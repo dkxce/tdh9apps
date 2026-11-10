@@ -1,5 +1,7 @@
 # TD-H9 HID Unbricker
 
+[RU](README.md) | [EN](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9unbrick/releases)
+
 Tools for debugging the main flash memory of the radio station**TIDRADIO TD-H9**
 в **HID mode**(without switching the chip to UBOOT mode). The project consists of two parts:
 
