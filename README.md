@@ -1,5 +1,7 @@
 ﻿# TD-H9 HID Unbricker
 
+[RU](README.md) | [EN](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9unbrick/releases)     
+
 Инструменты для раскирпичивания основной flash-памяти радиостанции **TIDRADIO TD-H9**
 в **HID-режиме** (без перехода чипа в UBOOT-режим). Проект состоит из двух частей:
 
