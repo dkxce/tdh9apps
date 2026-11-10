@@ -3,7 +3,7 @@ name: Auto Translate Markdown
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'README.md'
   workflow_dispatch:
