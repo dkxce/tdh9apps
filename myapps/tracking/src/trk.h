@@ -1,0 +1,98 @@
+/* TRACKER: shared state and helpers of the tracker modules.
+ *
+ * One app, five modules (build.json): TRACKER (menus), .TRK FIXED (target
+ * editor), .TRK RADAR, .TRK MAP, .TRK POINTS. They hand over through the
+ * run-next mailbox (trk_run + return 0) and keep everything in struct trk
+ * just below H9_SHARED_TOP, which survives module switches and the radio
+ * while no bigger module is loaded. Every module body must end below it:
+ * trk_open checks the trk_end marker (trk_end.c, linked last).
+ *
+ * GPS: stock's parser is stopped while a module runs, so each module drains
+ * the APRS modem's NMEA ring itself in trk_service; the track is recorded
+ * only while one of the tracker modules is open. */
+#ifndef TRK_H
+#define TRK_H
+
+#include <stdint.h>
+
+#include "gfx.h"
+#include "h9mod.h"
+
+enum { C_DGREY = 0x4208, C_LGREY = 0xC618, C_CYAN = 0x07ff, C_FUCHSIA = 0xF81F };
+enum { KEY_STAR = 0x13, KEY_HASH = 0x14 };
+enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x740, TRK_MAGIC = 0x314B5254 /* "TRK1" */ };
+enum { REC_OFF, REC_ON, REC_PAUSED };
+enum { SCR_MAIN, SCR_NAVTO };
+enum { MENU_BACK = -1, MENU_TOP = -2 };
+enum { VIEW_W = 106 };   /* radar / map drawing area; the value panel is to the right */
+
+#define TICK (*(const volatile uint32_t *)0x1D8B0)   /* 100 Hz */
+
+struct trk {
+    uint32_t magic;
+    unsigned cmd, frame_len, escape, nmea_len;
+    char nmea[NMEA];
+    int32_t lat, lon, alt10;          /* last fix: microdegrees, metres x 10 */
+    unsigned course, spd10, sats;     /* degrees, knots x 10 */
+    char utc[6];                      /* hhmmss */
+    uint8_t have_fix, fresh;
+    uint32_t fix_tick;
+    unsigned key, key_seen;
+    int32_t tlat, tlon;               /* navigation target */
+    uint8_t have_target, rec, has_start, screen;
+    int32_t slat, slon;               /* start point, kept when old points drop out */
+    uint32_t start_tick, base_dist;   /* base_dist: start -> p[0] along the track */
+    uint16_t cap, count;
+    uint8_t step, zoom, radar_mode, spare;
+    int16_t show, cur;                /* point to highlight on the map (-1 none), POINTS cursor */
+    int32_t p_lat[MAX_PTS], p_lon[MAX_PTS];
+    uint16_t p_t[MAX_PTS];            /* seconds from start / 2 */
+};
+
+#define TRK ((struct trk *)(H9_SHARED_TOP - STATE_BYTES))
+
+extern const uint32_t trk_end;
+extern const uint16_t STEP_M[16];
+
+/* trk_core.c */
+struct trk *trk_open(void);          /* 0: this module overlaps the state (message shown) */
+void trk_service(void);              /* drain NMEA, record the track */
+int trk_live(void);
+unsigned trk_key(void);
+void trk_run(const char *name);      /* open that module next; the caller returns 0 */
+void trk_wait(unsigned ticks);
+void trk_start(void);
+void trk_clear(void);
+void trk_set_cap(unsigned cap);
+uint32_t trk_point_dist(unsigned i);  /* metres from the start along the track */
+
+char *put(char *d, const char *s);
+char *num(char *d, uint32_t v, unsigned width);
+char *fixed(char *d, int32_t v, unsigned frac);
+char *km_text(char *d, uint32_t m);       /* "1.234" */
+char *time_text(char *d, uint32_t sec);   /* "1:02:03" */
+char *deg_text(char *d, int32_t micro);   /* "-55.75123" */
+char *dist_label(char *d, uint32_t m);    /* "250M", "2.5KM" */
+unsigned text_len(const char *s);
+
+int sin_deg(unsigned a);
+int cos_deg(unsigned a);
+void nav_delta(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2, int32_t *dx, int32_t *dy);
+uint32_t nav_distance(int32_t dx, int32_t dy);
+unsigned nav_bearing(int32_t dx, int32_t dy);
+
+/* trk_menu.c */
+typedef void (*menu_label_fn)(unsigned i, char *out);
+void menu_title(const char *title);
+int menu_run(const char *title, unsigned count, unsigned sel, menu_label_fn label, int up_exits);
+void trk_msg(const char *big, const char *line1, const char *line2, unsigned ticks);   /* ticks 0: wait for a key */
+
+/* trk_view.c */
+void view_px(int x, int y, uint16_t c);
+void view_line(int x0, int y0, int x1, int y1, uint16_t c);
+void view_circle(int cx, int cy, int r, uint16_t c);
+void view_spoke(int cx, int cy, unsigned a, int r, int *x, int *y);
+void view_arrow(int cx, int cy, unsigned a, int r, uint16_t c);
+void view_value(unsigned row, const char *label, const char *value, uint16_t color);
+
+#endif
