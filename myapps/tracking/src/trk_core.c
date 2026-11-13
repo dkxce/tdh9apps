@@ -1,13 +1,11 @@
 /* TRACKER core, linked into every tracker module: state, NMEA, navigation
- * math, track recording, keys, text. */
+ * math, track recording, keys, text. Track editing and point queries are in
+ * trk_track.c, linked only where used. */
 #include "trk.h"
 
 #define GPS_VALID (*(const volatile uint8_t *)0x12550)
 #define GPS_LAT (*(const volatile int32_t *)0x12558)
 #define GPS_LON (*(const volatile int32_t *)0x12560)
-
-#define GPS_TZ (*(const volatile uint8_t *)0xC1C6)   /* radio Time zone option: UTC-12..+12 as 0..24 */
-
 #define RING ((volatile uint8_t *)0x16634)
 #define RING_WRITE (*(volatile uint16_t *)0x16E34)
 #define RING_READ (*(volatile uint16_t *)0x16E36)
@@ -55,15 +53,6 @@ char *km_text(char *d, uint32_t m)
     if (m < 100000) return fixed(d, (int32_t)(m / 10), 2);
     if (m < 1000000) return fixed(d, (int32_t)(m / 100), 1);
     return num(d, m / 1000, 1);
-}
-
-char *time_text(char *d, uint32_t sec)
-{
-    d = num(d, sec / 3600, 1);
-    *d++ = ':';
-    d = num(d, sec / 60 % 60, 2);
-    *d++ = ':';
-    return num(d, sec % 60, 2);
 }
 
 /* At most 9 characters: 5 decimals below 100 degrees, 4 above. */
@@ -145,7 +134,7 @@ unsigned nav_bearing(int32_t dx, int32_t dy)
     return dx >= 0 ? 180 - a : 180 + a;
 }
 
-static uint32_t dist_between(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
+uint32_t dist_between(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
 {
     int32_t dx, dy;
     nav_delta(lat1, lon1, lat2, lon2, &dx, &dy);
@@ -154,7 +143,7 @@ static uint32_t dist_between(int32_t lat1, int32_t lon1, int32_t lat2, int32_t l
 
 /* ---- track ------------------------------------------------------------------ */
 
-static void drop_oldest(struct trk *s)
+void trk_drop_oldest(struct trk *s)
 {
     if (s->count > 1) s->base_dist += dist_between(s->p_lat[0], s->p_lon[0], s->p_lat[1], s->p_lon[1]);
     for (unsigned i = 1; i < s->count; i++) {
@@ -167,17 +156,17 @@ static void drop_oldest(struct trk *s)
 }
 
 /* UTC second of day from the last RMC / GGA time, -1 unknown */
-static int32_t utc_now(const struct trk *s)
+int32_t trk_utc_now(const struct trk *s)
 {
     if (!s->utc[0]) return -1;
     return (int32_t)(((s->utc[0] - '0') * 10 + (s->utc[1] - '0')) * 3600 +
                      ((s->utc[2] - '0') * 10 + (s->utc[3] - '0')) * 60 + (s->utc[4] - '0') * 10 + (s->utc[5] - '0'));
 }
 
-static void track_add(struct trk *s)
+void trk_track_add(struct trk *s)
 {
     uint32_t sec = (TICK - s->start_tick) / 100u;
-    if (s->start_utc < 0 && s->utc[0]) s->start_utc = (utc_now(s) - (int32_t)(sec % 86400u) + 86400) % 86400;
+    if (s->start_utc < 0 && s->utc[0]) s->start_utc = (trk_utc_now(s) - (int32_t)(sec % 86400u) + 86400) % 86400;
     if (!s->has_start) { s->slat = s->lat; s->slon = s->lon; s->has_start = 1; }
     if (s->count) {
         unsigned n = s->count - 1u;
@@ -187,61 +176,12 @@ static void track_add(struct trk *s)
     } else {
         s->base_dist = dist_between(s->slat, s->slon, s->lat, s->lon);
     }
-    while (s->count >= s->cap) drop_oldest(s);
+    while (s->count >= s->cap) trk_drop_oldest(s);
     sec /= 2;
     s->p_lat[s->count] = s->lat;
     s->p_lon[s->count] = s->lon;
     s->p_t[s->count] = (uint16_t)(sec > 0xFFFF ? 0xFFFF : sec);
     s->count++;
-}
-
-int32_t trk_point_clock(unsigned i)
-{
-    struct trk *s = TRK;
-    unsigned tz = GPS_TZ;
-    if (s->start_utc < 0 || i >= s->count) return -1;
-    int32_t t = s->start_utc + (int32_t)s->p_t[i] * 2 + (tz <= 24 ? ((int32_t)tz - 12) * 3600 : 0);
-    return (t % 86400 + 86400) % 86400;
-}
-
-void trk_start(void)
-{
-    struct trk *s = TRK;
-    s->count = 0;
-    s->base_dist = 0;
-    s->has_start = 0;
-    s->show = -1;
-    s->cur = 0;
-    s->start_tick = TICK;
-    s->start_utc = utc_now(s);
-    s->rec = REC_ON;
-    if (trk_live()) track_add(s);
-}
-
-void trk_clear(void)
-{
-    struct trk *s = TRK;
-    s->count = 0;
-    s->base_dist = 0;
-    s->show = -1;
-    s->cur = 0;
-}
-
-void trk_set_cap(unsigned cap)
-{
-    struct trk *s = TRK;
-    s->cap = (uint16_t)cap;
-    while (s->count > cap) drop_oldest(s);
-    if (s->cur >= (int)s->count) s->cur = 0;
-}
-
-uint32_t trk_point_dist(unsigned i)
-{
-    struct trk *s = TRK;
-    uint32_t d = s->base_dist;
-    for (unsigned k = 1; k <= i && k < s->count; k++)
-        d += dist_between(s->p_lat[k - 1], s->p_lon[k - 1], s->p_lat[k], s->p_lon[k]);
-    return d;
 }
 
 /* ---- NMEA (gps.c-derived: RMC and GGA) ---------------------------------------- */
@@ -346,9 +286,12 @@ static void poll_ring(struct trk *s)
 struct trk *trk_open(void)
 {
     struct trk *s = TRK;
-    if ((uint32_t)&trk_end + sizeof trk_end > (uint32_t)s) {
+    uint32_t end = (uint32_t)&trk_end + sizeof trk_end;
+    if (end > (uint32_t)s) {
+        char b[24];
+        num(put(b, "MODULE TOO BIG +"), end - (uint32_t)s, 1);
         gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-        gfx_text(4, 50, "MODULE TOO BIG", 14, 1, GFX_RED, GFX_BLACK);
+        gfx_text(4, 50, b, 22, 1, GFX_RED, GFX_BLACK);
         gfx_wait_key();
         return 0;
     }
@@ -378,7 +321,7 @@ void trk_service(void)
     poll_ring(s);
     if (s->fresh) {
         s->fresh = 0;
-        if (s->rec == REC_ON) track_add(s);
+        if (s->rec == REC_ON) trk_track_add(s);
     }
 }
 
@@ -413,10 +356,4 @@ void trk_run(const char *name)
     for (; i < H9_NAME_BYTES && name[i]; i++) rq->name[i] = name[i];
     for (; i < H9_NAME_BYTES; i++) rq->name[i] = ' ';
     rq->magic = H9_REQUEST_MAGIC;
-}
-
-void trk_wait(unsigned ticks)
-{
-    uint32_t t0 = TICK;
-    while (TICK - t0 < ticks) { trk_service(); h9_delay(10); }
 }

@@ -82,6 +82,10 @@ void trk_msg(const char *big, const char *line1, const char *line2, unsigned tic
     center(40, big, 2);
     if (line1) center(72, line1, 1);
     if (line2) center(86, line2, 1);
-    if (ticks) { trk_wait(ticks); return; }
+    if (ticks) {
+        uint32_t t0 = TICK;
+        while (TICK - t0 < ticks) { trk_service(); h9_delay(10); }
+        return;
+    }
     while (!trk_key()) { trk_service(); h9_delay(10); }
 }

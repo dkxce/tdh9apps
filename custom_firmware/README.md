@@ -23,6 +23,13 @@
 | `passlock/passlock.c` | модуль PASSLOCK с unlock-only веткой (для копирования в `myapps/passlock/src/passlock.c`) |
 | `build-lock.yml` | GitHub Actions workflow: сборка прошивки со stub через ваш CI (см. ниже) |
 
+## Готовые сборки
+
+| Файл | Назначение |
+|---|---|
+| [TD-H9-V1.0.38_dkxce_passlock.fw](TD-H9-V1.0.38_dkxce_passlock.fw) | Поддержка passlock, загрузка через Back |
+| [TD-H9-V1.0.38_dkxce_passlock_sharp.fw.fw](TD-H9-V1.0.38_dkxce_passlock_sharp.fw.fw) | Поддержка passlock, загрузка через # |
+
 ## Автосборка через GitHub Actions (рекомендуется)
 
 Без доступа к `melidosian/h9toolbox` вам не нужен: workflow `build-lock.yml`

@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'README.md'
+      - 'custom_firmware/README.md'
       - 'lock-pass.md'
       - 'ram.md'
       - 'td9_apps.md'
@@ -27,6 +28,7 @@ jobs:
         with:
           translate_paths: |
             README.md
+            custom_firmware/README.md
             lock-pass.md
             ram.md
             td9_apps.md

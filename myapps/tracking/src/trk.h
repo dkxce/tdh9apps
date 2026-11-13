@@ -21,7 +21,7 @@
 
 enum { C_DGREY = 0x4208, C_LGREY = 0xC618, C_CYAN = 0x07ff, C_FUCHSIA = 0xF81F };
 enum { KEY_STAR = 0x13, KEY_HASH = 0x14, KEY_0 = 2, KEY_5 = 7 };
-enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x740, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
+enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x710, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
 enum { REC_OFF, REC_ON, REC_PAUSED };
 enum { STEP_DIST, STEP_TIME };
 enum { FROM_MENU, FROM_RADAR, FROM_MAP };
@@ -67,18 +67,15 @@ int trk_live(void);
 int trk_heading_ok(void);            /* course worth showing: live, and moving if the 2 km/h filter is on */
 unsigned trk_key(void);
 void trk_run(const char *name);      /* open that module next; the caller returns 0 */
-void trk_wait(unsigned ticks);
-void trk_start(void);
-void trk_clear(void);
-void trk_set_cap(unsigned cap);
-uint32_t trk_point_dist(unsigned i);  /* metres from the start along the track */
-int32_t trk_point_clock(unsigned i);  /* local second of day, -1 unknown */
+void trk_track_add(struct trk *s);
+void trk_drop_oldest(struct trk *s);
+int32_t trk_utc_now(const struct trk *s);   /* UTC second of day, -1 unknown */
+uint32_t dist_between(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2);
 
 char *put(char *d, const char *s);
 char *num(char *d, uint32_t v, unsigned width);
 char *fixed(char *d, int32_t v, unsigned frac);
 char *km_text(char *d, uint32_t m);       /* "1.234" */
-char *time_text(char *d, uint32_t sec);   /* "1:02:03" */
 char *deg_text(char *d, int32_t micro);   /* "-55.75123" */
 char *dist_label(char *d, uint32_t m);    /* "250M", "2.5KM" */
 unsigned text_len(const char *s);
@@ -88,6 +85,14 @@ int cos_deg(unsigned a);
 void nav_delta(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2, int32_t *dx, int32_t *dy);
 uint32_t nav_distance(int32_t dx, int32_t dy);
 unsigned nav_bearing(int32_t dx, int32_t dy);
+
+/* trk_track.c: TRACKER, .TRK SETUP, .TRK POINTS only */
+void trk_start(void);
+void trk_clear(void);
+void trk_set_cap(unsigned cap);
+uint32_t trk_point_dist(unsigned i);  /* metres from the start along the track */
+int32_t trk_point_clock(unsigned i);  /* local second of day, -1 unknown */
+char *time_text(char *d, uint32_t sec);   /* "1:02:03" */
 
 /* trk_menu.c */
 typedef void (*menu_label_fn)(unsigned i, char *out);
