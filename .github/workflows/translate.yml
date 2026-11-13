@@ -6,6 +6,12 @@ on:
       - main
     paths:
       - 'README.md'
+      - 'lock-pass.md'
+      - 'ram.md'
+      - 'td9_apps.md'
+      - 'td9_aprs.md'
+      - 'td9_kpi.md'
+      - 'td9_logo.md'
   workflow_dispatch:
 
 permissions:
@@ -21,4 +27,9 @@ jobs:
         with:
           translate_paths: |
             README.md
+            lock-pass.md
+            ram.md
+            td9_apps.md
+            td9_kpi.md
+            td9_logo.md
           convert_skip: '**'
