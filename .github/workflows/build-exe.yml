@@ -47,12 +47,74 @@ jobs:
           & "$env:USERPROFILE\.local\bin\poetry" run pyinstaller --clean --paths . --version-file="h9_ui_flash.txt" -i "h9_ui_flash.ico" --noconsole --onefile --name="h9_ui_flash" ui_app/app.py
           if (Test-Path h9_ui_flash.txt) { Remove-Item h9_ui_flash.txt }
 
-      - name: Compress EXE with UPX
+      - name: Compress h9_ui_flash EXE with UPX
         run: .\tools\upx.exe -9f dist\h9_ui_flash.exe
+
+      # ---- standalone TD-H9 tools (each has <name>.py + <name>.yaml + <name>.spec) ----
+      # Built with their committed .spec files (which supply --onefile, console
+      # mode and the version resource), then compressed with UPX. The .cmd
+      # build scripts use the same steps (minus the interactive tasklist/pause).
+      - name: Build td9_apps EXE
+        run: |
+          & "$env:USERPROFILE\.local\bin\poetry" run create-version-file td9_apps.yaml --outfile td9_apps.txt
+          & "$env:USERPROFILE\.local\bin\poetry" run pyinstaller --clean td9_apps.spec
+          if (Test-Path td9_apps.txt) { Remove-Item td9_apps.txt }
+          .\tools\upx.exe -9f dist\td9_apps.exe
+
+      - name: Build td9_aprs EXE
+        run: |
+          & "$env:USERPROFILE\.local\bin\poetry" run create-version-file td9_aprs.yaml --outfile td9_aprs.txt
+          & "$env:USERPROFILE\.local\bin\poetry" run pyinstaller --clean td9_aprs.spec
+          if (Test-Path td9_aprs.txt) { Remove-Item td9_aprs.txt }
+          .\tools\upx.exe -9f dist\td9_aprs.exe
+
+      - name: Build td9_logo EXE
+        run: |
+          & "$env:USERPROFILE\.local\bin\poetry" run create-version-file td9_logo.yaml --outfile td9_logo.txt
+          & "$env:USERPROFILE\.local\bin\poetry" run pyinstaller --clean td9_logo.spec
+          if (Test-Path td9_logo.txt) { Remove-Item td9_logo.txt }
+          .\tools\upx.exe -9f dist\td9_logo.exe
+
+      - name: Build td9_kpi EXE
+        run: |
+          & "$env:USERPROFILE\.local\bin\poetry" run create-version-file td9_kpi.yaml --outfile td9_kpi.txt
+          & "$env:USERPROFILE\.local\bin\poetry" run pyinstaller --clean td9_kpi.spec
+          if (Test-Path td9_kpi.txt) { Remove-Item td9_kpi.txt }
+          .\tools\upx.exe -9f dist\td9_kpi.exe
+
+      # ---- compress the ui_flash exe was already done above ----
 
       - name: Save EXE to Job Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: h9_ui_flash
           path: dist/h9_ui_flash.exe
+          compression-level: 0
+
+      - name: Save td9_apps EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: td9_apps
+          path: dist/td9_apps.exe
+          compression-level: 0
+
+      - name: Save td9_aprs EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: td9_aprs
+          path: dist/td9_aprs.exe
+          compression-level: 0
+
+      - name: Save td9_logo EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: td9_logo
+          path: dist/td9_logo.exe
+          compression-level: 0
+
+      - name: Save td9_kpi EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: td9_kpi
+          path: dist/td9_kpi.exe
           compression-level: 0
