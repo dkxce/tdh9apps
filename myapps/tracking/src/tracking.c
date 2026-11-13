@@ -12,9 +12,9 @@
  * modules/gps/gps.c in h9toolbox does.
  *
  * Memory: no .data/.bss in a module and the task stack is small, so all
- * state lives in the 2 KiB below the request mailbox at the top of the RAM
- * slot (as aprs_monitor.c). The module body must end below STATE_ADDR,
- * i.e. stay under 6,112 bytes.
+ * state lives in the 1.5 KiB below the request mailbox at the top of the
+ * RAM slot (as aprs_monitor.c). The module body must end below it, i.e.
+ * stay under 6,624 bytes: the size field of the .h9mod entry (offset 36).
  *
  * Keys: digit d = d + 2, 12 Menu, 13 Up, 14 Down, 15 Back.
  *   select:  1 = target here, 2 = type coordinates, Back = leave
@@ -38,7 +38,7 @@
 #define RING_MASK 2047u
 #define TICK (*(const volatile uint32_t *)0x1D8B0)   /* 100 Hz */
 
-enum { NMEA = 84, MAX_TRACK = 200, MIN_DIST_M = 4, FIX_TIMEOUT = 500, STATE_BYTES = 0x800 };
+enum { NMEA = 84, MAX_TRACK = 160, MIN_DIST_M = 4, FIX_TIMEOUT = 500, STATE_BYTES = 0x600 };
 enum { MODE_SELECT, MODE_EDIT, MODE_COMPASS, MODE_MAP };
 
 #define STATE_ADDR (H9_SHARED_TOP - STATE_BYTES)
