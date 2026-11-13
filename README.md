@@ -272,7 +272,18 @@ Chat-20/
 
 ---
 
-## 12. Credits & Acknowledgments
+## 12. Скриншоты экранов
+
+<img src="scripts/render_lock_screens/screen_new_passw.png"/>
+<img src="scripts/render_lock_screens/screen_radio_lock_menu.png"/>
+<img src="scripts/render_lock_screens/screen_radio_lock_menu_selected.png"/>
+<img src="scripts/render_lock_screens/screen_radio_lock_unlock.png"/>
+<img src="scripts/render_lock_screens/screen_radio_widget.png"/>
+<img src="scripts/render_lock_screens/screen_radio_widget_selected.png"/>
+
+---
+
+## 13. Credits & Acknowledgments
 
 Приложения основаны на тулбоксе и кастомной прошивке [melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).    
 
