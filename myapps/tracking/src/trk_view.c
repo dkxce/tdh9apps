@@ -84,6 +84,13 @@ void view_status(unsigned x, unsigned y)
         gfx_fill(x + 4 - HALF[i], y + i, 2u * HALF[i] + 1, 1, rec == REC_ON ? GFX_GREEN : GFX_RED);
 }
 
+void view_rec_key(void)
+{
+    struct trk *s = TRK;
+    if (s->rec == REC_OFF) trk_start();
+    else s->rec = s->rec == REC_ON ? REC_PAUSED : REC_ON;
+}
+
 void view_frame(int full)
 {
     struct trk *s = TRK;

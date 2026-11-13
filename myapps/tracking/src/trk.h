@@ -67,6 +67,7 @@ int trk_live(void);
 int trk_heading_ok(void);            /* course worth showing: live, and moving if the 2 km/h filter is on */
 unsigned trk_key(void);
 void trk_run(const char *name);      /* open that module next; the caller returns 0 */
+void trk_start(void);                /* new track, recording */
 void trk_track_add(struct trk *s);
 void trk_drop_oldest(struct trk *s);
 int32_t trk_utc_now(const struct trk *s);   /* UTC second of day, -1 unknown */
@@ -86,7 +87,6 @@ uint32_t nav_distance(int32_t dx, int32_t dy);
 unsigned nav_bearing(int32_t dx, int32_t dy);
 
 /* trk_track.c: TRACKER, .TRK SETUP, .TRK POINTS only */
-void trk_start(void);
 void trk_clear(void);
 void trk_set_cap(unsigned cap);
 uint32_t trk_point_dist(unsigned i);  /* metres from the start along the track */
@@ -111,5 +111,6 @@ void view_arrow(int cx, int cy, unsigned a, int r, uint16_t c);
 void view_value(unsigned row, const char *label, const char *value, uint16_t color);
 void view_status(unsigned x, unsigned y);   /* 9 x 9: recording green dot, stopped red dot, paused yellow bars */
 void view_frame(int full);                  /* clear the view; split: clear the panel and draw the divider */
+void view_rec_key(void);                    /* Menu: idle -> start, recording -> pause, paused -> resume */
 
 #endif

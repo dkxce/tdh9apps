@@ -54,7 +54,7 @@ static void text_page(const char *title, const char *const *t, unsigned n)
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     menu_title(title);
     for (unsigned i = 0; i < n; i++)
-        gfx_text(4, 13 + i * 9, t[i], 26, 1, t[i][0] == ' ' ? GFX_WHITE : GFX_YELLOW, GFX_BLACK);
+        gfx_text(4, 12 + i * 9, t[i], 26, 1, t[i][0] == ' ' ? GFX_WHITE : GFX_YELLOW, GFX_BLACK);
     while (!trk_key()) { trk_service(); h9_delay(10); }
 }
 
@@ -63,7 +63,7 @@ static void help(void)
     static const char *const H[] = {
         "RADAR", " UP/DN   MAP", " 5       POINTS", " 0       FULL / SPLIT", " *       N-E-S-W/12/36",
         "MAP", " UP/DN   RADAR", " 5       POINTS", " 0       FULL / SPLIT", " * / #   SCALE -/+",
-        "BOTH", " BACK    TRACKER MENU" };
+        "BOTH", " MENU    REC/PAUSE/RESUME", " BACK    TRACKER MENU" };
     text_page("HELP", H, sizeof H / sizeof H[0]);
 }
 

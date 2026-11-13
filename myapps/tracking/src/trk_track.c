@@ -23,20 +23,6 @@ int32_t trk_point_clock(unsigned i)
     return (t % 86400 + 86400) % 86400;
 }
 
-void trk_start(void)
-{
-    struct trk *s = TRK;
-    s->count = 0;
-    s->base_dist = 0;
-    s->has_start = 0;
-    s->show = -1;
-    s->cur = 0;
-    s->start_tick = TICK;
-    s->start_utc = trk_utc_now(s);
-    s->rec = REC_ON;
-    if (trk_live()) trk_track_add(s);
-}
-
 void trk_clear(void)
 {
     struct trk *s = TRK;

@@ -3,7 +3,8 @@
  * own position white, the point picked in POINTS (SHOW) fuchsia. Top left:
  * north pointer and NAV (arrow to the target); recording status top right.
  * Keys: Up / Down = Radar, 5 = Points, 0 = full screen / split,
- * * / # = scale 50M..5000KM per 40 px bar, Back = TRACKER. */
+ * * / # = scale 50M..5000KM per 40 px bar, Menu = start / pause / resume
+ * recording, Back = TRACKER. */
 #include "trk.h"
 
 enum { MY = H9_HEIGHT / 2, BAR = 40, FAR = 600, ZOOMS = 16 };
@@ -124,6 +125,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (k == KEY_STAR && s->zoom) { s->zoom--; dirty = 1; }
         if (k == KEY_HASH && s->zoom + 1 < ZOOMS) { s->zoom++; dirty = 1; }
         if (k == KEY_0) { s->map_full = (uint8_t)!s->map_full; dirty = 1; }
+        if (k == H9_KEY_MENU) view_rec_key();
 
         uint32_t now = TICK;
         if (s->fix_tick != drawn_fix || s->count != drawn_count) dirty = 1;

@@ -177,6 +177,20 @@ void trk_track_add(struct trk *s)
     s->count++;
 }
 
+void trk_start(void)
+{
+    struct trk *s = TRK;
+    s->count = 0;
+    s->base_dist = 0;
+    s->has_start = 0;
+    s->show = -1;
+    s->cur = 0;
+    s->start_tick = TICK;
+    s->start_utc = trk_utc_now(s);
+    s->rec = REC_ON;
+    if (trk_live()) trk_track_add(s);
+}
+
 /* ---- NMEA (gps.c-derived: RMC and GGA) ---------------------------------------- */
 
 static unsigned dig(char c) { return c >= '0' && c <= '9' ? (unsigned)(c - '0') : 0; }

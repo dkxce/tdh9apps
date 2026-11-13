@@ -3,7 +3,8 @@
  * left. Arrow to the target green with a fix, red without; pale grey arrow
  * for the radio's own course (with the 2 km/h filter on, only while moving).
  * Keys: Up / Down = Map, 5 = Points, 0 = full screen / split with values,
- * * = dial labels (N E S W / 12 03 06 09 / 00 09 18 27), Back = TRACKER. */
+ * * = dial labels (N E S W / 12 03 06 09 / 00 09 18 27), Menu = start /
+ * pause / resume recording, Back = TRACKER. */
 #include "trk.h"
 
 enum { CY = 64, R = 50, NONE = 999 };
@@ -63,6 +64,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (k == KEY_5) { s->from = FROM_RADAR; trk_run(".TRK POINTS"); return 0; }
         if (k == KEY_STAR) { s->radar_mode = (uint8_t)((s->radar_mode + 1) % 3); dirty = 1; }
         if (k == KEY_0) { s->radar_full = (uint8_t)!s->radar_full; dirty = 1; }
+        if (k == H9_KEY_MENU) view_rec_key();
 
         uint32_t now = TICK;
         if (dirty || now - last >= 50) {
