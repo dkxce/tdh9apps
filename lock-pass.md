@@ -100,3 +100,10 @@ python td9_kpi.py passclear                       # сбросить (0xFF)
 python td9_kpi.py passread                        # прочитать 8 байт
 ```
 Пишет в `0x716FF8` через S2: программирует 32-байтный блок, не трогая font-сектор (запись только в стёртые `0xFF` ячейки).
+
+## Стек
+
+Для работы функции блокировки должны быть установлены следующие компоненты:
+- Прошивка [TD-H9-V1.0.38_dkxce_passlock.fw](custom_firmware/TD-H9-V1.0.38_dkxce_passlock.fw]
+- Меню [menu.h9mod](myapps/menu.h9mod]
+- Модуль приложения [passlock.h9mod](myapps/passlock.h9mod]
