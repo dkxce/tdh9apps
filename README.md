@@ -270,7 +270,11 @@ Chat-20/
 - [Запароливание рации](lock-pass.md)
 - [Конфигурирование APRS-настроек](td9_aprs.md)
 
-Приложения основаны на тулбоксе и кастомной прошивке [melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).
+---
+
+## 12. Credits & Acknowledgments
+
+Приложения основаны на тулбоксе и кастомной прошивке [melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).    
 
 ---
 
