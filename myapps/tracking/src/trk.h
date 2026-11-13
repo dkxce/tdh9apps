@@ -76,7 +76,6 @@ char *put(char *d, const char *s);
 char *num(char *d, uint32_t v, unsigned width);
 char *fixed(char *d, int32_t v, unsigned frac);
 char *km_text(char *d, uint32_t m);       /* "1.234" */
-char *deg_text(char *d, int32_t micro);   /* "-55.75123" */
 char *dist_label(char *d, uint32_t m);    /* "250M", "2.5KM" */
 unsigned text_len(const char *s);
 
@@ -93,6 +92,9 @@ void trk_set_cap(unsigned cap);
 uint32_t trk_point_dist(unsigned i);  /* metres from the start along the track */
 int32_t trk_point_clock(unsigned i);  /* local second of day, -1 unknown */
 char *time_text(char *d, uint32_t sec);   /* "1:02:03" */
+
+/* trk_deg.c: TRACKER, .TRK FIXED, .TRK RADAR only */
+char *deg_text(char *d, int32_t micro);   /* "-55.75123" */
 
 /* trk_menu.c */
 typedef void (*menu_label_fn)(unsigned i, char *out);

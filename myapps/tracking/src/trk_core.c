@@ -55,13 +55,6 @@ char *km_text(char *d, uint32_t m)
     return num(d, m / 1000, 1);
 }
 
-/* At most 9 characters: 5 decimals below 100 degrees, 4 above. */
-char *deg_text(char *d, int32_t micro)
-{
-    if (micro >= 100000000 || micro <= -100000000) return fixed(d, micro / 100, 4);
-    return fixed(d, micro / 10, 5);
-}
-
 char *dist_label(char *d, uint32_t m)
 {
     if (m < 1000) { d = num(d, m, 1); return put(d, "M"); }

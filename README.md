@@ -264,6 +264,7 @@ Chat-20/
 
 ## 11. Прочие приложения
 
+- [Кастомная прошивка](custom_firmware/README.md) с поддержкой запароливания: [Удерж Back](custom_firmware/TD-H9-V1.0.38_dkxce_passlock.fw) | [Удерж #](custom_firmware/TD-H9-V1.0.38_dkxce_passlock_sharp.fw) 
 - [Смена загрузочной картинки](td9_logo.md)
 - [Загрузка картинок](td9_kpi.md)
 - [Загрузка приложений](td9_apps.md)

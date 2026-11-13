@@ -8,8 +8,14 @@
 
 enum { MY = H9_HEIGHT / 2, BAR = 40, FAR = 600, ZOOMS = 16 };
 
-static const uint32_t ZOOM_M[ZOOMS] = { 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000,
-                                        250000, 500000, 1000000, 2500000, 5000000 };
+/* Bar length in metres: 50, 100, 250, 500, 1000, ... 5000000 */
+static uint32_t zoom_m(unsigned i)
+{
+    static const uint8_t M[3] = { 1, 2, 5 };
+    uint32_t v = 50u * M[i % 3];
+    for (i /= 3; i; i--) v *= 10;
+    return v;
+}
 
 struct view { int32_t lat, lon, scale; int mx; };
 
@@ -37,7 +43,7 @@ static void draw_map(const struct trk *s)
     char b[12];
     view_frame(s->map_full);
     v.mx = s->view_w / 2;
-    v.scale = (int32_t)ZOOM_M[s->zoom];
+    v.scale = (int32_t)zoom_m(s->zoom);
     if (s->show >= 0 && s->show < (int)s->count) { v.lat = s->p_lat[s->show]; v.lon = s->p_lon[s->show]; }
     else if (s->have_fix) { v.lat = s->lat; v.lon = s->lon; }
     else if (s->has_start) { v.lat = s->slat; v.lon = s->slon; }
@@ -58,9 +64,7 @@ static void draw_map(const struct trk *s)
     }
 
     /* north pointer and NAV arrow */
-    view_line(4, 14, 4, 2, GFX_WHITE);
-    view_line(4, 2, 1, 6, GFX_WHITE);
-    view_line(4, 2, 7, 6, GFX_WHITE);
+    view_arrow(4, 14, 0, 12, GFX_WHITE);
     gfx_text(9, 2, "N", 1, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(2, 18, "NAV", 3, 1, GFX_WHITE, GFX_BLACK);
     if (s->have_fix && s->have_target) {
@@ -73,7 +77,7 @@ static void draw_map(const struct trk *s)
     gfx_fill(4, 122, BAR + 1, 1, GFX_WHITE);
     gfx_fill(4, 118, 1, 4, GFX_WHITE);
     gfx_fill(4 + BAR, 118, 1, 4, GFX_WHITE);
-    dist_label(b, ZOOM_M[s->zoom]);
+    dist_label(b, (uint32_t)v.scale);
     gfx_text(4, 108, b, 6, 1, GFX_WHITE, GFX_BLACK);
 }
 
