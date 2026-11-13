@@ -1,6 +1,6 @@
-﻿# Tidradio TD-H9 HID Unbricker
+﻿# Tidradio TD-H9 HID Unbricker + Custom Apps
 
-[RU](README.md) | [EN](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9unbrick/releases)      
+[RU](README.md) | [EN](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)      
 
 Инструменты для раскирпичивания основной flash-памяти радиостанции **TIDRADIO TD-H9**
 в **HID-режиме** (без перехода чипа в UBOOT-режим). Проект состоит из двух частей:
@@ -259,6 +259,15 @@ Chat-20/
 | `Package unpack error` | выбранный файл — не валидный TD-H9 пакет `.fw` |
 | `Radio already matches ... Nothing to write` | рация уже совпадает с образом; используйте `--nocheck` если нужна принудительная перезапись |
 | Окно GUI не открывается (PySide6) | `poetry run python -c "import PySide6"` — если ошибка, проверьте `poetry install` |
+
+---
+
+## 11. Прочие приложения
+
+- [Смена загрузочной картинки](td9_logo.md)
+- [Загрузка картинок](td9_kpi.md)
+- [Загрузка приложений](td9_apps.md)
+- [Запароливание рации](lock-pass.md)
 
 ---
 
