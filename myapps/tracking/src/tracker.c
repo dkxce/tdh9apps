@@ -3,6 +3,34 @@
  * Map and Points are the hidden .TRK modules. */
 #include "trk.h"
 
+#define GPS_VALID (*(const volatile uint8_t *)0x12550)
+#define GPS_LAT (*(const volatile int32_t *)0x12558)
+#define GPS_LON (*(const volatile int32_t *)0x12560)
+
+/* First run (no state yet): defaults and stock's last fix. Only TRACKER does
+ * this; the hidden modules are reached through it and send a bad state here.
+ * Skipped when this body overlaps the state: trk_open then reports it. */
+static void state_init(void)
+{
+    struct trk *s = TRK;
+    if (s->magic == TRK_MAGIC || (uint32_t)&trk_end + sizeof trk_end > (uint32_t)s) return;
+    uint8_t *z = (uint8_t *)s;
+    for (unsigned i = 0; i < sizeof *s; i++) z[i] = 0;
+    s->magic = TRK_MAGIC;
+    s->cap = MAX_PTS;
+    s->zoom = 4;   /* 1KM */
+    s->show = -1;
+    s->start_utc = -1;
+    s->step_time = 30;
+    s->hdg_filter = 1;
+    if (GPS_VALID) {
+        s->lat = GPS_LAT;
+        s->lon = GPS_LON;
+        s->fix_tick = TICK;
+        s->have_fix = 1;
+    }
+}
+
 static void main_label(unsigned i, char *o)
 {
     static const char *const T[7] = { "NAVTO", "RADAR", "MAP", "POINTS", "SETTINGS", "HELP", "ABOUT" };
@@ -107,6 +135,7 @@ static int navto(struct trk *s)
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
     (void)api; (void)self;
+    state_init();
     struct trk *s = trk_open();
     if (!s) return 0;
     s->from = FROM_MENU;

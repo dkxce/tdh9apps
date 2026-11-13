@@ -3,9 +3,6 @@
  * trk_track.c, linked only where used. */
 #include "trk.h"
 
-#define GPS_VALID (*(const volatile uint8_t *)0x12550)
-#define GPS_LAT (*(const volatile int32_t *)0x12558)
-#define GPS_LON (*(const volatile int32_t *)0x12560)
 #define RING ((volatile uint8_t *)0x16634)
 #define RING_WRITE (*(volatile uint16_t *)0x16E34)
 #define RING_READ (*(volatile uint16_t *)0x16E36)
@@ -295,20 +292,9 @@ struct trk *trk_open(void)
         gfx_wait_key();
         return 0;
     }
-    if (s->magic != TRK_MAGIC) {
-        uint8_t *z = (uint8_t *)s;
-        for (unsigned i = 0; i < sizeof *s; i++) z[i] = 0;
-        s->magic = TRK_MAGIC;
-        s->cap = MAX_PTS;
-        s->zoom = 4;   /* 1KM */
-        s->show = -1;
-        s->start_utc = -1;
-        s->step_time = 30;
-        s->hdg_filter = 1;
-        if (GPS_VALID) {   /* stock's last fix before the first module started */
-            got_fix(s, GPS_LAT, GPS_LON);
-            s->fresh = 0;
-        }
+    if (s->magic != TRK_MAGIC) {   /* only TRACKER sets the state up (tracker.c) */
+        trk_run("TRACKER");
+        return 0;
     }
     s->key = s->key_seen = h9_key();
     s->view_w = VIEW_W;

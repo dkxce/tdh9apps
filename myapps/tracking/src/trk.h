@@ -60,7 +60,7 @@ extern const uint32_t trk_end;
 extern const uint16_t STEP_M[16];
 
 /* trk_core.c */
-struct trk *trk_open(void);          /* 0: this module overlaps the state (message shown) */
+struct trk *trk_open(void);          /* 0: body overlaps the state (message shown), or no state yet (TRACKER requested) */
 void trk_service(void);              /* drain NMEA, record the track */
 int trk_live(void);
 int trk_heading_ok(void);            /* course worth showing: live, and moving if the 2 km/h filter is on */
