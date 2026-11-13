@@ -33,7 +33,7 @@ Scripts work exactly on the HID channel.
 | **TIDRADIO TD-H9** | walkie-talkie | you |
 | **USB-C cable with data transfer** | Physical connection (not "charging"!) | you |
 | **Python 3. 11. +** | performance | python.org |
-| **Poetry** | Dependency management and environment n | python-poetry.org |
+| **Poetry** | Dependency management and environment n | Python-poetry.org |
 | **Package`hid`**(pyhidapi) | access | `poetry add hid` |
 | **`hidapi.dll`(x64)** | native library`hid` | github.com/libusb/hidapi/releases |
 | **PySide6** | GUI only | `poetry add pyside6` |
@@ -264,6 +264,8 @@ Chat-20/
 * [Downloading applications](td9_apps.md)
 * [Passing the radio](lock-pass.md)
 * [Configuration of APRS settings](td9_aprs.md)
+
+Applications are based on tulbox and custom firmware[melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).
 
 ---
 
