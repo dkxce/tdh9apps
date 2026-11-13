@@ -265,6 +265,10 @@ Chat-20/
 * [Passing the radio](lock-pass.md)
 * [Configuration of APRS settings](td9_aprs.md)
 
+---
+
+## 12. Credits & Acknowledgments
+
 Applications are based on tulbox and custom firmware[melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).
 
 ---
