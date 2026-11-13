@@ -111,8 +111,8 @@ def save(path, screen):
 def screen_unlock():
     """passlock.c: title_line / okb / enter_digits("PASSWORD:", 56, mask=1)."""
     s = Screen()
-    s.fill(0, 0, W, 22, "blue")
-    s.text(18, 3, "RADIO LOCK", 12, 2, "white", "blue")
+    #s.fill(0, 0, W, 22, "blue")
+    #s.text(18, 3, "RADIO LOCK", 12, 2, "white", "blue")
     s.fill(0, 22, W, H - 22, "black")
     s.text(4, 26, "RADIO IS LOCK", 14, 2, "red", "black")
     s.text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, "grey", "black")
@@ -178,7 +178,7 @@ def _radio_widget(modules, selected):
 
 def main():
     out = os.path.dirname(os.path.abspath(__file__))
-    save(os.path.join(out, "screen_radio_lock_unlock.png"), screen_unlock())
+    save(os.path.join(out, "screen_radio_lock_locked.png"), screen_unlock())
     save(os.path.join(out, "screen_radio_lock_menu.png"), _lock_menu(0))
     save(os.path.join(out, "screen_radio_lock_menu_selected.png"), _lock_menu(2))
     save(os.path.join(out, "screen_new_passw.png"), screen_new_passw())
