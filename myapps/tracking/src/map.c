@@ -25,10 +25,10 @@ static int to_xy(const struct view *v, int32_t lat, int32_t lon, int *x, int *y)
 {
     int32_t dx, dy;
     nav_delta(v->lat, v->lon, lat, lon, &dx, &dy);
-    if (dx > 20000000 || dx < -20000000 || dy > 20000000 || dy < -20000000) return 0;
+    if ((uint32_t)dx + 20000000u > 40000000u || (uint32_t)dy + 20000000u > 40000000u) return 0;
     *x = v->mx + (int)(dx * BAR / v->scale);
     *y = MY - (int)(dy * BAR / v->scale);
-    return *x > -FAR && *x < FAR && *y > -FAR && *y < FAR;
+    return (unsigned)*x + FAR < 2u * FAR && (unsigned)*y + FAR < 2u * FAR;
 }
 
 static void mark(const struct view *v, int32_t lat, int32_t lon, int r, uint16_t c)
@@ -41,11 +41,12 @@ static void draw_map(const struct trk *s)
 {
     struct view v;
     int x = 0, y = 0, px = 0, py = 0, prev = 0;
+    int show = s->show >= 0 && s->show < (int)s->count;
     char b[12];
     view_frame(s->map_full);
     v.mx = s->view_w / 2;
     v.scale = (int32_t)zoom_m(s->zoom);
-    if (s->show >= 0 && s->show < (int)s->count) { v.lat = s->p_lat[s->show]; v.lon = s->p_lon[s->show]; }
+    if (show) { v.lat = s->p_lat[s->show]; v.lon = s->p_lon[s->show]; }
     else if (s->have_fix) { v.lat = s->lat; v.lon = s->lon; }
     else if (s->has_start) { v.lat = s->slat; v.lon = s->slon; }
     else { v.lat = s->tlat; v.lon = s->tlon; }
@@ -58,7 +59,7 @@ static void draw_map(const struct trk *s)
     }
     if (s->has_start) mark(&v, s->slat, s->slon, 3, GFX_GREEN);
     if (s->have_target) mark(&v, s->tlat, s->tlon, 3, GFX_RED);
-    if (s->show >= 0 && s->show < (int)s->count) mark(&v, s->p_lat[s->show], s->p_lon[s->show], 5, C_FUCHSIA);
+    if (show) mark(&v, s->p_lat[s->show], s->p_lon[s->show], 5, C_FUCHSIA);
     if (s->have_fix && to_xy(&v, s->lat, s->lon, &x, &y)) {
         view_line(x - 3, y, x + 3, y, GFX_WHITE);
         view_line(x, y - 3, x, y + 3, GFX_WHITE);
@@ -92,16 +93,11 @@ static void draw_panel(const struct trk *s)
     d = put(b, live ? "OK:" : "BAD:");
     num(d, s->sats, 1);
     view_value(0, "FIX", b, live ? GFX_GREEN : GFX_RED);
-    if (nav) km_text(b, nav_distance(dx, dy)); else put(b, "---");
-    view_value(1, "DST KM", b, GFX_WHITE);
-    if (trk_heading_ok()) num(b, s->course, 3); else put(b, "---");
-    view_value(2, "HDG", b, GFX_WHITE);
-    if (nav) num(b, nav_bearing(dx, dy), 3); else put(b, "---");
-    view_value(3, "BRG", b, GFX_YELLOW);
-    if (s->have_fix) fixed(b, s->alt10 / 10, 0); else put(b, "---");
-    view_value(4, "ALT M", b, GFX_WHITE);
-    if (s->have_fix) fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1); else put(b, "---");
-    view_value(5, "SPD KMH", b, GFX_WHITE);
+    view_value(1, "DST KM", nav ? (km_text(b, nav_distance(dx, dy)), b) : 0, GFX_WHITE);
+    view_value(2, "HDG", trk_heading_ok() ? (num(b, s->course, 3), b) : 0, GFX_WHITE);
+    view_value(3, "BRG", nav ? (num(b, nav_bearing(dx, dy), 3), b) : 0, GFX_YELLOW);
+    view_value(4, "ALT M", s->have_fix ? (fixed(b, s->alt10 / 10, 0), b) : 0, GFX_WHITE);
+    view_value(5, "SPD KMH", s->have_fix ? (fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1), b) : 0, GFX_WHITE);
     num(b, s->count, 1);
     view_value(6, "PTS", b, C_CYAN);
 }

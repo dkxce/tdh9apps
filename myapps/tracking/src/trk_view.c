@@ -63,6 +63,7 @@ void view_value(unsigned row, const char *label, const char *value, uint16_t col
 {
     char b[10];
     unsigned i = 0;
+    if (!value) value = "---";
     for (; i < 9 && value[i]; i++) b[i] = value[i];
     for (; i < 9; i++) b[i] = ' ';
     b[9] = 0;

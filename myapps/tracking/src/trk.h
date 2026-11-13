@@ -21,7 +21,7 @@
 
 enum { C_DGREY = 0x4208, C_LGREY = 0xC618, C_CYAN = 0x07ff, C_FUCHSIA = 0xF81F };
 enum { KEY_STAR = 0x13, KEY_HASH = 0x14, KEY_0 = 2, KEY_5 = 7 };
-enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x710, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
+enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x6F4, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
 enum { REC_OFF, REC_ON, REC_PAUSED };
 enum { STEP_DIST, STEP_TIME };
 enum { FROM_MENU, FROM_RADAR, FROM_MAP };
@@ -33,14 +33,13 @@ enum { VIEW_W = 106 };   /* radar / map area in split mode; the value panel is t
 
 struct trk {
     uint32_t magic;
-    unsigned cmd, frame_len, escape, nmea_len;
+    uint8_t cmd, frame_len, escape, nmea_len;   /* frame_len: 0 before the command byte, then 1 */
     char nmea[NMEA];
     int32_t lat, lon, alt10;          /* last fix: microdegrees, metres x 10 */
-    unsigned course, spd10, sats;     /* degrees, knots x 10 */
+    uint16_t course, spd10, sats;     /* degrees, knots x 10 */
     char utc[6];                      /* hhmmss, utc[0] = 0 until seen */
-    uint8_t have_fix, fresh;
+    uint8_t have_fix, fresh, key, key_seen;
     uint32_t fix_tick;
-    unsigned key, key_seen;
     int32_t tlat, tlon;               /* navigation target */
     uint8_t have_target, rec, has_start, screen;
     int32_t slat, slon;               /* start point, kept when old points drop out */
@@ -78,7 +77,6 @@ char *num(char *d, uint32_t v, unsigned width);
 char *fixed(char *d, int32_t v, unsigned frac);
 char *km_text(char *d, uint32_t m);       /* "1.234" */
 char *dist_label(char *d, uint32_t m);    /* "250M", "2.5KM" */
-unsigned text_len(const char *s);
 
 int sin_deg(unsigned a);
 int cos_deg(unsigned a);
@@ -108,7 +106,7 @@ void view_line(int x0, int y0, int x1, int y1, uint16_t c);
 void view_circle(int cx, int cy, int r, uint16_t c);
 void view_spoke(int cx, int cy, unsigned a, int r, int *x, int *y);
 void view_arrow(int cx, int cy, unsigned a, int r, uint16_t c);
-void view_value(unsigned row, const char *label, const char *value, uint16_t color);
+void view_value(unsigned row, const char *label, const char *value, uint16_t color);   /* value 0: "---" */
 void view_status(unsigned x, unsigned y);   /* 9 x 9: recording green dot, stopped red dot, paused yellow bars */
 void view_frame(int full);                  /* clear the view; split: clear the panel and draw the divider */
 void view_rec_key(void);                    /* Menu: idle -> start, recording -> pause, paused -> resume */

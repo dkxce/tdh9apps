@@ -19,13 +19,6 @@ const uint16_t STEP_M[16] = { 10, 25, 50, 75, 100, 150, 200, 250, 300, 350, 400,
 
 char *put(char *d, const char *s) { while (*s) *d++ = *s++; *d = 0; return d; }
 
-unsigned text_len(const char *s)
-{
-    unsigned n = 0;
-    while (s[n]) n++;
-    return n;
-}
-
 char *num(char *d, uint32_t v, unsigned width)
 {
     char t[10];

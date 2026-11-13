@@ -23,7 +23,7 @@ static void dial(const struct trk *s, int cx, unsigned target, uint16_t tcol, un
         int x, y;
         const char *t = L[s->radar_mode][i];
         view_spoke(cx, CY, i * 90, R - 8, &x, &y);
-        gfx_text((unsigned)(x - (int)text_len(t) * 3), (unsigned)(y - 4), t, 2, 1, GFX_WHITE, GFX_BLACK);
+        gfx_text((unsigned)(x - (t[1] ? 6 : 3)), (unsigned)(y - 4), t, 2, 1, GFX_WHITE, GFX_BLACK);
     }
     if (course != NONE) view_arrow(cx, CY, course, R - 14, C_LGREY);
     if (target != NONE) view_arrow(cx, CY, target, R - 12, tcol);
@@ -32,20 +32,15 @@ static void dial(const struct trk *s, int cx, unsigned target, uint16_t tcol, un
 static void panel(const struct trk *s, int nav, int32_t dx, int32_t dy, int live)
 {
     char b[12];
-    if (nav) km_text(b, nav_distance(dx, dy)); else put(b, "---");
-    view_value(0, "DST KM", b, GFX_WHITE);
-    if (trk_heading_ok()) num(b, s->course, 3); else put(b, "---");
-    view_value(1, "HDG", b, GFX_WHITE);
-    if (nav) num(b, nav_bearing(dx, dy), 3); else put(b, "---");
-    view_value(2, "BRG", b, GFX_YELLOW);
-    if (s->have_fix) fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1); else put(b, "---");
-    view_value(3, "SPD KMH", b, GFX_WHITE);
-    if (s->have_fix) deg_text(b, s->lat); else put(b, "---");
-    view_value(4, "LAT", b, live ? GFX_WHITE : GFX_GREY);
-    if (s->have_fix) deg_text(b, s->lon); else put(b, "---");
-    view_value(5, "LON", b, live ? GFX_WHITE : GFX_GREY);
-    if (s->have_fix) fixed(b, s->alt10 / 10, 0); else put(b, "---");
-    view_value(6, "ALT M", b, GFX_WHITE);
+    int fix = s->have_fix;
+    uint16_t pos = live ? GFX_WHITE : GFX_GREY;
+    view_value(0, "DST KM", nav ? (km_text(b, nav_distance(dx, dy)), b) : 0, GFX_WHITE);
+    view_value(1, "HDG", trk_heading_ok() ? (num(b, s->course, 3), b) : 0, GFX_WHITE);
+    view_value(2, "BRG", nav ? (num(b, nav_bearing(dx, dy), 3), b) : 0, GFX_YELLOW);
+    view_value(3, "SPD KMH", fix ? (fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1), b) : 0, GFX_WHITE);
+    view_value(4, "LAT", fix ? (deg_text(b, s->lat), b) : 0, pos);
+    view_value(5, "LON", fix ? (deg_text(b, s->lon), b) : 0, pos);
+    view_value(6, "ALT M", fix ? (fixed(b, s->alt10 / 10, 0), b) : 0, GFX_WHITE);
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)

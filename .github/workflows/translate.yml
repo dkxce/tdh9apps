@@ -8,6 +8,7 @@ on:
       - 'README.md'
       - 'custom_firmware/README.md'
       - 'tracking/LIMITS.md'
+      - 'myapps/tracking/README.md'
       - 'lock-pass.md'
       - 'ram.md'
       - 'td9_apps.md'
@@ -31,6 +32,7 @@ jobs:
             README.md
             custom_firmware/README.md
             tracking/LIMITS.md
+            myapps/tracking/README.md
             lock-pass.md
             ram.md
             td9_apps.md

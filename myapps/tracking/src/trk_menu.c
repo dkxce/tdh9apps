@@ -7,7 +7,9 @@ enum { ROW_Y = 14, ROW_H = 10, ROWS = 10, STATUS_Y = 118 };
 
 static void center(unsigned y, const char *s, unsigned scale)
 {
-    unsigned w = text_len(s) * 6 * scale;
+    unsigned w = 0;
+    while (s[w]) w++;
+    w *= 6 * scale;
     gfx_text(w < H9_WIDTH ? (H9_WIDTH - w) / 2 : 0, y, s, 26, scale, GFX_WHITE, GFX_BLACK);
 }
 
