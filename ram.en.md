@@ -20,7 +20,7 @@ TIDRADIO TD-H9 memory card (JieLi AC695X) RAM addresses - physical
 | `0x12234` | NOR marker "ready" =`0x5AA5`[HW] |
 | `0x12550` / `0x12558` / `0x12560` | GPS fix: validity/latitude/longitude (signed micro-degrees) [STATIC] |
 | `0x13D10` | Last decoded AX.25 packet (324B) [STATIC] |
-| `0x16634` | APRS serial ring (2048 B; record indexes)`h[0x16634]`→`0x16E34`reading`0x16E36`) [HW] |
+| `0x16634` | APRS serial ring (2048 B; record indices)`h[0x16634]`→`0x16E34`reading`0x16E36`) [HW] |
 | `0x1D8B0` | 100-Hz tick counter [HW] |
 | `0x1D7D0` | Heap free-bit map (128 B blocks) |
 | `0x1D8A8` / `0x1D8AA` | Heap: blocks occupied/all [HW] |
@@ -35,18 +35,18 @@ TIDRADIO TD-H9 memory card (JieLi AC695X) RAM addresses - physical
 | Range. | Appointment |
 | --- | --- |
 | `0x00000–0x04FFF` | **Boot region**. HID recovery cannot read/write [HW] |
-| `0x05000–0xD9FFF` | **Appropriate image**Encrypted: Each 32-B XOR block with a CRC key stream`0xF181 ^ ((flash−0x5000)>>2)`[HW] |
+| `0x05000–0xD9FFF` | **Appropriate image**, encrypted: each 32-B XOR block with a CRC key stream`0xF181 ^ ((flash−0x5000)>>2)`[HW] |
 | `0xDA000–0xE9FFF` | **Settings VM**two banks of 32 KB (`0xDA000`, `0xE2000`) [STATIC] |
 | `0xEA000–0xFBFFF` | Free (72 KB), plain, executed on site`0x01EE5000`[HW] |
 | `0xFC000–0xFFFFF` | Stock data (leave alone) [HW] |
 
 ---
 
-## Resource chip (16 MiB SPI NOR, SPI2)
+## Resource chip (16 MB SPI NOR, SPI2)
 
 | Address | Appointment | Writes. |
 | --- | --- | --- |
-| `0x3A7000–0x3FFFFF` | The tail of the voice party: erased, runoff does not write [HW] | — |
+| `0x3A7000–0x3FFFFF` | Tail of the voice party: erased, runoff does not write [HW] | — |
 | `0x3FE000` | User VFO backup (log 16-B records) – overlap with the voice of the game [STATIC] | - |
 | `0x3FF000` | **Last GPS fix.**log`GFX1`, 256×16 B) [HW] | loader stub |
 | `0x717000–0x7FFFFF` | The tail of the font party [HW] | — |

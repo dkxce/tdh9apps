@@ -33,7 +33,7 @@ Scripts work exactly on the HID channel.
 | **TIDRADIO TD-H9** | walkie-talkie | you |
 | **USB-C cable with data transfer** | Physical connection (not "charging"!) | you |
 | **Python 3. 11. +** | performance | python.org |
-| **Poetry** | Dependency management and environment n | Python-poetry.org |
+| **Poetry** | Dependency management and environment n | python-poetry.org |
 | **Package`hid`**(pyhidapi) | access | `poetry add hid` |
 | **`hidapi.dll`(x64)** | native library`hid` | github.com/libusb/hidapi/releases |
 | **PySide6** | GUI only | `poetry add pyside6` |
@@ -259,6 +259,7 @@ Chat-20/
 
 ## 11. Other annexes
 
+* [Custom firmware](custom_firmware/README.md)password-enabled:[Hold Back.](custom_firmware/TD-H9-V1.0.38_dkxce_passlock.fw) | [Hold on #](custom_firmware/TD-H9-V1.0.38_dkxce_passlock_sharp.fw)
 * [Changing the boot image](td9_logo.md)
 * [Image uploading](td9_kpi.md)
 * [Downloading applications](td9_apps.md)
@@ -267,10 +268,18 @@ Chat-20/
 
 ---
 
-## 12. Screenshots of screens
+## 12. Screenshots of application widget screens
 
-<img src="scripts/render_lock_screens/screen_radio_lock_unlock.png"/> <img src="scripts/render_lock_screens/screen_radio_lock_menu.png"/> <img src="scripts/render_lock_screens/screen_new_passw.png"/>   
+### Menu and Passwordsman
+
+<img src="scripts/render_lock_screens/screen_radio_lock_locked.png"/> <img src="scripts/render_lock_screens/screen_radio_lock_menu.png"/> <img src="scripts/render_lock_screens/screen_new_passw.png"/>   
 <img src="scripts/render_lock_screens/screen_radio_lock_menu_selected.png"/> <img src="scripts/render_lock_screens/screen_radio_widget.png"/> <img src="scripts/render_lock_screens/screen_radio_widget_selected.png"/>
+
+### Tracking
+
+<img src="scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="scripts/render_tracker_screens/screen_map.png"/> <img src="scripts/render_tracker_screens/screen_menu.png"/>
+<img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/>
+<img src="scripts/render_tracker_screens/screen_radar.png"/> <img src="scripts/render_tracker_screens/screen_settings.png"/> <img src="scripts/render_tracker_screens/screen_step_dist.png"/>
 
 ---
 

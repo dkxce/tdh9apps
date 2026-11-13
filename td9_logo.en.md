@@ -46,7 +46,7 @@ Script before recording:
 
 ## Comments
 
-* **Requires firmware with write service**(H9 Toolbox / Custom) Without her (stock S1)
+* **Requires firmware with writing service**(H9 Toolbox / Custom) Without her (stock S1)
   The record is unavailable, he writes about it.
 * `--backup`defined in the interface, but automatic backup
   copy`write` **unrealized**. Make it for the backup.`read`manually:`poetry run python td9_logo.py read -o my-original-logo.bin`
