@@ -89,52 +89,50 @@ static long isqrt(long n)
     return x;
 }
 
-/* Great-circle distance squared in m^2 (integer, tangent plane). */
-static long nav_dist_sq(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
+/* Great-circle distance in metres between two points (microdegrees).
+ * Integer tangent-plane approximation, early-divided to avoid long overflow. */
+static long nav_distance_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
 {
     long cosl = cos_deg((unsigned)((lat1 >= 0 ? (unsigned)lat1 : -(unsigned)lat1) / 1000000) % 360);
     long dlat = (long)(lat2 - lat1);
     long dlon = (long)(lon2 - lon1);
-    long dy = dlat * 111320 / 1000000;
-    long dx = dlon * 111320 / 1000000 * cosl / 1024;
-    return dx * dx + dy * dy;
-}
-
-/* distance in metres */
-static long nav_distance_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
-{
-    return isqrt(nav_dist_sq(lat1, lon1, lat2, lon2));
+    /* 0.11132 m per microdegree of latitude */
+    long dy = (dlat / 100) * 111 / 10;            /* metres */
+    long dx = ((dlon / 100) * 111 / 10) * cosl / 1024;   /* metres */
+    long dxa = dx > 0 ? dx : -dx, dya = dy > 0 ? dy : -dy;
+    if (dxa > 40000 || dya > 40000) return dxa > dya ? dxa : dya; /* >40 km: square would overflow */
+    return isqrt(dx * dx + dy * dy);
 }
 
 /* Initial bearing in degrees (0-359) from p1 to p2 (microdegrees).
  * Integer atan2 via the Q10 table: map the dy/dx ratio through asin-like
  * arctan using the sin table (acceptable for navigation). */
+/* Initial bearing in degrees (0-359) from p1 to p2 (microdegrees).
+ * Integer atan2 approximation. */
 static unsigned nav_bearing_deg(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
 {
     long cosl = cos_deg((unsigned)((lat1 >= 0 ? (unsigned)lat1 : -(unsigned)lat1) / 1000000) % 360);
-    long dx = (long)(lon2 - lon1) * cosl / 1024;
-    long dy = (long)(lat2 - lat1);
-    /* angle in degrees whose tangent is dy/dx, found by scanning the table */
+    long dx = ((long)(lon2 - lon1) / 256) * cosl / 4;   /* scale to avoid overflow */
+    long dy = (long)(lat2 - lat1) / 256;
     unsigned ang = 0;
     if (dx == 0 && dy == 0) return 0;
     if (dx == 0) ang = dy > 0 ? 90 : 270;
     else {
-        long r = (dx > 0 ? dx : -dx) > (dy > 0 ? dy : -dy)
-               ? (dy * 1024) / (dx > 0 ? dx : -dx)     /* |tan| <= 1 */
-               : (dx * 1024) / (dy > 0 ? dy : -dy);    /* |tan| >  1 */
-        /* scan 0..45 degrees for the best table match */
+        long ax = dx > 0 ? dx : -dx, ay = dy > 0 ? dy : -dy;
+        /* normalise so the larger axis is in [1000..2000] to keep tan in Q10 */
+        long big = ax > ay ? ax : ay;
+        long s = big / 1500 + 1;
+        long nx = ax / s, ny = ay / s;
+        if (nx == 0) nx = 1;
+        if (ny == 0) ny = 1;
+        long r = (ax >= ay) ? (ny * 1024) / nx : (nx * 1024) / ny;  /* |slope| in Q10 */
         for (int d = 0; d <= 45; d++) {
             long t = (long)sin_deg((unsigned)d) * 1024 / cos_deg((unsigned)d);
             if (t >= r) { ang = (unsigned)d; break; }
         }
         if (ang == 0 && r > 1024) ang = 45;
-        if ((dx > 0 ? dx : -dx) > (dy > 0 ? dy : -dy)) {
-            /* angle = atan(r) already in ang */
-        } else {
-            ang = 90 - ang;
-        }
+        if (ax < ay) ang = 90 - ang;
     }
-    /* quadrant */
     if (dx < 0 && dy >= 0) ang = 180 - ang;
     else if (dx < 0 && dy < 0) ang = 180 + ang;
     else if (dx >= 0 && dy < 0) ang = 360 - (ang ? ang : 360);
@@ -143,7 +141,7 @@ static unsigned nav_bearing_deg(int32_t lat1, int32_t lon1, int32_t lat2, int32_
 
 /* ---- track state --------------------------------------------------------- */
 #define MAX_TRACK 250
-#define MIN_DIST_M_SQ 16  /* ~4 m min spacing between track points (m^2) */
+#define MIN_DIST_M 4  /* ~4 m min spacing between track points (metres) */
 
 static int32_t t_lat[MAX_TRACK], t_lon[MAX_TRACK];
 static int t_count;
@@ -151,8 +149,8 @@ static int t_count;
 static void track_add(int32_t lat, int32_t lon)
 {
     if (t_count) {
-        long d = nav_dist_sq(t_lat[t_count - 1], t_lon[t_count - 1], lat, lon);
-        if (d < MIN_DIST_M_SQ) return;
+        long d = nav_distance_m(t_lat[t_count - 1], t_lon[t_count - 1], lat, lon);
+        if (d < MIN_DIST_M) return;
     }
     if (t_count >= MAX_TRACK) {
         for (int i = 1; i < MAX_TRACK; i++) { t_lat[i - 1] = t_lat[i]; t_lon[i - 1] = t_lon[i]; }
@@ -182,15 +180,15 @@ static void draw_map(int32_t clat, int32_t clon, int32_t tlat, int32_t tlon, lon
     if (mxlon - mnlon < 200) { int32_t m = (mxlon + mnlon) / 2; mnlon = m - 100; mxlon = m + 100; }
 
     int cosl = cos_deg((unsigned)((clat >= 0 ? (unsigned)clat : -(unsigned)clat) / 1000000) % 360);
-    long dlat = (long)(mxlat - mnlat);
-    long dlon = (long)(mxlon - mnlon) * cosl / 1024;
+    long dlat = (long)(mxlat - mnlat) / 4;
+    long dlon = ((long)(mxlon - mnlon) / 4) * cosl / 1024;
     long span = dlat > dlon ? dlat : dlon;
     if (span < 1) span = 1;
 
     int cx = MX + MW / 2, cy = MY + MH / 2;
     int32_t clatc = (mnlat + mxlat) / 2, clonc = (mnlon + mxlon) / 2;
-#define TOX(lo) (cx + (int)(((long)((lo) - clonc) * cosl / 1024) * (MW - 16) / span))
-#define TOY(la) (cy - (int)(((long)((la) - clatc)) * (MH - 16) / span))
+#define TOX(lo) (cx + (int)((((long)((lo) - clonc) / 4) * cosl / 1024) * (MW - 16) / span))
+#define TOY(la) (cy - (int)((((long)((la) - clatc) / 4)) * (MH - 16) / span))
 
     /* track */
     for (int i = 1; i < t_count; i++)
@@ -202,9 +200,10 @@ static void draw_map(int32_t clat, int32_t clon, int32_t tlat, int32_t tlon, lon
 #undef TOX
 #undef TOY
 
-    /* scale bar: metres per pixel */
-    long mpp = 111320L * 100000 / span;             /* per degree / pixels-per-degree */
-    mpp = mpp / (MW - 16);
+    /* scale bar: metres per pixel. span is the lat/lon extent in
+     * microdegrees; ~0.11133 m per microdegree of latitude. */
+    long span_m = span * 111 / 100;                 /* metres (approx, avoids overflow) */
+    long mpp = span_m / (MW - 16);                  /* metres per pixel */
     long steps[] = { 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
     long chosen = 10000; int bar = 30;
     for (int i = 0; i < 10; i++) {
