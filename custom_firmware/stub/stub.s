@@ -4,7 +4,7 @@
  * game used (app+0xA77F0, before the S2 tables at app+0xA7E50) and is entered
  * from the same my_app loop hook (app+0x088906) Brick Breaker's launcher used.
  *
- * Hold Back about 0.4 s (40 stock hold ticks, as Brick Breaker):
+ * Hold # about 0.4 s (40 stock hold ticks; Back hold stays stock SATS INFO):
  *   1. ml_check validates the module bundle on the resource chip while the
  *      stock my_app frame is still intact. No valid bundle: the stock loop
  *      continues as if nothing happened (the radio stays usable).
@@ -41,7 +41,7 @@ ml_hotkey:
      * No 0x716FF8 read here. Then, if skip_check is 2 (locked and not yet
      * unlocked), open the toolbox (menu) at once; the menu at skip_check==2
      * runs PASSCODE, which verifies the password and clears the flag to 1.
-     * Otherwise fall through to the normal hold-Back entry. */
+     * Otherwise fall through to the normal hold-# entry. */
     call mlk_check
     r5 = 0x0002b8df
     r0 = b[r5+0] (u)
@@ -58,7 +58,7 @@ ml_hotkey:
 ml_no_auto_open:
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
-    if (r0 != 15) goto ml_back_released
+    if (r0 != 20) goto ml_back_released   /* # (0x14) */
 
     r2 = [sp+76]
     r1 = r2 >> 16
