@@ -273,10 +273,18 @@ Chat-20/
 
 ---
 
-## 12. Скриншоты экранов
+## 12. Скриншоты экранов виджетов приложений
+
+### Меню и Запаролеватель
 
 <img src="scripts/render_lock_screens/screen_radio_lock_locked.png"/> <img src="scripts/render_lock_screens/screen_radio_lock_menu.png"/> <img src="scripts/render_lock_screens/screen_new_passw.png"/>       
 <img src="scripts/render_lock_screens/screen_radio_lock_menu_selected.png"/> <img src="scripts/render_lock_screens/screen_radio_widget.png"/> <img src="scripts/render_lock_screens/screen_radio_widget_selected.png"/>
+
+### Tracking
+
+<img src="scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="scripts/render_tracker_screens/screen_map.png"/> <img src="scripts/render_tracker_screens/screen_menu.png"/> 
+<img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/> 
+<img src="scripts/render_tracker_screens/screen_radar.png"/> <img src="scripts/render_tracker_screens/screen_settings.png"/> <img src="scripts/render_tracker_screens/screen_step_dist.png"/> 
 
 ---
 
