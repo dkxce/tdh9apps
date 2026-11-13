@@ -33,7 +33,7 @@ Scripts work exactly on the HID channel.
 | **TIDRADIO TD-H9** | walkie-talkie | you |
 | **USB-C cable with data transfer** | Physical connection (not "charging"!) | you |
 | **Python 3. 11. +** | performance | python.org |
-| **Poetry** | Dependency management and environment n | python-poetry.org |
+| **Poetry** | Dependency management and environment n | Python-poetry.org |
 | **Package`hid`**(pyhidapi) | access | `poetry add hid` |
 | **`hidapi.dll`(x64)** | native library`hid` | github.com/libusb/hidapi/releases |
 | **PySide6** | GUI only | `poetry add pyside6` |
@@ -277,8 +277,8 @@ Chat-20/
 
 ### Tracking
 
-<img src="scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="scripts/render_tracker_screens/screen_map.png"/> <img src="scripts/render_tracker_screens/screen_menu.png"/>
-<img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/>
+<img src="scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="scripts/render_tracker_screens/screen_map.png"/> <img src="scripts/render_tracker_screens/screen_menu.png"/>   
+<img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/>   
 <img src="scripts/render_tracker_screens/screen_radar.png"/> <img src="scripts/render_tracker_screens/screen_settings.png"/> <img src="scripts/render_tracker_screens/screen_step_dist.png"/>
 
 ---

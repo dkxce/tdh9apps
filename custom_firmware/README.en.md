@@ -1,10 +1,10 @@
 # TD-H9 self-contained locking - materials for assembly
 
-Owner's radio security function (for the owner, no bypassing protection).
+Owner's radio security function (for the owner, no circumvention of protection).
 Two changes that together give offline lock when turned on:
 
 1. **`stub/`**- loader patch (`stub.s`) H9 Toolbox firmware.
-   At each turn on / restart checks the password in resource flash`0x716FF8`If the radio is locked and not yet unlocked in this session,
+   At each turn on / restart, check the password in resource flash`0x716FF8`If the radio is locked and not yet unlocked in this session,
    launcher`PASSLOCK`(input + rendering), does not draw the screen itself.
    Session unlock flag - spare-byte`0x2B8DF`satshare
    (Experiencing only soft-reset)`cpu_reset`; after a cold start,
@@ -30,7 +30,7 @@ Two changes that together give offline lock when turned on:
 
 ## Autobuild through GitHub Actions (recommended)
 
-Without access to`melidosian/h9toolbox`You don't need: workflow`build-lock.yml`Cloning it as a public vendor`stub/stub.patch`extract
+Without access to`melidosian/h9toolbox`You don't need workflow`build-lock.yml`Cloning it as a public vendor`stub/stub.patch`extract
 stock`app.bin`from`firmware/TD-H9-V1.0.38.fw`in your repos, download JieLi
 toolchain from your release`toolchain`And he collects firmware.
 
