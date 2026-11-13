@@ -1,11 +1,11 @@
-/* TRACKER: the app's visible module. Menus TRACKER, NAV TO (target, track
- * recording), CURRENT and SETTINGS; Fixed, Radar, Map and Points are the
- * hidden .TRK modules. */
+/* TRACKER: the app's visible module. Menus TRACKER and NAV TO (target,
+ * track recording), the CURRENT screen, HELP and ABOUT; Settings, Fixed, Radar,
+ * Map and Points are the hidden .TRK modules. */
 #include "trk.h"
 
 static void main_label(unsigned i, char *o)
 {
-    static const char *const T[5] = { "NAVTO", "RADAR", "MAP", "POINTS", "SETTINGS" };
+    static const char *const T[7] = { "NAVTO", "RADAR", "MAP", "POINTS", "SETTINGS", "HELP", "ABOUT" };
     put(o, T[i]);
 }
 
@@ -13,26 +13,6 @@ static void navto_label(unsigned i, char *o)
 {
     static const char *const T[5] = { "FIXED", "CURRENT", "START", "PAUSE", "STOP" };
     put(o, i == 3 && TRK->rec == REC_PAUSED ? "RESUME" : T[i]);
-}
-
-static void settings_label(unsigned i, char *o)
-{
-    struct trk *s = TRK;
-    if (i == 0) { o = put(o, "STORE PTS "); num(o, s->cap, 1); }
-    else if (i == 1) { o = put(o, "STEP DIST "); dist_label(o, STEP_M[s->step]); }
-    else put(o, "CLEAR LOG");
-}
-
-static void cap_label(unsigned i, char *o)
-{
-    o = num(o, (i + 1) * 40, 1);
-    put(o, TRK->cap == (i + 1) * 40 ? " PTS <" : " PTS");
-}
-
-static void step_label(unsigned i, char *o)
-{
-    o = dist_label(o, STEP_M[i]);
-    if (TRK->step == i) put(o, " <");
 }
 
 /* "N 55.75123" */
@@ -68,42 +48,59 @@ static void current(struct trk *s)
     trk_msg("<NO FIX>", a, b, 0);
 }
 
+/* Lines starting with a space are white, the rest yellow headings. */
+static void text_page(const char *title, const char *const *t, unsigned n)
+{
+    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+    menu_title(title);
+    for (unsigned i = 0; i < n; i++)
+        gfx_text(4, 13 + i * 9, t[i], 26, 1, t[i][0] == ' ' ? GFX_WHITE : GFX_YELLOW, GFX_BLACK);
+    while (!trk_key()) { trk_service(); h9_delay(10); }
+}
+
+static void help(void)
+{
+    static const char *const H[] = {
+        "RADAR", " UP/DN   MAP", " 5       POINTS", " 0       FULL / SPLIT", " *       N-E-S-W/12/36",
+        "MAP", " UP/DN   RADAR", " 5       POINTS", " 0       FULL / SPLIT", " * / #   SCALE -/+",
+        "BOTH", " BACK    TRACKER MENU" };
+    text_page("HELP", H, sizeof H / sizeof H[0]);
+}
+
+static void about(void)
+{
+    static const char *const A[] = {
+        " VERSION 1.0.0", " ",
+        "AUTHOR: DKXCE", " HTTPS://GITHUB.COM/DKXCE", " ",
+        "PROJECT:", " HTTPS://GITHUB.COM/DKXCE/", " TDH9APPS", " ",
+        " (C) DKXCE 2026" };
+    text_page("ABOUT", A, sizeof A / sizeof A[0]);
+}
+
 /* 1 when another module was requested */
 static int navto(struct trk *s)
 {
     unsigned sel = 0;
     for (;;) {
-        int r = menu_run("NAV TO", 5, sel, navto_label, 0);
+        int r = menu_run("NAV TO", 5, sel, navto_label);
         if (r < 0) return 0;
         sel = (unsigned)r;
         if (r == 0) { s->screen = SCR_NAVTO; trk_run(".TRK FIXED"); return 1; }
         if (r == 1) current(s);
-        else if (r == 2) { trk_start(); trk_msg("<STARTED>", 0, 0, 80); }
-        else if (r == 3) {
+        else if (r == 2) {
+            trk_start();
+            trk_msg("<STARTED>", 0, 0, 80);
+            trk_run(".TRK RADAR");
+            return 1;
+        } else if (r == 3) {
             if (s->rec == REC_ON) { s->rec = REC_PAUSED; trk_msg("<PAUSED>", 0, 0, 80); }
-            else if (s->rec == REC_PAUSED) { s->rec = REC_ON; trk_msg("<RESUMED>", 0, 0, 80); }
-            else trk_msg("<STOPPED>", 0, 0, 80);
+            else if (s->rec == REC_PAUSED) {
+                s->rec = REC_ON;
+                trk_msg("<RESUMED>", 0, 0, 80);
+                trk_run(".TRK RADAR");
+                return 1;
+            } else trk_msg("<STOPPED>", 0, 0, 80);
         } else { s->rec = REC_OFF; trk_msg("<STOPPED>", 0, 0, 80); }
-    }
-}
-
-static void settings(struct trk *s)
-{
-    unsigned sel = 0;
-    for (;;) {
-        int r = menu_run("SETTINGS", 3, sel, settings_label, 0);
-        if (r < 0) return;
-        sel = (unsigned)r;
-        if (r == 0) {
-            int c = menu_run("STORE PTS", 4, s->cap / 40u - 1u, cap_label, 0);
-            if (c >= 0) trk_set_cap(((unsigned)c + 1) * 40);
-        } else if (r == 1) {
-            int c = menu_run("STEP DIST", 16, s->step, step_label, 0);
-            if (c >= 0) s->step = (uint8_t)c;
-        } else {
-            trk_clear();
-            trk_msg("<CLEARED>", 0, 0, 80);
-        }
     }
 }
 
@@ -112,19 +109,21 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     (void)api; (void)self;
     struct trk *s = trk_open();
     if (!s) return 0;
-    unsigned sel = 0;
+    s->from = FROM_MENU;
     if (s->screen == SCR_NAVTO) {
         s->screen = SCR_MAIN;
         if (navto(s)) return 0;
     }
     for (;;) {
-        int r = menu_run("TRACKER", 5, sel, main_label, 0);
+        int r = menu_run("TRACKER", 7, s->main_sel, main_label);
         if (r < 0) return 0;
-        sel = (unsigned)r;
+        s->main_sel = (uint8_t)r;
         if (r == 0) { if (navto(s)) return 0; }
-        else if (r == 4) settings(s);
+        else if (r == 5) help();
+        else if (r == 6) about();
         else {
-            trk_run(r == 1 ? ".TRK RADAR" : r == 2 ? ".TRK MAP" : ".TRK POINTS");
+            static const char *const NEXT[4] = { ".TRK RADAR", ".TRK MAP", ".TRK POINTS", ".TRK SETUP" };
+            trk_run(NEXT[r - 1]);
             return 0;
         }
     }

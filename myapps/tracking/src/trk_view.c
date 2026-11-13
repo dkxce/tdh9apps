@@ -1,10 +1,11 @@
-/* TRACKER radar / map drawing: primitives clipped to the view (x < VIEW_W)
- * and the value panel on the right. */
+/* TRACKER radar / map drawing: primitives clipped to the view (x <
+ * TRK->view_w: VIEW_W split, H9_WIDTH full screen), the value panel on the
+ * right and the recording status icon. */
 #include "trk.h"
 
 void view_px(int x, int y, uint16_t c)
 {
-    if (x < 0 || x >= VIEW_W || y < 0 || y >= H9_HEIGHT) return;
+    if (x < 0 || x >= TRK->view_w || y < 0 || y >= H9_HEIGHT) return;
     gfx_fill((unsigned)x, (unsigned)y, 1, 1, c);
 }
 
@@ -67,4 +68,29 @@ void view_value(unsigned row, const char *label, const char *value, uint16_t col
     b[9] = 0;
     gfx_text(VIEW_W + 2, row * 18, label, 9, 1, GFX_GREY, GFX_BLACK);
     gfx_text(VIEW_W + 2, row * 18 + 8, b, 9, 1, color, GFX_BLACK);
+}
+
+void view_status(unsigned x, unsigned y)
+{
+    static const uint8_t HALF[9] = { 1, 2, 3, 4, 4, 4, 3, 2, 1 };   /* dot of radius 4 */
+    unsigned rec = TRK->rec;
+    gfx_fill(x, y, 9, 9, GFX_BLACK);
+    if (rec == REC_PAUSED) {
+        gfx_fill(x + 1, y, 3, 9, GFX_YELLOW);
+        gfx_fill(x + 5, y, 3, 9, GFX_YELLOW);
+        return;
+    }
+    for (unsigned i = 0; i < 9; i++)
+        gfx_fill(x + 4 - HALF[i], y + i, 2u * HALF[i] + 1, 1, rec == REC_ON ? GFX_GREEN : GFX_RED);
+}
+
+void view_frame(int full)
+{
+    struct trk *s = TRK;
+    s->view_w = (uint8_t)(full ? H9_WIDTH : VIEW_W);
+    gfx_fill(0, 0, s->view_w, H9_HEIGHT, GFX_BLACK);
+    if (!full) {
+        gfx_fill(VIEW_W, 0, 1, H9_HEIGHT, C_DGREY);
+        gfx_fill(VIEW_W + 1, 0, H9_WIDTH - VIEW_W - 1, H9_HEIGHT, GFX_BLACK);
+    }
 }

@@ -70,7 +70,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     if (!s) return 0;
     unsigned sel = 0;
     for (;;) {
-        int r = menu_run("FIXED", 2, sel, fixed_label, 0);
+        int r = menu_run("FIXED", 2, sel, fixed_label);
         if (r < 0) { trk_run("TRACKER"); return 0; }
         sel = (unsigned)r;
         int32_t lat = s->have_target ? s->tlat : s->lat;

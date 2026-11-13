@@ -1,8 +1,9 @@
 /* TRACKER menus: three colours (black background, white text, the current
- * item on dark grey) and the short <MESSAGE> screens. */
+ * item on dark grey), the recording status on the bottom line, and the
+ * short <MESSAGE> screens. */
 #include "trk.h"
 
-enum { ROW_Y = 14, ROW_H = 10, ROWS = 11 };
+enum { ROW_Y = 14, ROW_H = 10, ROWS = 10, STATUS_Y = 118 };
 
 static void center(unsigned y, const char *s, unsigned scale)
 {
@@ -30,16 +31,23 @@ static void row(unsigned y, unsigned n, const char *label, int selected)
     gfx_text(4, y + 1, b, 26, 1, GFX_WHITE, bg);
 }
 
-/* Up / Down move (wrapping; with up_exits, Up on the first item returns
- * MENU_TOP), Menu picks, digit 1-9 picks that item (0 = item 10), Back
- * returns MENU_BACK. */
-int menu_run(const char *title, unsigned count, unsigned sel, menu_label_fn label, int up_exits)
+static void status_line(void)
+{
+    static const char *const S[3] = { "STATUS: IDLE", "STATUS: RECORDING...", "STATUS: PAUSED" };
+    gfx_fill(0, STATUS_Y - 3, H9_WIDTH, 1, C_DGREY);
+    gfx_text(4, STATUS_Y, S[TRK->rec], 20, 1, GFX_WHITE, GFX_BLACK);
+}
+
+/* Up / Down move (wrapping), Menu picks, digit 1-9 picks that item
+ * (0 = item 10), Back returns MENU_BACK. */
+int menu_run(const char *title, unsigned count, unsigned sel, menu_label_fn label)
 {
     char b[24];
     unsigned top = 0, dirty = 1;
     if (sel >= count) sel = 0;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     menu_title(title);
+    status_line();
     for (;;) {
         trk_service();
         if (dirty) {
@@ -55,9 +63,7 @@ int menu_run(const char *title, unsigned count, unsigned sel, menu_label_fn labe
         if (k == H9_KEY_BACK) return MENU_BACK;
         if (k == H9_KEY_MENU) return (int)sel;
         if (k == H9_KEY_UP) {
-            if (sel) sel--;
-            else if (up_exits) return MENU_TOP;
-            else sel = count - 1;
+            sel = sel ? sel - 1 : count - 1;
             dirty = 1;
         } else if (k == H9_KEY_DOWN) {
             sel = sel + 1 < count ? sel + 1 : 0;

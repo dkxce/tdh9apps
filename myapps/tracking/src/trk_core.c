@@ -6,6 +6,8 @@
 #define GPS_LAT (*(const volatile int32_t *)0x12558)
 #define GPS_LON (*(const volatile int32_t *)0x12560)
 
+#define GPS_TZ (*(const volatile uint8_t *)0xC1C6)   /* radio Time zone option: UTC-12..+12 as 0..24 */
+
 #define RING ((volatile uint8_t *)0x16634)
 #define RING_WRITE (*(volatile uint16_t *)0x16E34)
 #define RING_READ (*(volatile uint16_t *)0x16E36)
@@ -164,21 +166,42 @@ static void drop_oldest(struct trk *s)
     if (s->show >= 0) s->show--;
 }
 
+/* UTC second of day from the last RMC / GGA time, -1 unknown */
+static int32_t utc_now(const struct trk *s)
+{
+    if (!s->utc[0]) return -1;
+    return (int32_t)(((s->utc[0] - '0') * 10 + (s->utc[1] - '0')) * 3600 +
+                     ((s->utc[2] - '0') * 10 + (s->utc[3] - '0')) * 60 + (s->utc[4] - '0') * 10 + (s->utc[5] - '0'));
+}
+
 static void track_add(struct trk *s)
 {
+    uint32_t sec = (TICK - s->start_tick) / 100u;
+    if (s->start_utc < 0 && s->utc[0]) s->start_utc = (utc_now(s) - (int32_t)(sec % 86400u) + 86400) % 86400;
     if (!s->has_start) { s->slat = s->lat; s->slon = s->lon; s->has_start = 1; }
     if (s->count) {
         unsigned n = s->count - 1u;
-        if (dist_between(s->p_lat[n], s->p_lon[n], s->lat, s->lon) < STEP_M[s->step]) return;
+        if (s->step_mode == STEP_TIME) {
+            if (sec < s->p_t[n] * 2u + s->step_time) return;
+        } else if (dist_between(s->p_lat[n], s->p_lon[n], s->lat, s->lon) < STEP_M[s->step]) return;
     } else {
         s->base_dist = dist_between(s->slat, s->slon, s->lat, s->lon);
     }
     while (s->count >= s->cap) drop_oldest(s);
-    uint32_t t = (TICK - s->start_tick) / 200u;
+    sec /= 2;
     s->p_lat[s->count] = s->lat;
     s->p_lon[s->count] = s->lon;
-    s->p_t[s->count] = (uint16_t)(t > 0xFFFF ? 0xFFFF : t);
+    s->p_t[s->count] = (uint16_t)(sec > 0xFFFF ? 0xFFFF : sec);
     s->count++;
+}
+
+int32_t trk_point_clock(unsigned i)
+{
+    struct trk *s = TRK;
+    unsigned tz = GPS_TZ;
+    if (s->start_utc < 0 || i >= s->count) return -1;
+    int32_t t = s->start_utc + (int32_t)s->p_t[i] * 2 + (tz <= 24 ? ((int32_t)tz - 12) * 3600 : 0);
+    return (t % 86400 + 86400) % 86400;
 }
 
 void trk_start(void)
@@ -190,6 +213,7 @@ void trk_start(void)
     s->show = -1;
     s->cur = 0;
     s->start_tick = TICK;
+    s->start_utc = utc_now(s);
     s->rec = REC_ON;
     if (trk_live()) track_add(s);
 }
@@ -333,14 +357,18 @@ struct trk *trk_open(void)
         for (unsigned i = 0; i < sizeof *s; i++) z[i] = 0;
         s->magic = TRK_MAGIC;
         s->cap = MAX_PTS;
-        s->zoom = 3;
+        s->zoom = 4;   /* 1KM */
         s->show = -1;
+        s->start_utc = -1;
+        s->step_time = 30;
+        s->hdg_filter = 1;
         if (GPS_VALID) {   /* stock's last fix before the first module started */
             got_fix(s, GPS_LAT, GPS_LON);
             s->fresh = 0;
         }
     }
     s->key = s->key_seen = h9_key();
+    s->view_w = VIEW_W;
     return s;
 }
 
@@ -358,6 +386,12 @@ int trk_live(void)
 {
     struct trk *s = TRK;
     return s->have_fix && TICK - s->fix_tick < FIX_TIMEOUT;
+}
+
+int trk_heading_ok(void)
+{
+    struct trk *s = TRK;
+    return trk_live() && (!s->hdg_filter || s->spd10 >= 11);   /* 1.1 knots, about 2 km/h */
 }
 
 /* A key once two readings agree (the keypad ADC has no debounce). */

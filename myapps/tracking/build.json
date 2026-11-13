@@ -1,9 +1,7 @@
-{
-  "modules": [
-    { "name": "TRACKER",     "sources": ["trk_core.c", "trk_menu.c", "tracker.c", "trk_end.c"] },
-    { "name": ".TRK FIXED",  "sources": ["trk_core.c", "trk_menu.c", "fixed.c", "trk_end.c"] },
-    { "name": ".TRK RADAR",  "sources": ["trk_core.c", "trk_view.c", "radar.c", "trk_end.c"] },
-    { "name": ".TRK MAP",    "sources": ["trk_core.c", "trk_view.c", "map.c", "trk_end.c"] },
-    { "name": ".TRK POINTS", "sources": ["trk_core.c", "trk_menu.c", "points.c", "trk_end.c"] }
-  ]
-}
+{ "modules": [
+  { "name": "TRACKER", "sources": ["trk_core.c","trk_menu.c","tracker.c","trk_end.c"] },
+  { "name": ".TRK FIXED", "sources": ["trk_core.c","trk_menu.c","fixed.c","trk_end.c"] },
+  { "name": ".TRK SETUP", "sources": ["trk_core.c","trk_menu.c","setup.c","trk_end.c"] },
+  { "name": ".TRK RADAR", "sources": ["trk_core.c","trk_view.c","radar.c","trk_end.c"] },
+  { "name": ".TRK MAP", "sources": ["trk_core.c","trk_view.c","map.c","trk_end.c"] },
+  { "name": ".TRK POINTS", "sources": ["trk_core.c","trk_menu.c","points.c","trk_end.c"] } ] }
