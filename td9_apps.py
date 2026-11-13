@@ -14,8 +14,8 @@ What it does / Что делает:
   - reads back and verifies before marking the upload COMPLETE, exactly like
     the App Manager page.
 
-Requires H9 Toolbox Firmware on the radio (S2 write service).
-Требует прошивку H9 Toolbox Firmware (S2 write service).
+Requires H9 Toolbox Firmware on the radio (S2 write service) or *dkxce_passlock.fw
+Требует прошивку H9 Toolbox Firmware (S2 write service) или *dkxce_passlock.fw
 
 Usage / Использование:
   python td9_apps.py list                                  -- show apps in ./apps_catalog
