@@ -104,6 +104,6 @@ python td9_kpi.py passread                        # прочитать 8 бай�
 ## Стек
 
 Для работы функции блокировки должны быть установлены следующие компоненты:
-- Прошивка [TD-H9-V1.0.38_dkxce_passlock.fw](custom_firmware/TD-H9-V1.0.38_dkxce_passlock.fw]
-- Меню [menu.h9mod](myapps/menu.h9mod]
-- Модуль приложения [passlock.h9mod](myapps/passlock.h9mod]
+- Прошивка [TD-H9-V1.0.38_dkxce_passlock.fw](custom_firmware/TD-H9-V1.0.38_dkxce_passlock.fw)
+- Меню [menu.h9mod](myapps/menu.h9mod)
+- Модуль приложения [passlock.h9mod](myapps/passlock.h9mod)
