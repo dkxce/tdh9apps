@@ -1,0 +1,44 @@
+name: Build myapps modules
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download JieLi toolchain from this repo's GitHub Release
+        run: |
+          # Тулчейн лежит как asset в собственном Release проекта (тег "toolchain").
+          # Берём URL asset через GitHub API, чтобы не зависеть от точного имени файла.
+          mkdir -p toolchain
+          ASSET_URL=$(curl -sSL \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/toolchain" \
+            | python3 -c "import sys,json;d=json.load(sys.stdin);print([a['url'] for a in d['assets'] if a['name'].endswith('.tar.xz')][0])")
+          echo "asset: $ASSET_URL"
+          curl -sSL -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/octet-stream" \
+            -o toolchain/jieli-linux-toolchains.tar.xz "$ASSET_URL"
+          file toolchain/jieli-linux-toolchains.tar.xz
+          tar -xJf toolchain/jieli-linux-toolchains.tar.xz -C toolchain
+          ls toolchain/jieli-linux-toolchains-20260730.1/pi32v2/bin/clang
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build all apps
+        run: |
+          JIELI_TOOLCHAIN="$GITHUB_WORKSPACE/toolchain/jieli-linux-toolchains-20260730.1" \
+            python3 myapps/build_all.py
+
+      - name: Upload .h9mod artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: myapps-h9mod
+          path: myapps/*.h9mod

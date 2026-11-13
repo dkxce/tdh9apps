@@ -1,0 +1,241 @@
+name: Build TD-H9 lock firmware
+
+on:
+  workflow_dispatch:
+
+env:
+  PATCH: custom_firmware/stub/stub.patch
+  H9FW: firmware/TD-H9-V1.0.38.fw
+  VENDOR_ASSET: buildable.zip
+  VENDOR_TAG: buildable
+  # The minimal vendor ships firmware.py only under brick-breaker/tools/
+  # (no top-level firmware-research/h9-firmware-research in the archive).
+  HFR: vendor/firmware-research/brick-breaker/tools/h9-firmware-research
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- stock package from this repo -----------------------------
+      - name: Check stock firmware present
+        run: |
+          ls -l "$H9FW"
+          sha256sum "$H9FW"
+
+      # Download + extract the vendor archive. Uses absolute $GITHUB_WORKSPACE
+      # paths so the step is independent of the shell's cwd. Python zipfile
+      # normalizes path separators (the archive may use forward or back
+      # slashes). If extraction lands in the wrong place we fail loudly.
+      - name: Download vendor archive from release
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          cd "$ROOT"
+          echo "=== releases with tag '$VENDOR_TAG' ==="
+          gh release view "$VENDOR_TAG" --json tagName,assets 2>&1 || true
+          mkdir -p "$ROOT/vendor"
+          echo "=== downloading asset '$VENDOR_ASSET' ==="
+          gh release download "$VENDOR_TAG" \
+            --pattern "$VENDOR_ASSET" \
+            --output "$ROOT/vendor/vendor.zip"
+          ls -l "$ROOT/vendor/vendor.zip"
+          python3 - "$ROOT/vendor/vendor.zip" "$ROOT/vendor" <<'PY'
+          import sys, zipfile, os
+          zsrc, zdst = sys.argv[1], sys.argv[2]
+          with zipfile.ZipFile(zsrc) as z:
+              for info in z.infolist():
+                  # Normalize separators explicitly: archives built on Windows
+                  # with some tools store "\" in entry names. Treat both "/"
+                  # and "\" as path separators so the tree is always nested.
+                  rel = info.filename.replace("\\", "/")
+                  if rel.startswith("/") or ".." in rel.split("/"):
+                      raise SystemExit("unsafe zip entry: " + repr(info.filename))
+                  if rel.endswith("/"):
+                      os.makedirs(os.path.join(zdst, rel), exist_ok=True)
+                      continue
+                  target = os.path.join(zdst, rel)
+                  os.makedirs(os.path.dirname(target), exist_ok=True)
+                  with z.open(info) as src, open(target, "wb") as dst:
+                      while True:
+                          chunk = src.read(1 << 16)
+                          if not chunk:
+                              break
+                          dst.write(chunk)
+              print("extracted", len(z.infolist()), "entries")
+          stub = os.path.join(zdst, "firmware-research", "module-loader", "src", "stub.s")
+          if os.path.exists(stub):
+              print("OK:", stub)
+          else:
+              for root, dirs, files in os.walk(zdst):
+                  lvl = root.replace(zdst, "").count(os.sep)
+                  print("  " * lvl + os.path.basename(root) + "/")
+                  for f in files:
+                      print("  " * (lvl + 1) + f)
+              raise SystemExit("vendor tree missing after extract: " + stub)
+          PY
+          rm "$ROOT/vendor/vendor.zip"
+          ls "$ROOT/vendor/firmware-research/module-loader/src/stub.s"
+
+      # ---- apply our stub patch --------------------------------------
+      # The vendored archive is not a git repo, so apply with `patch` instead
+      # of `git apply`. The patch paths (src/stub.s) are relative to
+      # module-loader/, matching the original CI invocation.
+      - name: Apply owner-lock stub patch
+        run: |
+          cp "$PATCH" vendor-patch.patch
+          cd vendor/firmware-research/module-loader
+          # The vendored archive was built on Windows: stub.s is CRLF. Our
+          # patch is LF, and `patch` fails on a line-ending mismatch. Normalize
+          # to LF before applying.
+          sed -i 's/\r$//' src/stub.s
+          patch -p1 < ../../../vendor-patch.patch
+          cd "$GITHUB_WORKSPACE"
+          echo "patched stub.s lines:"
+          wc -l vendor/firmware-research/module-loader/src/stub.s
+
+      # Our menu adds the owner-lock boot path (skip_check == 2 -> run PASSCODE
+      # or fail open). The vendored copy does not have it, so overwrite it with
+      # ours before module-loader/build.py compiles the bundle.
+      - name: Install owner-lock menu.c
+        run: |
+          cp custom_firmware/menu/menu.c \
+             vendor/firmware-research/module-loader/modules/menu/menu.c
+          grep -c "SKIP_CHECK" \
+            vendor/firmware-research/module-loader/modules/menu/menu.c
+
+      # Build a minimal bundle: only the menu (module 0) ships in the
+      # lock-firmware, so the radio's toolbox shows just the lock flow and
+      # nothing else. The rest of build_modules (bb, apron, satpass...) only
+      # sets up the vendor catalog; we override the returned list.
+      - name: Ship only the menu module
+        run: |
+          cd vendor/firmware-research/module-loader
+          python3 - <<'PY'
+          import re, pathlib
+          p = pathlib.Path("build.py")
+          src = p.read_text()
+          old = "    return [menu, bb, *screens, aprs, satpass, satplot, sattrack, satauto, satdata, gps, vfo_probe, about]"
+          if old not in src:
+              raise SystemExit("module list return not found")
+          src = src.replace(old, "    return [menu]")
+          p.write_text(src)
+          print("module list -> [menu]")
+          PY
+          cd "$GITHUB_WORKSPACE"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ---- JieLi toolchain from your release --------------------------
+      # Same layout as in .github/workflows/build-module.yml: the archive is
+      # extracted under toolchain/ and JIELI_TOOLCHAIN points at the folder
+      # that directly contains pi32v2/ (it is NOT the pi32v2 dir itself).
+      - name: Download JieLi toolchain from release
+        run: |
+          mkdir -p toolchain
+          ASSET_URL=$(curl -sSL \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/toolchain" \
+            | python3 -c "import sys,json;d=json.load(sys.stdin);print([a['url'] for a in d['assets'] if a['name'].endswith('.tar.xz')][0])")
+          echo "asset: $ASSET_URL"
+          curl -sSL -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/octet-stream" \
+            -o toolchain/jieli-linux-toolchains.tar.xz "$ASSET_URL"
+          tar -xJf toolchain/jieli-linux-toolchains.tar.xz -C toolchain
+          echo "--- toolchain layout ---"
+          ls toolchain/jieli-linux-toolchains-20260730.1/pi32v2/bin/clang
+          TC="$GITHUB_WORKSPACE/toolchain/jieli-linux-toolchains-20260730.1"
+          echo "JIELI_TOOLCHAIN=$TC" >> "$GITHUB_ENV"
+
+      # ---- extract stock app.bin from the .fw --------------------------
+      - name: Extract app.bin from stock package
+        run: |
+          cd "$HFR"
+          python3 firmware.py extract "$GITHUB_WORKSPACE/$H9FW" --output wicked-extract
+          ls -l wicked-extract/app.bin wicked-extract/flash.bin
+          echo "app.bin sha: $(sha256sum wicked-extract/app.bin)"
+
+      # ---- resource-service: bb-s2 base -------------------------------
+      # --output must live INSIDE the vendor tree: build.py requires every
+      # intermediate .o to be under firmware-research (it is mounted as /w
+      # in the JieLi Docker image, and paths are relativized to RESEARCH).
+      # The module loader also expects the produced raw at
+      # resource-service/build/h9_toolbox_firmware_NOT_FOR_FLASH.raw.
+      - name: Build resource-service (bb-s2)
+        run: |
+          cd vendor/firmware-research/resource-service
+          OUT="$GITHUB_WORKSPACE/vendor/firmware-research/resource-service/build"
+          JIELI_TOOLCHAIN="$JIELI_TOOLCHAIN" \
+            python3 -I build.py --stage bb-s2 \
+              --stock-image "$GITHUB_WORKSPACE/$HFR/wicked-extract/app.bin" \
+              --stock-package "$GITHUB_WORKSPACE/$H9FW" \
+              --output "$OUT"
+          ls -l "$OUT"/h9_toolbox_firmware_NOT_FOR_FLASH.raw
+
+      # ---- module-loader: the stub + apps -----------------------------
+      # module-loader/build.py compiles .c through `docker run h9-jieli`.
+      # That image does not exist on linux-latest runners, so we rewrite
+      # compile_c to call the extracted JieLi clang directly; ubuntu-latest
+      # already has libstdc++6/zlib1g/libtinfo6, which the toolchain needs.
+      - name: Patch module-loader to call clang directly
+        run: |
+          cd vendor/firmware-research/module-loader
+          python3 - <<'PY'
+          import re, pathlib
+          p = pathlib.Path("build.py")
+          src = p.read_text()
+          old = re.search(r'def compile_c\(source: Path, out: Path, toolchain: Path\) -> Path:.*?return obj', src, re.S)
+          if not old:
+              raise SystemExit("compile_c not found")
+          # -Wno-missing-braces: the vendored APRS third-party code
+          # (smartbeacon.c) triggers this with the newer clang, and -Werror
+          # turns it into a hard error.
+          new = (
+            "def compile_c(source: Path, out: Path, toolchain: Path) -> Path:\n"
+            "    obj = out / (source.stem + \".o\")\n"
+            "    clang = toolchain / \"pi32v2\" / \"bin\" / \"clang\"\n"
+            "    run([str(clang), *C_FLAGS, \"-Wno-missing-braces\",\n"
+            "         \"-I\", str(ROOT / \"modules\" / \"common\"),\n"
+            "         \"-c\", str(source), \"-o\", str(obj)])\n"
+            "    return obj"
+          )
+          p.write_text(src[:old.start()] + new + src[old.end():])
+          print("patched compile_c")
+          PY
+          cd "$GITHUB_WORKSPACE"
+
+      - name: Build module-loader firmware
+        run: |
+          # The module loader looks up H9TB_RAW at resource-service/build
+          # (absolute default), which the step above already filled. Its own
+          # --output is also kept inside the vendor tree so the JieLi paths
+          # stay relativizable to RESEARCH.
+          cd vendor/firmware-research/module-loader
+          OUT="$GITHUB_WORKSPACE/vendor/firmware-research/module-loader/build"
+          mkdir -p "$OUT"
+          JIELI_TOOLCHAIN="$JIELI_TOOLCHAIN" \
+            python3 -I build.py \
+              --stock-image "$GITHUB_WORKSPACE/$HFR/wicked-extract/app.bin" \
+              --stock-package "$GITHUB_WORKSPACE/$H9FW" \
+              --output "$OUT"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          ML="$GITHUB_WORKSPACE/vendor/firmware-research/module-loader/build"
+          cp "$ML"/h9_toolbox_modules_OFFLINE_EXPERIMENT.fw "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
+          cp "$ML"/h9_modules.bin "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
+          cp "$ML"/h9_toolbox_modules-manifest.json "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
+          ls -l "$GITHUB_WORKSPACE/artifacts"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lock-firmware
+          path: artifacts/*
