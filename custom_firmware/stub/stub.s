@@ -59,7 +59,7 @@ ml_no_auto_open:
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
 	 /* Проверяем клавишу: # (20), * (19)  */
-    if (r0 == 20) goto ml_holded        /* # (0x14) */
+    if (r0 == 20) goto ml_holded   /* # (0x14) */
     if (r0 == 19) goto ml_holded   /* * (0x13) */
     // if (r0 == 19) goto ml_star_holded   /* * (0x13) */
     goto ml_back_released
@@ -130,7 +130,8 @@ mlk_check:
     r4 = 0x0002b8df
     r0 = b[r4+0] (u)
     if (r0 == 1) goto mlk_done       /* already unlocked this session */
-    if (r0 == 2) goto mlk_done       /* already marked locked */
+    if (r0 == 2) goto mlk_done       /* already need enter password */
+    if (r0 == 3) goto mlk_done       /* already marked locked */
     /* fresh: read the 8 lock bytes */
     sp += -8
     r0 = sp + 0
