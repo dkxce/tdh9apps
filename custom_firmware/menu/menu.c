@@ -124,7 +124,7 @@ static void message(const char *text)
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
 	/* check keb locked */
-	//if (*KEY_HOLDED == 1) return 0;
+	if (*KEY_HOLDED == 1) return 0;
 	
     uint8_t header[H9_BUNDLE_HEADER];
     (void)self;
@@ -133,8 +133,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned modules = count > 1 ? count - 1 : 0;
 	
 	// SKIP_CHECK, KEY_HOLDED, KB_UNLOCKED
-	unsigned state = 0;
-	if (*KB_UNLOCKED == 1) state = 
+	//unsigned state = 0;
+	//if (*KB_UNLOCKED == 1) state = 
 	
 /*	
  *   ├─ (skip_check == 0 || skip_check == 0xFF) -> # первый проход
