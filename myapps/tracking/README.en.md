@@ -2,7 +2,7 @@
 
 Tracker app: shows current position, navigation to target
 (fixed coordinates or stored point), records track in memory
-radios and gives a view on the radar and the map. Written for the TD-H9 platform
+radio and gives you a view on the radar and the map. Written for the TD-H9 platform
 
 One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/setup) and five hidden screens`.TRK *`which
 switching.
@@ -27,7 +27,7 @@ switching.
 | --- | --- |
 | menu | in the menu - selection / confirmation;**on RADAR / MAP - recording / pause / continuation** |
 | Up/down | menu list; transition RADAR MAP |
-| 1..9. | Quick selection of menu items, entering numbers in editors |
+| 1..9. | Quick selection of menu item, entering numbers in editors |
 | 5 | Points |
 | 0 | RADAR/MAP: full screen or split with value field |
 | `*` | RADAR: Dial signatures (N E S W / 12 03 06 09 / 00 09 18 27); MAP: scale − |
@@ -48,7 +48,8 @@ switching.
   top left, scale bottom.
 * **Points**- a list of points with distance / time from the start; at the point -
   full description`SHOW` / `NAVIGATE`.
-* **SETTINGS** — `STORE PTS`(40...160),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(5..3600c),`STEP MODE`(DIST/TIME),`CLEAR LOG`.
+* **SETTINGS** — `STORE PTS`(40...160),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME),`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
+  The step is quicker.
 
 ## GPS and track recording
 
@@ -102,7 +103,7 @@ After installation - application menu (holding back)**TRACKER**.
 ## Assembly and limitations
 
 * Flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`(anything)
-  warning drops CI.
+  CI drops the warning.
 * Without libc and without floating arithmetic; global`const`- tables,
   variable data - in`struct trk`.
 * Body of each module ≤ 8192 bytes; when overflowing`trk_open`show`MODULE TOO BIG +N`It doesn't start. Exact limits and techniques
