@@ -11,8 +11,9 @@
  * display redraw (the calls SAT PASS makes after a VFO step), because stock
  * does not redraw by itself.
  *
- * Holding Back is what opened the menu, so input is ignored until every key
- * has been released.
+ * Holding # is what opened the menu, so input is ignored until every key
+ * has been released. With exactly one visible module (USB UPDATE aside) the
+ * menu opened by # runs it at once; when it returns the list is shown.
  *
  * Owner-lock integration (dkxce lock firmware):
  *   skip_check lives at 0x2B8DF: 0/fresh, 1=unlocked, 2=locked.
@@ -28,6 +29,7 @@
 
 enum { TITLE_H = 22, ROW_Y = 26, ROW_H = 18, ROWS = 5, FOOT_Y = 117, MAX_ITEMS = 64 };
 enum { ITEM_USB = -2 };
+enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #ifndef STOCK_REFRESH
 #define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
 #define STOCK_REDRAW() ((void (*)(unsigned))0x01E53306)(0)    /* marks the three display rows for redraw */
@@ -136,7 +138,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     /* A module asked for another one: run it without showing the menu. */
     volatile struct h9_request *rq = H9_REQUEST;
-    if (rq->magic != H9_REQUEST_MAGIC) vfo_restore_pending(api->read);   /* opened by hold Back: the tracker is stopped */
+    if (rq->magic != H9_REQUEST_MAGIC) vfo_restore_pending(api->read);   /* opened by hold #: the tracker is stopped */
     if (rq->magic == H9_REQUEST_MAGIC) {
         rq->magic = 0;
         for (unsigned i = 1; i < count; i++) {
@@ -157,6 +159,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (first != '.') vis[shown++] = (uint8_t)i;
     }
     modules = shown;
+
+    /* Opened by holding # with a single app: run it at once. # is no longer
+     * held when that app returns, so leaving it shows this list. */
+    if (modules == 1 && h9_key() == KEY_HASH) return vis[0];
+
     unsigned items = modules + 1, selected = 0, top = 0;
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);

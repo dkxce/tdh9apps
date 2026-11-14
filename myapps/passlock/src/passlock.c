@@ -210,7 +210,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
  * the lock armed); otherwise returns 0 (back to the toolbox menu). */
 static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 {
-    enum { LOCK, UNLOCK, LOCKNOW, EXIT } sel = LOCK;
+    enum { LOCK, UNLOCK, EXIT } sel = LOCK;
     for (;;) {
         title_line();
 		clear_body();
@@ -219,17 +219,14 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                  sel == LOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(4, 60, sel == UNLOCK  ? "[UNLOCK]    Clear pass" : " UNLOCK     Clear pass", 24, 1,
                  sel == UNLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
-		if (pass_locked(pass))
-			gfx_text(4, 76, sel == LOCKNOW ? "[LOCK NOW]  Lock radio" : " LOCK NOW   Lock radio", 24, 1,
-                 sel == LOCKNOW ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
-        gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Exit2Menu" : " EXIT       Menu", 24, 1,
+		gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Exit2Menu" : " EXIT       Menu", 24, 1,
                  sel == EXIT ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(2, 118, "UP/DN: MOVE      BACK: OK", 30, 1, GFX_GREY, GFX_BLACK);
         gfx_wait_release();
 
         unsigned k = gfx_wait_key();
-        if (k == H9_KEY_UP)       { sel = sel == LOCK ? EXIT : (unsigned)(sel - 1); if (!pass_locked(pass) && sel == LOCKNOW) sel = (unsigned)(sel - 1); }
-        else if (k == H9_KEY_DOWN){ sel = (sel == EXIT) ? LOCK : (unsigned)(sel + 1); if (!pass_locked(pass) && sel == LOCKNOW) sel = (unsigned)(sel + 1); }
+        if (k == H9_KEY_UP)       { sel = sel == LOCK ? EXIT : (unsigned)(sel - 1); }
+        else if (k == H9_KEY_DOWN){ sel = (sel == EXIT) ? LOCK : (unsigned)(sel + 1); }
         else if (k == H9_KEY_MENU) {
             char buf[PASS_LEN + 1];
             unsigned char newpass[PASS_LEN];
@@ -250,10 +247,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                     }
                     h9_delay(70);                    
                 }
-			} else if (sel == LOCKNOW) {							
-				h9_delay(20);
-				goto locknow_done;
-            } else if (sel == UNLOCK) {
+			} else if (sel == UNLOCK) {
                 for (i = 0; i < PASS_LEN; i++) newpass[i] = 0xFF;
                 if (write_pass(api, newpass) == 0) {
                     api->read(pass, PASS_ADDR, PASS_LEN);
@@ -268,10 +262,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
         }
         else if (k == H9_KEY_BACK) return 0;
     }
-	locknow_done:
-	*SKIP_CHECK = SKIP_LOCKED;	
-	clear_all();
-    return H9_RETURN_RADIO_LOCAL;
+	return 0;
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)
@@ -290,7 +281,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         clear_all();
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
-        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto okb; /* ignore UP/DOWN here */
+        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto okb;
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
         char ascii[PASS_LEN + 1];
@@ -312,15 +303,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         ok: ;
         clear_all();
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
-        gfx_text(4, 118, "UP/DN: LOCK    BACK: MENU", 30, 1, GFX_GREY, GFX_BLACK);
+        gfx_text(4, 118, "NEED PASSWORD TO RESET", 30, 1, GFX_GREY, GFX_BLACK);
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
         if (rc == 1) return 0;                      /* Back cancels to menu */
-        if (rc == 2) {
-			*SKIP_CHECK = SKIP_LOCKED;
-			clear_all();
-			return H9_RETURN_RADIO_LOCAL;  /* UP/DOWN = LOCK NOW: leave locked */
-		}
-
+        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto okb;
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
         char ascii[PASS_LEN + 1];
@@ -328,7 +314,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         unsigned i = 0;
         while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
         if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
-            gfx_text(4, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
+            gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
             h9_delay(90);
             goto ok;
         }
