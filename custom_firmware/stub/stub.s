@@ -59,9 +59,15 @@ ml_no_auto_open:
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
 	 /* Проверяем клавишу: # (20), * (19)  */
-    // if (r0 == 20) goto ml_holded   /* # (0x14) */
-    if (r0 == 19) goto ml_holded   /* * (0x13) */
+    if (r0 == 20) goto ml_holded        /* # (0x14) */
+    if (r0 == 19) goto ml_star_holded   /* * (0x13) */
     goto ml_back_released
+
+ml_star_holded:
+	r3 = 0x0000c3c8
+    r0 = b[r3+0] (u)
+	if (r0 == 0) goto ml_no_auto_open 
+	goto ml_holded
 
 ml_holded:
     r2 = [sp+76]
