@@ -34,7 +34,7 @@ mlk_kb_unl:
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
     if (r0 == 20) goto mlk_hold
-    if (r0 != 19) goto mlk_keyup
+    if (r0 != 20) goto mlk_keyup // was 19
     r0 = r4 & 2
     if (r0 != 0) goto mlk_hold
 

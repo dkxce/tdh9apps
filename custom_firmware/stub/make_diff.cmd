@@ -1,0 +1,1 @@
+git diff stub_base.s stub.s > stub.patch

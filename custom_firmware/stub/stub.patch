@@ -1,7 +1,7 @@
-diff --git a/src/stub.s b/src/stub.s
-index 52428ba..4af775c 100644
---- a/src/stub.s
-+++ b/src/stub.s
+diff --git a/stub_base.s b/stub.s
+index 52428ba..59b58a2 100644
+--- a/stub_base.s
++++ b/stub.s
 @@ -1,46 +1,49 @@
 -/* H9 Toolbox module loader: the main-flash stub (offline, not yet flashed).
 - *
@@ -73,7 +73,7 @@ index 52428ba..4af775c 100644
      r0 = b[r3+0] (u)
 -    if (r0 != 15) goto ml_back_released
 +    if (r0 == 20) goto mlk_hold
-+    if (r0 != 19) goto mlk_keyup
++    if (r0 != 20) goto mlk_keyup // was 19
 +    r0 = r4 & 2
 +    if (r0 != 0) goto mlk_hold
  
