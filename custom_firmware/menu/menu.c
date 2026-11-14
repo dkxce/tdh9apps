@@ -42,7 +42,7 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_NORMAL   3u
 #define SKIP_NORMAL   3u
 
-#define KEY_HOLDED  ((volatile unsigned char *)0x0С3AFu)
+#define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu)
 #define KB_UNLOCKED ((volatile unsigned char *)0x0C3C8u)
 
 #define SKIP_KBLOCKED    2u /*  признак блокировки клавиатуры */
@@ -121,10 +121,17 @@ static void message(const char *text)
     gfx_text(4, ROW_Y + 8, text, 12, 2, GFX_YELLOW, GFX_BLACK);
 }
 
+static char *hex(char *d, uint32_t v, unsigned n)
+{
+    for (unsigned i = n; i--;) { d[i] = "0123456789ABCDEF"[v & 15]; v >>= 4; }
+    d[n] = 0;
+    return d + n;
+}
+
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
 	/* check keb locked */
-	if (*KEY_HOLDED == 1) return 0;
+	//if (*KEY_HOLDED == 1) return 0;
 	
     uint8_t header[H9_BUNDLE_HEADER];
     (void)self;
@@ -208,9 +215,12 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     unsigned items = modules + 1, selected = 0, top = 0;
 
+	char buf[3];          // 2 символа под сам байт + 1 под завершающий ноль '\0'
+	hex(buf, *KEY_HOLDED, 2); 
+	
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
-    gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
+    gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
     gfx_text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, GFX_GREY, GFX_BLACK);
