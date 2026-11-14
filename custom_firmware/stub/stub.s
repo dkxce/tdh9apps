@@ -4,7 +4,7 @@
  * magic upper half 0xA5A5, stock hold count at arming below it.
  *
  * skip_check at 0x2B8DF bitmask:
- *   2   SKIP_KBLOCKED   keypad locked (0xC3C8 == 0)
+ *   2   SKIP_KBLOCKED   keypad locked (0xC3C8 != 0)
  *   4   SKIP_HASHPSSD   # held ~0.4 s
  *   8   SKIP_STARPSSD   * held ~0.4 s (while locked)
  *   16  SKIP_PSWENTRD   password confirmed this session (set by menu)
@@ -22,10 +22,10 @@ ml_hotkey:
     r0 = 0xb0                        /* keep STARTED (128) | PASSEXST (32) | PSWENTRD (16) */
     r4 &= r0
 
-    /* Проверяем заблокирована ли клавиатура (0x0C3C8: 0 = locked, 1 = unlocked) */
+    /* Проверяем заблокирована ли клавиатура (0x0C3C8: 0 = unlocked, != 0 = locked) */
     r3 = 0x0000c3c8
     r0 = b[r3+0] (u)
-    if (r0 != 0) goto mlk_kb_unl
+    if (r0 == 0) goto mlk_kb_unl
     r0 = 2                           /* SKIP_KBLOCKED */
     r4 |= r0
 mlk_kb_unl:
@@ -34,7 +34,7 @@ mlk_kb_unl:
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
     if (r0 == 20) goto mlk_hold
-    if (r0 != 20) goto mlk_keyup // was 19
+    if (r0 != 19) goto mlk_keyup
     r0 = r4 & 2
     if (r0 != 0) goto mlk_hold
 
