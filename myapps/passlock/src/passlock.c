@@ -318,7 +318,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
 		if (rc == 2) goto okb; 
-		if ((rc == 1) && (**KEY_HOLDED == 0xF0)) {
+		if ((rc == 1) && (*KEY_HOLDED == 0xF0)) {
 			h9_key();
 			h9_delay(90);
 			clear_all();
