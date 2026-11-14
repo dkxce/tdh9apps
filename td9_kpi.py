@@ -22,6 +22,17 @@ Usage / Использование:
       -- write a pack of raw RGB565 .bin pictures (+ .png/.jpg via Pillow)
   python td9_kpi.py dump --addr <start> --out <file>
       -- dump raw bytes of a range (for inspection)
+  python td9_kpi.py pass  --password <1234> [--out <backup>]
+      -- set the radio lock password (modern S2: whole-sector erase+program)
+  python td9_kpi.py passclear [--out <backup>]
+      -- clear the lock password to 0xFF (same whole-sector rewrite)
+  python td9_kpi.py passread
+      -- read and interpret the 8 lock bytes
+  python td9_kpi.py pass --force --withdump <sector.bin> [--password <1234>]
+      -- hard write: use <sector.bin> as the base instead of the radio's
+         current sector (rebuild/rescue after a partial erase)
+  Before any erase the sector @0x716000 is dumped to --out (default
+  kpi-dump.bin) so the font can be restored if the link drops mid-write.
 
 Depends on: pip install bleak, (optional) Pillow for png/jpg input.
 Radio on + Bluetooth programming mode, H9 Toolbox Firmware (S2 write service).
@@ -68,6 +79,7 @@ SECTOR_SIZE = 0x1000
 # Пароль блокировки рации: 8 байт непосредственно перед областью картинок.
 PASS_ADDR = 0x716FF8
 PASS_LEN = 8
+PASS_SECTOR = PASS_ADDR & ~(SECTOR_SIZE - 1)   # 0x716000, whole 4 KiB sector to erase
 
 # Bulk read (S1 fast) — порт из web resource.mjs / radio.mjs. Наибольший
 # выигрыш: каждая операция читает до 2 КиБ пачкой notify, а не 32 байта.
@@ -710,9 +722,9 @@ async def async_main(args):
                 else:
                     print("  -> not locked (non-digit/non-space byte present).")
                 return 0
-            # pass / passclear write the 8-byte record at PASS_ADDR.
-            # Format: up to 8 digits; shorter passwords pad with spaces (0x20).
-            # Cleared (no password): the record is all 0xFF (erased).
+            # pass / passclear rewrite the 8-byte record at PASS_ADDR.
+            # Format: up to 8 digits; shorter passwords pad with spaces (0x20);
+            # cleared (no password) = all 0xFF (erased).
             pw_bytes = None
             if args.command == "pass":
                 if isinstance(args.password, str) and args.password:
@@ -725,29 +737,46 @@ async def async_main(args):
                     raise RuntimeError("pass requires --password (1-8 digits)")
             else:  # passclear
                 pw_bytes = bytes([ERASED]) * PASS_LEN
-            # Program ONLY into erased cells: the lock record shares a 4 KiB
-            # sector with the font glyphs, so erasing the sector would destroy
-            # the font. We require every target byte to be 0xFF before
-            # programming (busy rule). S2 program writes 32-byte data frames at
-            # the write pointer (DATA_ADDRESS); use data_frame + a begin program
-            # on the PASS_ADDR sector, but never the erase operation.
-            await radio.enter_programming()
-            try:
-                cur = await radio.read_any(PASS_ADDR, PASS_LEN)
-                if any(b != ERASED for b in cur):
-                    raise RuntimeError("lock record not erased (0xFF); refusing to overwrite "
-                                       "without erasing the font sector")
-                # Align: program a 32-byte block covering PASS_ADDR.
-                blk = PASS_ADDR & ~(BLOCK - 1)
-                blk_off = PASS_ADDR - blk
-                curblk = bytearray(await radio.read_any(blk, BLOCK))
-                curblk[blk_off:blk_off + PASS_LEN] = pw_bytes
-                await radio.send_write(control_frame(OP["program"], blk))
-                await radio.expect_write(blk, "begin program")
-                await radio.send_write(data_frame(bytes(curblk)))
-                await radio.expect_write(blk, "program")
-            finally:
-                await radio.leave_programming()
+            # The record lives in the last 4 KiB sector of the font partition
+            # (0x716000..0x717000), so we must not destroy the glyphs. NOR flash
+            # programming can only clear bits (1->0), so once a password is
+            # written we cannot turn those cells back to 0xFF without erasing.
+            # The S2 controller refuses to program cells that are not erased
+            # ("target not erased"), so a partial rewrite of the 32-byte block
+            # is impossible. The only way is to erase the whole 4 KiB sector and
+            # program it back verbatim, replacing just the 8 lock cells:
+            #   read sector -> patch PASS_ADDR..+8 -> erase sector -> program all
+            # (that is exactly what write_range() does).
+            #
+            # Before erasing we always dump the current sector to a file so the
+            # font can be recovered if the link drops mid-erase. With --force
+            # --withdump <file> the BASE sector is taken from that dump instead
+            # of the radio (hard write): useful when the radio cannot read its
+            # own cells, or to rebuild after a partial erase.
+            if args.force:
+                if not args.withdump:
+                    raise RuntimeError("--force requires --withdump <file>")
+                with open(args.withdump, "rb") as f:
+                    base = f.read()
+                if len(base) != SECTOR:
+                    raise RuntimeError("--withdump must be a %d-byte sector dump (got %d)" %
+                                       (SECTOR, len(base)))
+                sector = bytearray(base)
+                print("Force-write: using sector base from %s (%d bytes)." %
+                      (args.withdump, len(base)))
+            else:
+                await radio.enter_programming()
+                try:
+                    sector = bytearray(await radio.read_any(PASS_SECTOR, SECTOR))
+                finally:
+                    await radio.leave_programming()
+            # Backup the ORIGINAL sector (before patching) so the font can be
+            # restored if the link drops mid-erase. Default name is --out.
+            with open(args.out, "wb") as f:
+                f.write(bytes(sector))
+                print("Sector backup (original, unpatched) saved to %s for recovery." % args.out)
+            sector[PASS_ADDR - PASS_SECTOR:PASS_ADDR - PASS_SECTOR + PASS_LEN] = pw_bytes
+            await write_range(radio, PASS_SECTOR, bytes(sector))
             # verify
             await radio.enter_programming()
             try:
@@ -790,6 +819,12 @@ def main():
     ap.add_argument("--span", default="0x1000", help="span bytes for check/dump (default 4 KiB = one sector; writing checks its exact pack size)")
     ap.add_argument("--out", default="kpi-dump.bin", help="output file for 'dump'")
     ap.add_argument("--password", default=None, help="lock password (1-8 digits) for 'pass'")
+    ap.add_argument("--force", action="store_true",
+                    help="hard write for 'pass'/'passclear': write a whole sector dump, not just "
+                         "the 8 lock bytes / жёсткая замена: писать целый сектор (--withdump).")
+    ap.add_argument("--withdump", default=None, metavar="FILE",
+                    help="path to a whole-sector (4 KiB) dump used as the base instead of the "
+                         "radio's current sector, for --force / базовый дамп сектора для --force.")
     ap.add_argument("--scan-timeout", type=int, default=8)
     args = ap.parse_args()
     if args.command in ("write", "forcewrite") and not args.images:

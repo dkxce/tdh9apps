@@ -162,7 +162,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     /* Opened by holding # with a single app: run it at once. # is no longer
      * held when that app returns, so leaving it shows this list. */
-    if (modules == 1 && h9_key() == KEY_HASH) return vis[0];
+    if (modules == 1 && h9_key() == KEY_HASH) 
+	{
+		int pc = find_passcode(api, count);
+		if (!pc) return vis[0];
+	};
 
     unsigned items = modules + 1, selected = 0, top = 0;
 

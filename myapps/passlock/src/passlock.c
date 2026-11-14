@@ -306,7 +306,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 118, "NEED PASSWORD TO RESET", 30, 1, GFX_GREY, GFX_BLACK);
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
         if (rc == 1) return 0;                      /* Back cancels to menu */
-        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto okb;
+        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto ok;
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
         char ascii[PASS_LEN + 1];
