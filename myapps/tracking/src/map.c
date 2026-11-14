@@ -18,13 +18,13 @@ static uint32_t zoom_m(unsigned i)
     return v;
 }
 
-struct view { int32_t lat, lon, scale; int mx; };
+struct view { int32_t ll[2], scale; int mx; };   /* ll: centre lat, lon */
 
 /* Screen position of a point; 0 when it is too far off the view to draw a line to. */
 static int to_xy(const struct view *v, int32_t lat, int32_t lon, int *x, int *y)
 {
     int32_t dx, dy;
-    nav_delta(v->lat, v->lon, lat, lon, &dx, &dy);
+    nav_delta(v->ll[0], v->ll[1], lat, lon, &dx, &dy);
     if ((uint32_t)dx + 20000000u > 40000000u || (uint32_t)dy + 20000000u > 40000000u) return 0;
     *x = v->mx + (int)(dx * BAR / v->scale);
     *y = MY - (int)(dy * BAR / v->scale);
@@ -46,20 +46,22 @@ static void draw_map(const struct trk *s)
     view_frame(s->map_full);
     v.mx = s->view_w / 2;
     v.scale = (int32_t)zoom_m(s->zoom);
-    if (show) { v.lat = s->p_lat[s->show]; v.lon = s->p_lon[s->show]; }
-    else if (s->have_fix) { v.lat = s->lat; v.lon = s->lon; }
-    else if (s->has_start) { v.lat = s->slat; v.lon = s->slon; }
-    else { v.lat = s->tlat; v.lon = s->tlon; }
+    if (show) trk_point((unsigned)s->show, v.ll);
+    else if (s->have_fix) { v.ll[0] = s->lat; v.ll[1] = s->lon; }
+    else if (s->has_start) { v.ll[0] = s->slat; v.ll[1] = s->slon; }
+    else { v.ll[0] = s->tlat; v.ll[1] = s->tlon; }
 
     for (unsigned i = 0; i < s->count; i++) {
-        int ok = to_xy(&v, s->p_lat[i], s->p_lon[i], &x, &y);
+        int32_t ll[2];
+        trk_point(i, ll);
+        int ok = to_xy(&v, ll[0], ll[1], &x, &y);
         if (ok && prev) view_line(px, py, x, y, C_CYAN);
         else if (ok) view_px(x, y, C_CYAN);
         px = x; py = y; prev = ok;
     }
     if (s->has_start) mark(&v, s->slat, s->slon, 3, GFX_GREEN);
     if (s->have_target) mark(&v, s->tlat, s->tlon, 3, GFX_RED);
-    if (show) mark(&v, s->p_lat[s->show], s->p_lon[s->show], 5, C_FUCHSIA);
+    if (show) mark(&v, v.ll[0], v.ll[1], 5, C_FUCHSIA);   /* the view is centred on it */
     if (s->have_fix && to_xy(&v, s->lat, s->lon, &x, &y)) {
         view_line(x - 3, y, x + 3, y, GFX_WHITE);
         view_line(x, y - 3, x, y + 3, GFX_WHITE);

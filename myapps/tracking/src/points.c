@@ -9,7 +9,7 @@ static void point_row(unsigned i, char *o)
 {
     o = km_text(o, trk_point_dist(i));
     o = put(o, "KM ");
-    time_text(o, TRK->p_t[i] * 2u);
+    time_text(o, TRK->p[i].t * 2u);
 }
 
 static char *clock_text(char *o, int32_t t)
@@ -28,14 +28,14 @@ static void point_item(unsigned i, char *o)
     unsigned p = (unsigned)s->cur;
     if (i == 0) { o = put(o, "NUMBER "); num(o, p + 1, 1); }
     else if (i == 1) { o = put(o, "DIST "); o = km_text(o, trk_point_dist(p)); put(o, "KM"); }
-    else if (i == 2) { o = put(o, "ELAPSED "); time_text(o, s->p_t[p] * 2u); }
+    else if (i == 2) { o = put(o, "ELAPSED "); time_text(o, s->p[p].t * 2u); }
     else if (i == 3) { o = put(o, "TIME "); clock_text(o, trk_point_clock(p)); }
     else if (i == 4) {
         o = put(o, "EST DIST ");
         if (s->have_fix) {
-            int32_t dx, dy;
-            nav_delta(s->lat, s->lon, s->p_lat[p], s->p_lon[p], &dx, &dy);
-            o = km_text(o, nav_distance(dx, dy));
+            int32_t ll[2];
+            trk_point(p, ll);
+            o = km_text(o, dist_between(s->lat, s->lon, ll[0], ll[1]));
             put(o, "KM");
         } else put(o, "---");
     }
@@ -69,8 +69,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             sel = (unsigned)c;
             if (c == 5) { s->show = s->cur; trk_run(".TRK MAP"); return 0; }
             if (c == 6) {
-                s->tlat = s->p_lat[s->cur];
-                s->tlon = s->p_lon[s->cur];
+                int32_t ll[2];
+                trk_point((unsigned)s->cur, ll);
+                s->tlat = ll[0];
+                s->tlon = ll[1];
                 s->have_target = 1;
                 trk_run(".TRK RADAR");
                 return 0;

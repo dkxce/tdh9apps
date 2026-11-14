@@ -9,6 +9,7 @@
 #define RING_MASK 2047u
 
 _Static_assert(sizeof(struct trk) <= STATE_BYTES, "state must fit below the request mailbox");
+_Static_assert(H9_SHARED_TOP - STATE_BYTES >= BODY_TOP + 0x60, "state must stay above satshare");
 
 const uint16_t STEP_M[16] = { 10, 25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 1000, 2500, 5000 };
 
@@ -126,14 +127,38 @@ uint32_t dist_between(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
 
 /* ---- track ------------------------------------------------------------------ */
 
+static void put24(uint8_t *p, int32_t v)
+{
+    uint32_t u = (uint32_t)v;
+    p[0] = (uint8_t)u;
+    p[1] = (uint8_t)(u >> 8);
+    p[2] = (uint8_t)(u >> 16);
+}
+
+static int32_t get24(const uint8_t *p)
+{
+    return (int32_t)((uint32_t)p[0] << 8 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 24) >> 8;
+}
+
+void trk_point(unsigned i, int32_t *ll)
+{
+    const struct trk *s = TRK;
+    ll[0] = s->slat + get24(s->p[i].lat) * 2;
+    ll[1] = s->slon + get24(s->p[i].lon) * 2;
+}
+
+uint32_t trk_leg(unsigned i)
+{
+    int32_t a[2], b[2];
+    trk_point(i - 1, a);
+    trk_point(i, b);
+    return dist_between(a[0], a[1], b[0], b[1]);
+}
+
 void trk_drop_oldest(struct trk *s)
 {
-    if (s->count > 1) s->base_dist += dist_between(s->p_lat[0], s->p_lon[0], s->p_lat[1], s->p_lon[1]);
-    for (unsigned i = 1; i < s->count; i++) {
-        s->p_lat[i - 1] = s->p_lat[i];
-        s->p_lon[i - 1] = s->p_lon[i];
-        s->p_t[i - 1] = s->p_t[i];
-    }
+    if (s->count > 1) s->base_dist += trk_leg(1);
+    for (unsigned i = 1; i < s->count; i++) s->p[i - 1] = s->p[i];
     s->count--;
     if (s->show >= 0) s->show--;
 }
@@ -146,6 +171,8 @@ int32_t trk_utc_now(const struct trk *s)
                      ((s->utc[2] - '0') * 10 + (s->utc[3] - '0')) * 60 + (s->utc[4] - '0') * 10 + (s->utc[5] - '0'));
 }
 
+/* A fix farther than PT_RANGE from the start cannot be stored: recording
+ * pauses and too_far asks the user (trk_far) to stop or start a new track. */
 void trk_track_add(struct trk *s)
 {
     uint32_t sec = (TICK - s->start_tick) / 100u;
@@ -153,17 +180,27 @@ void trk_track_add(struct trk *s)
     if (!s->has_start) { s->slat = s->lat; s->slon = s->lon; s->has_start = 1; }
     if (s->count) {
         unsigned n = s->count - 1u, dist_mode = s->step_mode != STEP_TIME;
-        if (sec < s->p_t[n] * 2u + (dist_mode ? DIST_GAP : s->step_time)) return;
-        if (dist_mode && dist_between(s->p_lat[n], s->p_lon[n], s->lat, s->lon) < STEP_M[s->step]) return;
+        if (sec < s->p[n].t * 2u + (dist_mode ? DIST_GAP : s->step_time)) return;
+        if (dist_mode) {
+            int32_t ll[2];
+            trk_point(n, ll);
+            if (dist_between(ll[0], ll[1], s->lat, s->lon) < STEP_M[s->step]) return;
+        }
     } else {
         s->base_dist = dist_between(s->slat, s->slon, s->lat, s->lon);
     }
+    int32_t dlat = s->lat - s->slat, dlon = s->lon - s->slon;
+    if ((uint32_t)dlat + PT_RANGE > 2u * PT_RANGE || (uint32_t)dlon + PT_RANGE > 2u * PT_RANGE) {
+        s->rec = REC_PAUSED;
+        s->too_far = 1;
+        return;
+    }
     while (s->count >= s->cap) trk_drop_oldest(s);
+    struct pt *p = &s->p[s->count++];
+    put24(p->lat, dlat / 2);
+    put24(p->lon, dlon / 2);
     sec /= 2;
-    s->p_lat[s->count] = s->lat;
-    s->p_lon[s->count] = s->lon;
-    s->p_t[s->count] = (uint16_t)(sec > 0xFFFF ? 0xFFFF : sec);
-    s->count++;
+    p->t = (uint16_t)(sec > 0xFFFF ? 0xFFFF : sec);
 }
 
 void trk_start(void)
@@ -172,6 +209,7 @@ void trk_start(void)
     s->count = 0;
     s->base_dist = 0;
     s->has_start = 0;
+    s->too_far = 0;
     s->show = -1;
     s->cur = 0;
     s->start_tick = TICK;
@@ -282,10 +320,9 @@ static void poll_ring(struct trk *s)
 struct trk *trk_open(void)
 {
     struct trk *s = TRK;
-    uint32_t end = (uint32_t)&trk_end + sizeof trk_end;
-    if (end > (uint32_t)s) {
+    if (TRK_BODY_END > BODY_TOP) {
         char b[24];
-        num(put(b, "MODULE TOO BIG +"), end - (uint32_t)s, 1);
+        num(put(b, "MODULE TOO BIG +"), TRK_BODY_END - BODY_TOP, 1);
         gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
         gfx_text(4, 50, b, 22, 1, GFX_RED, GFX_BLACK);
         gfx_wait_key();
@@ -327,6 +364,7 @@ unsigned trk_key(void)
 {
     struct trk *s = TRK;
     unsigned k = h9_key();
+    if (s->too_far) return H9_KEY_BACK;
     if (k != s->key) { s->key = k; return 0; }
     if (k == s->key_seen) return 0;
     s->key_seen = k;

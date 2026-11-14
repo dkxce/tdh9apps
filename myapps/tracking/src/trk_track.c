@@ -19,7 +19,7 @@ int32_t trk_point_clock(unsigned i)
     struct trk *s = TRK;
     unsigned tz = GPS_TZ;
     if (s->start_utc < 0 || i >= s->count) return -1;
-    int32_t t = s->start_utc + (int32_t)s->p_t[i] * 2 + (tz <= 24 ? ((int32_t)tz - 12) * 3600 : 0);
+    int32_t t = s->start_utc + (int32_t)s->p[i].t * 2 + (tz <= 24 ? ((int32_t)tz - 12) * 3600 : 0);
     return (t % 86400 + 86400) % 86400;
 }
 
@@ -44,7 +44,6 @@ uint32_t trk_point_dist(unsigned i)
 {
     struct trk *s = TRK;
     uint32_t d = s->base_dist;
-    for (unsigned k = 1; k <= i && k < s->count; k++)
-        d += dist_between(s->p_lat[k - 1], s->p_lon[k - 1], s->p_lat[k], s->p_lon[k]);
+    for (unsigned k = 1; k <= i && k < s->count; k++) d += trk_leg(k);
     return d;
 }

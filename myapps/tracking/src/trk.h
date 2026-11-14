@@ -4,9 +4,11 @@
  * (settings), .TRK FIXED (target editor), .TRK RADAR, .TRK MAP, .TRK POINTS.
  * They hand over through the run-next mailbox (trk_run + return 0) and keep
  * everything in struct trk just below H9_SHARED_TOP, which survives module
- * switches and the radio while no bigger module is loaded. Every module body
- * must end below it: trk_open checks the trk_end marker (trk_end.c, linked
- * last).
+ * switches and the radio while no bigger module is loaded. The state sits
+ * above satshare (0x2B880..0x2B8DF: the stub clears res_magic there on every
+ * menu entry, skip_check is its last byte), in the APRS modules' area. Every
+ * module body must end below satshare: trk_open checks the trk_end marker
+ * (trk_end.c, linked last).
  *
  * GPS: stock's parser is stopped while a module runs, so each module drains
  * the APRS modem's NMEA ring itself in trk_service; the track is recorded
@@ -21,7 +23,9 @@
 
 enum { C_DGREY = 0x4208, C_LGREY = 0xC618, C_CYAN = 0x07ff, C_FUCHSIA = 0xF81F };
 enum { KEY_STAR = 0x13, KEY_HASH = 0x14, KEY_0 = 2, KEY_5 = 7 };
-enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x6F4, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
+enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x600, TRK_MAGIC = 0x334B5254 /* "TRK3" */ };
+enum { BODY_TOP = 0x2B880 };       /* satshare: module bodies end below it */
+enum { PT_RANGE = 16777214 };      /* microdegrees from the start a point can store: 24 bits x 2 */
 enum { REC_OFF, REC_ON, REC_PAUSED };
 enum { STEP_DIST, STEP_TIME };
 enum { DIST_GAP = 15, STEP_TIME_MIN = 15, STEP_TIME_MAX = 3600 };   /* seconds: DIST mode records at most once per DIST_GAP */
@@ -31,6 +35,13 @@ enum { MENU_BACK = -1 };
 enum { VIEW_W = 106 };   /* radar / map area in split mode; the value panel is to the right */
 
 #define TICK (*(const volatile uint32_t *)0x1D8B0)   /* 100 Hz */
+
+/* Offsets from the start point (slat, slon) in 2-microdegree steps, 24-bit
+ * signed, low byte first; read through trk_point. */
+struct pt {
+    uint8_t lat[3], lon[3];
+    uint16_t t;                       /* seconds from start / 2 */
+};
 
 struct trk {
     uint32_t magic;
@@ -49,13 +60,13 @@ struct trk {
     uint16_t cap, count, step_time;   /* step_time: seconds */
     uint8_t step, step_mode, hdg_filter, zoom;
     uint8_t radar_mode, radar_full, map_full, from;
-    uint8_t main_sel, view_w, spare[2];
+    uint8_t main_sel, view_w, too_far, spare;   /* too_far: a fix out of PT_RANGE paused recording, not answered yet */
     int16_t show, cur;                /* point to highlight on the map (-1 none), POINTS cursor */
-    int32_t p_lat[MAX_PTS], p_lon[MAX_PTS];
-    uint16_t p_t[MAX_PTS];            /* seconds from start / 2 */
+    struct pt p[MAX_PTS];
 };
 
 #define TRK ((struct trk *)(H9_SHARED_TOP - STATE_BYTES))
+#define TRK_BODY_END ((uint32_t)&trk_end + sizeof trk_end)
 
 extern const uint32_t trk_end;
 extern const uint16_t STEP_M[16];
@@ -65,11 +76,13 @@ struct trk *trk_open(void);          /* 0: body overlaps the state (message show
 void trk_service(void);              /* drain NMEA, record the track */
 int trk_live(void);
 int trk_heading_ok(void);            /* course worth showing: live, and moving if the 2 km/h filter is on */
-unsigned trk_key(void);
+unsigned trk_key(void);              /* Back while too_far is set: every screen falls back to a menu */
 void trk_run(const char *name);      /* open that module next; the caller returns 0 */
 void trk_start(void);                /* new track, recording */
 void trk_track_add(struct trk *s);
 void trk_drop_oldest(struct trk *s);
+void trk_point(unsigned i, int32_t *ll);   /* ll[0] lat, ll[1] lon, microdegrees */
+uint32_t trk_leg(unsigned i);        /* metres from point i - 1 to point i */
 int32_t trk_utc_now(const struct trk *s);   /* UTC second of day, -1 unknown */
 uint32_t dist_between(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2);
 
@@ -98,7 +111,8 @@ char *deg_text(char *d, int32_t micro);   /* "-55.75123" */
 /* trk_menu.c */
 typedef void (*menu_label_fn)(unsigned i, char *out);
 void menu_title(const char *title);
-int menu_run(const char *title, unsigned count, unsigned sel, menu_label_fn label);
+int menu_run(const char *title, unsigned count, unsigned sel, menu_label_fn label);   /* asks trk_far first when too_far is set */
+void trk_far(void);                  /* warning, then STOP RECORDING / NEW TRACK; Back keeps the track paused */
 void trk_msg(const char *big, const char *line1, const char *line2, unsigned ticks);   /* ticks 0: wait for a key */
 
 /* trk_view.c: clipped to x < TRK->view_w */

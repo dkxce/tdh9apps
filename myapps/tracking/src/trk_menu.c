@@ -40,18 +40,33 @@ static void status_line(void)
     gfx_text(4, STATUS_Y, S[TRK->rec], 20, 1, GFX_WHITE, GFX_BLACK);
 }
 
+static void far_label(unsigned i, char *o) { put(o, i ? "NEW TRACK" : "STOP RECORDING"); }
+
+void trk_far(void)
+{
+    struct trk *s = TRK;
+    s->too_far = 0;
+    trk_msg("<TOO FAR>", "16 DEG FROM TRACK START", "RECORDING PAUSED", 0);
+    int r = menu_run("TOO FAR", 2, 0, far_label);
+    if (r == 0) { s->rec = REC_OFF; trk_msg("<STOPPED>", 0, 0, 80); }
+    else if (r == 1) { trk_start(); trk_msg("<STARTED>", 0, 0, 80); }
+}
+
 /* Up / Down move (wrapping), Menu picks, digit 1-9 picks that item
  * (0 = item 10), Back returns MENU_BACK. */
 int menu_run(const char *title, unsigned count, unsigned sel, menu_label_fn label)
 {
     char b[24];
-    unsigned top = 0, dirty = 1;
+    unsigned top = 0, dirty = 2;
     if (sel >= count) sel = 0;
-    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    menu_title(title);
-    status_line();
     for (;;) {
         trk_service();
+        if (TRK->too_far) { trk_far(); dirty = 2; }
+        if (dirty > 1) {
+            gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+            menu_title(title);
+            status_line();
+        }
         if (dirty) {
             if (sel < top) top = sel;
             if (sel >= top + ROWS) top = sel - ROWS + 1;

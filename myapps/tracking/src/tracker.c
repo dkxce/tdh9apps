@@ -9,11 +9,11 @@
 
 /* First run (no state yet): defaults and stock's last fix. Only TRACKER does
  * this; the hidden modules are reached through it and send a bad state here.
- * Skipped when this body overlaps the state: trk_open then reports it. */
+ * Skipped when this body runs into satshare: trk_open then reports it. */
 static void state_init(void)
 {
     struct trk *s = TRK;
-    if (s->magic == TRK_MAGIC || (uint32_t)&trk_end + sizeof trk_end > (uint32_t)s) return;
+    if (s->magic == TRK_MAGIC || TRK_BODY_END > BODY_TOP) return;
     uint8_t *z = (uint8_t *)s;
     for (unsigned i = 0; i < sizeof *s; i++) z[i] = 0;
     s->magic = TRK_MAGIC;
