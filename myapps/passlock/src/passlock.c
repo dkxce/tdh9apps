@@ -22,44 +22,81 @@
  *
  * <RADIO LOCK FLOW>
  *
- * skip_check = 0 # включение питания (0x2B8DF)
+ * skip_check = 0 # 0 - включение питания (0x2B8DF)
+ *                # 1,3,5,7 и т.д. (нечетные числа) - работа стоковой прошивки
+ *                # 2,4,6,8 и т.д. (четные числа)   - работа menu.h9mod
+ * SKIP_UNLSTD    1 - пароль не задан, включение рации
+ * SKIP_LCKMNU    2 - пароль задан, включение рации
+ * SKIP_NOLOCK    3 - пароль задан, passcode отсутствует
+ * SKIP_KBLOCK    4 - пароль задан, надо проверить, выход из режима блокировки клавиатуры
+ * SKIP_PASSED    5 - пароль задан, подтвержден
+ * 
+ * SKIP_KBLOCKED    2u - признак блокировки клавиатуры
+ * SKIP_HASHPSSD    4u - признак удержания #
+ * SKIP_STARPSSD    8u - признак удержания *
+ * SKIP_PSWENTRD   16u - признак что пароль подтвержден
+ * SKIP_PASSEXST   32u - признак что пароль задан
+ * SKIP_WANTMENU   64u - признак что запущен флоу menu mod
+ * SKIP_STARTED   128u - признак что процесс работает
+ *
+ * Три варианта открытия MENU MOD
+ * 1. Есть пароль, рация включилась, клавиатура не залочена
+ * 2. Есть пароль, клавиатура залочена, удержана *
+ * 3. Удержана #
+ * 
  * <stub>
  *   ├─ (skip_check == 0 || skip_check == 0xFF) -> # первый проход
- *   │   ├── Читаем 0x716FF8 - 8 байт
- *   │   ├── (Пароль отсутствует) -> 
- *   │   │   └─► skip_check = 1 # все ок
- *   │   └─► (Пароль присутствует) -> 
- *   │       └─► skip_check = 2 # надо проверить
+ *   │   ├── skip_check |= SKIP_STARTED
+ *   │   └─► Читаем 0x716FF8 - 8 байт
+ *   │       └─► (Пароль присутствует) -> Да
+ *   │           └─► skip_check |= SKIP_PASSEXST
+ *   │ 
+ *   ├─ skip_check = skip_check & 0xF0
+ *   ├─ Проверяем заблокирована ли клавиатура (0x0C3C8)
+ *   │   └─► Клавиатура заблокирована -> Да
+ *   │       └─► skip_check |= SKIP_KBLOCKED
+ *   ├─ Проверяем удержана ли #
+ *   │   └─► Удержана # -> Да
+ *   │       └─► skip_check |= SKIP_HASHPSSD
+ *   ├─ Проверяем удержана ли *
+ *   │   └─► Удержана * -> Да
+ *   │       └─► skip_check |= SKIP_STARPSSD
  *   │
- *   ├─ (Удержан back или skip_check > 1) -> menu app
+ *   ├─ if ((skip_check & (SKIP_PASSEXST | SKIP_KBLOCKED | SKIP_PSWENTRD)) == SKIP_PASSEXST) -> да
+ *   │   └─► skip_check |= SKIP_WANTMENU
+ *   ├─ if ((skip_check & (SKIP_PASSEXST | SKIP_KBLOCKED | SKIP_STARPSSD)) == (SKIP_PASSEXST | SKIP_KBLOCKED | SKIP_STARPSSD)) -> да
+ *   │   ├── skip_check &= ~SKIP_PSWENTRD
+ *   │   └─► skip_check |= SKIP_WANTMENU
+ *   ├─ if (skip_check & SKIP_HASHPSSD) -> да
+ *   │   └─► skip_check |= SKIP_WANTMENU
+ *   ├─ (skip_check & SKIP_WANTMENU) и меню есть -> menu app
  *   │ <menu>
- *   │   ├── (skip_check == 2) ->
+ *   │   ├── skip_check |= SKIP_WANTMENU
+ *   │   ├── ((skip_check & (SKIP_PASSEXST | SKIP_PSWENTRD)) == SKIP_PASSEXST) -> да
  *   │   │   ├── (Модуля passcode нет) ->
- *   │   │   │   ├── skip_check = 1
- *   │   │   │   └─► Выход из меню, возврат к стоку  
+ *   │   │   │   ├── skip_check |= SKIP_PSWENTRD
+ *   │   │   │   └─► if (skip_check & SKIP_HASHPSSD) -> нет
+ *   │   │   │       └─► Выход из меню, возврат к стоку (пароль запрошен при включении)
  *   │   │   └─► (Модуль passcode есть) -> passcode app
  *   │   │   <passcode>
- *   │   │       ├─ (skip_check == 2) -> 
+ *   │   │       ├─ ((skip_check & (SKIP_PASSEXST | SKIP_PSWENTRD)) == SKIP_PASSEXST) -> да
  *   │   │       │   ├─ Читаем 0x716FF8 - 8 байт
  *   │   │       │   ├─ (Пароль отсутствует) -> 
- *   │   │       │   │   ├─ skip_check = 1 # все ок
+ *   │   │       │   │   ├─ skip_check |= SKIP_PSWENTRD
  *   │   │       │   │   └─► Выход из меню, возврат к стоку  
  *   │   │       │   └─► (Пароль присутствует) ->
  *   │   │       │       ├─ ввод и проверка пароля - сверяем  ◀────────┐
  *   │   │       │       ├─ пароли совпадают ->                        │
- *   │   │       │       │   ├─ skip_check = 1                         │
+ *   │   │       │       │   ├─ skip_check = SKIP_PSWENTRD             │
  *   │   │       │       │   └─► Выход из меню, возврат к стоку        │  
  *   │   │       │       └─► пароли различны ->                        │
  *   │   │       │           └─► Вернуться к вводу и проверке пароля ──┘
- *   │   │       └─► (skip_check != 2) -> 
+ *   │   │       └─► ((skip_check & (SKIP_PASSEXST | SKIP_PSWENTRD)) == 0) -> да
  *   │   │           └─► меню блокировки рации
  *   │   │               ├─ разблокировать рацию (удаление пароля), если есть пароль
  *   │   │               ├─ заблокировать рацию (просмотр, ввод и запись пароля)
- *   │   │               ├─ заблокировать сейчас ->
- *   │   │               │   ├─ skip_check = 2
- *   │   │               │   └─► Выход из меню, возврат к стоку  
  *   │   │               └─► Вернуться в меню menu app
- *   │   └─► (skip_check != 2) ->
+ *   │   └─► (skip_check & SKIP_HASHPSSD) -> да
  *   │       └─► Вывод меню модулей
  *   │           ├── passcode
  *   │           │    └──► passcode: flow аналогичный вышеприведенному
@@ -79,10 +116,15 @@
  * toolbox menu (menu.c). 0 = fresh, 1 = unlocked this session, 2 = locked:
  * the stub opened the toolbox to verify the password. The module clears it to
  * 1 when the password is accepted. */
-#define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu) 
-#define SKIP_UNLOCKED 1u
-#define SKIP_LOCKED   2u
-#define SKIP_NORMAL   3u
+#define SKIP_CHECK  ((volatile unsigned char *)0x2B8DFu)
+#define SKIP_KBLOCKED    2u /*  признак блокировки клавиатуры */
+#define SKIP_HASHPSSD    4u /*  признак удержания # */
+#define SKIP_STARPSSD    8u /*  признак удержания * */
+#define SKIP_PSWENTRD   16u /*  признак что пароль подтвержден */
+#define SKIP_PASSEXST   32u /*  признак что пароль задан */
+#define SKIP_WANTMENU   64u /*  признак что запущен флоу menu mod */
+#define SKIP_STARTED   128u /*  признак что процесс работает */
+#define KB_UNLOCKED ((volatile unsigned char *)0x0C3C8u)
 
 /* Loader API 2 (H9 Toolbox Firmware v0.1.4): a module other than the menu can
  * return 0xFFFF to leave for the radio at once, without loading the toolbox
@@ -270,9 +312,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-    if (*SKIP_CHECK == 2) {
+    if ((*SKIP_CHECK & (SKIP_PASSEXST | SKIP_PSWENTRD)) == SKIP_PASSEXST) {
         if (!pass_locked(pass)) {
-			*SKIP_CHECK = SKIP_NORMAL;
+			*SKIP_CHECK |= SKIP_PSWENTRD;
 			clear_all();
 			return H9_RETURN_RADIO_LOCAL;
 		}
@@ -281,7 +323,12 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         clear_all();
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
-        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto okb;
+        int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
+		if (rc == 1) {			
+			clear_all();
+			return H9_RETURN_RADIO_LOCAL;
+		};
+		if (rc == 2) goto okb;
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
         char ascii[PASS_LEN + 1];
@@ -293,7 +340,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             h9_delay(90);
             goto okb;
         }
-        *SKIP_CHECK = SKIP_NORMAL;
+        *SKIP_CHECK |= SKIP_PSWENTRD;
+		if (*SKIP_CHECK & SKIP_KBLOCKED) *KB_UNLOCKED = 1;
         clear_all();
         return H9_RETURN_RADIO_LOCAL;
     }

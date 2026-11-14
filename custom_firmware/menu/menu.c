@@ -37,10 +37,13 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 
 /* Owner-lock flag, shared with the main-flash stub (stub.s mlk_check). */
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu)
-#define SKIP_UNLOCKED 1u
-#define SKIP_LOCKED   2u
-#define SKIP_NORMAL   3u
-
+#define SKIP_KBLOCKED    2u /*  признак блокировки клавиатуры */
+#define SKIP_HASHPSSD    4u /*  признак удержания # */
+#define SKIP_STARPSSD    8u /*  признак удержания * */
+#define SKIP_PSWENTRD   16u /*  признак что пароль подтвержден */
+#define SKIP_PASSEXST   32u /*  признак что пароль задан */
+#define SKIP_WANTMENU   64u /*  признак что запущен флоу menu mod */
+#define SKIP_STARTED   128u /*  признак что процесс работает */
 #define PASSCODE_NAME "PASSLOCK"
 
 static void read_entry(const struct h9_api *api, unsigned index, struct h9_entry *entry)
@@ -117,24 +120,27 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     api->read(header, api->bundle, sizeof header);
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;
+	
+	*SKIP_CHECK |= SKIP_WANTMENU;
 
-    if (*SKIP_CHECK == SKIP_LOCKED) {
+    if ((*SKIP_CHECK & (SKIP_PASSEXST | SKIP_PSWENTRD)) == SKIP_PASSEXST) {
         int pc = find_passcode(api, count);
         if (!pc) {
-            *SKIP_CHECK = SKIP_UNLOCKED;
-            return 0;
+            *SKIP_CHECK |= SKIP_PSWENTRD;
+			if (!(*SKIP_CHECK & SKIP_HASHPSSD)) return 0;
         }
-        return (unsigned)pc;
+		else return (unsigned)pc;
 	}
 	
-	if (*SKIP_CHECK == SKIP_NORMAL) {
-		*SKIP_CHECK = SKIP_UNLOCKED;
-		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
+	/* Return from passcode runned if no SKIP_PSWENTRD 
+	if ((*SKIP_CHECK & SKIP_HASHPSSD)) {
+		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
          STOCK_REFRESH();
          STOCK_REDRAW();
 		 h9_delay(120);
          return 0;
     }
+	*/
 
     /* A module asked for another one: run it without showing the menu. */
     volatile struct h9_request *rq = H9_REQUEST;
