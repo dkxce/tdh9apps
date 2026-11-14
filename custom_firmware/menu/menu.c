@@ -160,7 +160,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     }
     modules = shown;
 
-    /* Opened by holding # with a single app: run it at once. # is no longer
+    /* Opened by holding # with a single app: run it at once. # if not passcode
      * held when that app returns, so leaving it shows this list. */
     if (modules == 1 && h9_key() == KEY_HASH) 
 	{

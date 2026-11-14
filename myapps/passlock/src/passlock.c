@@ -219,7 +219,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                  sel == LOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(4, 60, sel == UNLOCK  ? "[UNLOCK]    Clear pass" : " UNLOCK     Clear pass", 24, 1,
                  sel == UNLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
-		gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Exit2Menu" : " EXIT       Menu", 24, 1,
+		gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Menu" : " EXIT       Menu", 24, 1,
                  sel == EXIT ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(2, 118, "UP/DN: MOVE      BACK: OK", 30, 1, GFX_GREY, GFX_BLACK);
         gfx_wait_release();
@@ -305,8 +305,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "NEED PASSWORD TO RESET", 30, 1, GFX_GREY, GFX_BLACK);
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
-        if (rc == 1) return 0;                      /* Back cancels to menu */
-        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto ok;
+        if (rc == 1) return 0;  /* Back cancels to menu */
+        if (rc == 2) goto ok; 
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
         char ascii[PASS_LEN + 1];
