@@ -51,7 +51,7 @@
  *   │       └─► (Пароль присутствует) -> Да
  *   │           └─► skip_check |= SKIP_PASSEXST
  *   │ 
- *   ├─ skip_check = skip_check & 0xF0
+ *   ├─ skip_check = skip_check & 0xB0
  *   ├─ Проверяем заблокирована ли клавиатура (0x0C3C8)
  *   │   └─► Клавиатура заблокирована -> Да
  *   │       └─► skip_check |= SKIP_KBLOCKED

@@ -1,71 +1,47 @@
-/* H9 Toolbox module loader: the main-flash stub (offline, not yet flashed).
- *
- * Replaces Brick Breaker in H9 Toolbox Firmware. It lives in the cave the
- * game used (app+0xA77F0, before the S2 tables at app+0xA7E50) and is entered
- * from the same my_app loop hook (app+0x088906) Brick Breaker's launcher used.
- *
- * skip_check at 0x2B8DF is a bit set (menu / PASSLOCK read the same byte):
- *   2 SKIP_KBLOCKED   keypad locked (0xC3C8 == 0)
- *   4 SKIP_HASHPSSD   # held ~0.4 s
- *   8 SKIP_STARPSSD   * held ~0.4 s
- *  16 SKIP_PSWENTRD   password already confirmed this session
- *  32 SKIP_PASSEXST   a lock password is stored at 0x716FF8
- *  64 SKIP_WANTMENU   open the menu this pass
- * 128 SKIP_STARTED    first pass has run
- * Three ways to open the menu:
- *   1. password set, keypad unlocked, password not yet confirmed (power-on)
- *   2. password set, keypad locked, * held (intercept stock unlock)
- *   3. # held ~0.4 s (Back hold stays stock SATS INFO)
- * WANTMENU is recomputed every pass (the 0xF0 mask would leave it sticky).
- * PSWENTRD is not written here: the menu sets it when the password is
- * confirmed. Case 2 clears it and asks again. No valid bundle: the stock
- * loop continues. ml_main is a subroutine and returns to the stock UI.
- * Every other pass, rec_tick saves stock's GPS fix to the resource chip
- * when it has moved (background recorder, below).
- *
- * Storage: the "modules" upload slot (dist/doom/upload.mjs, H9DATA01
- * directory at 0xCC0000, one segment at 0xCC1000, COMPLETE marker), holding
- * one bundle:
- *   +0  "H9MODS01"  +8 u16 version 1  +10 u16 count  +12 u32 bundle bytes
- *   +16 + 32*i: name[16], u32 offset (from bundle start), u32 size,
- *              u32 bss, u16 entry (from the load address), u16 CRC-16/XMODEM
- * Each module body is linked for, and copied to, RAM 0x29F00-0x2BEFF (8 KiB
- * taken from the stock heap: app+0x05FA9E, 0x2BF00 -> 0x29F00). The stub
- * zeroes bss, checks the body CRC in RAM, then calls
- *   entry(r0 = &ml_api, r1 = own index)
- * with the JieLi clang ABI (r4-r14 preserved by the module).
- */
-    .section .text,"ax",@progbits
-
 /* ---- my_app loop hook (Brick Breaker's launcher, retargeted) ----------
  * sp+68 in the original my_app frame holds an initialization-only temporary
  * (see brick-breaker/src/launcher.s). After saving rets/r4 it is at sp+76:
- * magic upper half 0xA5A5, stock hold count at arming below it. */
+ * magic upper half 0xA5A5, stock hold count at arming below it.
+ *
+ * skip_check at 0x2B8DF bitmask:
+ *   2   SKIP_KBLOCKED   keypad locked (0xC3C8 == 0)
+ *   4   SKIP_HASHPSSD   # held ~0.4 s
+ *   8   SKIP_STARPSSD   * held ~0.4 s (while locked)
+ *   16  SKIP_PSWENTRD   password confirmed this session (set by menu)
+ *   32  SKIP_PASSEXST   lock password exists at 0x716FF8
+ *   64  SKIP_WANTMENU   open menu this pass
+ *   128 SKIP_STARTED    first pass completed */
+    .section .text,"ax",@progbits
     .globl ml_hotkey
 ml_hotkey:
     [--sp] = {rets, r4}
     call mlk_check
-    r5 = 0x0002b8df
-    r4 = b[r5+0] (u)
-    r0 = 0xb0
-    r4 &= r0                     /* keep STARTED|PASSEXST|PSWENTRD; drop WANTMENU and the low bits */
 
+    r3 = 0x0002b8df
+    r4 = b[r3+0] (u)
+    r0 = 0xb0                        /* keep STARTED (128) | PASSEXST (32) | PSWENTRD (16) */
+    r4 &= r0
+
+    /* Проверяем заблокирована ли клавиатура (0x0C3C8: 0 = locked, 1 = unlocked) */
     r3 = 0x0000c3c8
     r0 = b[r3+0] (u)
-    if (r0 != 0) goto mlk_kb_unl /* 1 = unlocked, 0 = locked */
-    r0 = 2
-    r4 |= r0                     /* SKIP_KBLOCKED */
+    if (r0 != 0) goto mlk_kb_unl
+    r0 = 2                           /* SKIP_KBLOCKED */
+    r4 |= r0
 mlk_kb_unl:
+
+    /* Проверяем клавишу: # (20) всегда, * (19) только при SKIP_KBLOCKED */
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
-    if (r0 == 20) goto mlk_hold  /* # 0x14: always */
-    if (r0 != 19) goto mlk_keyup /* * 0x13 only while the keypad is locked */
+    if (r0 == 20) goto mlk_hold
+    if (r0 != 19) goto mlk_keyup
     r0 = r4 & 2
-    if (r0 != 0) goto mlk_hold   /* SKIP_KBLOCKED */
+    if (r0 != 0) goto mlk_hold
+
 mlk_keyup:
     r0 = 0
     [sp+76] = r0
-    goto mlk_flags
+    goto mlk_eval_flags
 
 mlk_hold:
     r2 = [sp+76]
@@ -77,56 +53,70 @@ mlk_hold:
     r2 = r2.l (u)
     if (r0 < r2) goto ml_arm_back_hold
     r0 -= r2
-    if (r0 < 40) goto mlk_not_yet
+    if (r0 < 40) goto mlk_save_only  /* ещё не прошло 40 тиков */
+
+    /* Удержана >= 0.4 с: ставим SKIP_HASHPSSD (4) или SKIP_STARPSSD (8) */
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
-    if (r0 == 20) goto mlk_hash
-    if (r0 != 19) goto mlk_flags
-    r1 = 8
-    r4 |= r1                     /* SKIP_STARPSSD */
-    goto mlk_flags
-mlk_hash:
-    r1 = 4
-    r4 |= r1                     /* SKIP_HASHPSSD */
-    goto mlk_flags
+    if (r0 == 20) goto mlk_set_hash
+    if (r0 != 19) goto mlk_eval_flags
+    r1 = 8                           /* SKIP_STARPSSD */
+    r4 |= r1
+    goto mlk_eval_flags
+mlk_set_hash:
+    r1 = 4                           /* SKIP_HASHPSSD */
+    r4 |= r1
 
-mlk_not_yet:
-    b[r5+0] = r4
-    goto ml_stock_loop_call
-
-mlk_flags:
-    r0 = r4 & 0x32               /* PASSEXST | KBLOCKED | PSWENTRD */
+mlk_eval_flags:
+    /* 1) (skip_check & (PASSEXST | KBLOCKED | PSWENTRD)) == PASSEXST */
+    r0 = r4 & 0x32
     r1 = 0x20
-    if (r0 != r1) goto mlk_c2
-    r1 = 0x40
-    r4 |= r1                     /* case 1: password, unlocked, not confirmed */
-mlk_c2:
-    r0 = r4 & 0x2a               /* PASSEXST | KBLOCKED | STARPSSD */
+    if (r0 != r1) goto mlk_check_c2
+    r1 = 0x40                        /* SKIP_WANTMENU */
+    r4 |= r1
+
+mlk_check_c2:
+    /* 2) (skip_check & (PASSEXST | KBLOCKED | STARPSSD)) == (PASSEXST | KBLOCKED | STARPSSD) */
+    r0 = r4 & 0x2a
     r1 = 0x2a
-    if (r0 != r1) goto mlk_c3
-    r1 = 0xef
-    r4 &= r1                     /* ~SKIP_PSWENTRD */
-    r1 = 0x40
-    r4 |= r1                     /* case 2: password, locked, * held */
-mlk_c3:
+    if (r0 != r1) goto mlk_check_c3
+    r1 = 0xef                        /* ~SKIP_PSWENTRD */
+    r4 &= r1
+    r1 = 0x40                        /* SKIP_WANTMENU */
+    r4 |= r1
+
+mlk_check_c3:
+    /* 3) (skip_check & SKIP_HASHPSSD) != 0 */
     r0 = r4 & 0x04
-    if (r0 == 0) goto mlk_save
-    r1 = 0x40
-    r4 |= r1                     /* case 3: # held */
-mlk_save:
-    b[r5+0] = r4
-    r0 = r4 & 0x40
+    if (r0 == 0) goto mlk_commit
+    r1 = 0x40                        /* SKIP_WANTMENU */
+    r4 |= r1
+
+mlk_commit:
+    r3 = 0x0002b8df
+    b[r3+0] = r4
+    r0 = r4 & 0x40                   /* SKIP_WANTMENU? */
     if (r0 == 0) goto ml_stock_loop_call
+
     call ml_check
     if (r0 == 0) goto mlk_no_bundle
     call ml_main
     goto ml_back_released
+
 mlk_no_bundle:
-    r0 = r4 & 0x0c               /* HASHPSSD | STARPSSD: re-arm and try again after 0.4 s */
+    /* Если бандла нет, но держали кнопку — перевзводим таймер, чтобы не спамить ml_check */
+    r0 = r4 & 0x0c
     if (r0 != 0) goto ml_arm_back_hold
     goto ml_stock_loop_call
 
+mlk_save_only:
+    r3 = 0x0002b8df
+    b[r3+0] = r4
+    goto ml_stock_loop_call
+
 ml_arm_back_hold:
+    r3 = 0x0002b8df
+    b[r3+0] = r4
     r3 = 0x0000c3b2
     r0 = h[r3+0] (u)
     r3 = 0xa5a50000
@@ -145,24 +135,21 @@ ml_stock_loop_call:
     call r3
     {pc, r4} = [sp++]
 
-/* ---- owner-lock first pass (mlk_*) -----------------------------------
- * skip_check lives at 0x2B8DF (spare byte, last of the satshare struct).
- * On the first pass (skip_check 0 or 0xFF) set SKIP_STARTED (128) and read
- * the 8 lock bytes at 0x716FF8:
- *   - all bytes are digits '0'-'9' or spaces (0x20) AND at least one is a
- *     digit  -> SKIP_PASSEXST (32)
- *   - otherwise (incl. all 0xFF erased) -> leave PASSEXST clear
- * Later passes leave the byte alone; ml_hotkey rebuilds the low bits and
- * WANTMENU. mlk_check preserves r7-r4; ml_read preserves r14-r4. */
+/* ---- owner-lock flag setter (mlk_*) ----------------------------------
+ * On first pass (skip_check == 0 || skip_check == 0xFF):
+ *   skip_check |= SKIP_STARTED (128)
+ *   read 8 bytes at 0x716FF8; if valid password -> skip_check |= SKIP_PASSEXST (32) */
 mlk_check:
     [--sp] = {rets, r7-r4}
     r4 = 0x0002b8df
     r0 = b[r4+0] (u)
     if (r0 == 0) goto mlk_fresh
     if (r0 != 0xff) goto mlk_done
+
 mlk_fresh:
     r0 = 0x80                        /* SKIP_STARTED */
     b[r4+0] = r0
+
     sp += -8
     r0 = sp + 0
     r1 = 0x00716ff8
@@ -171,18 +158,20 @@ mlk_fresh:
     r5 = [sp+0]                      /* word 0 */
     r6 = [sp+4]                      /* word 1 */
     sp += 8
+
     r0 = r5
     r0 |= r6
     if (r0 == 0xffffffff) goto mlk_done
+
     r11 = 0                          /* anyDigit = 0 */
-    r9  = 0
-    r8  = r5
+    r9  = 0                          /* byte counter 0..7 */
+    r8  = r5                         /* start with word 0 */
 mlkl_byte:
     r3 = r8 & 0xff
-    if (r3 == 0x20) goto mlkl_next
-    if (r3 < 0x30) goto mlk_done
+    if (r3 == 0x20) goto mlkl_next   /* space: ok */
+    if (r3 < 0x30) goto mlk_done     /* not digit/space */
     if (r3 > 0x39) goto mlk_done
-    r11 = 1
+    r11 = 1                          /* a digit */
 mlkl_next:
     r8 = r8 >> 8
     r9 += 1
@@ -191,13 +180,17 @@ mlkl_next:
 mlkl_cnt:
     if (r9 != 8) goto mlkl_byte
     if (r11 == 0) goto mlk_done
+
+    /* Пароль присутствует -> skip_check |= SKIP_PASSEXST (32) */
     r4 = 0x0002b8df
     r0 = b[r4+0] (u)
-    r1 = 0x20                        /* SKIP_PASSEXST */
+    r1 = 0x20
     r0 |= r1
     b[r4+0] = r0
+
 mlk_done:
     {pc, r7-r4} = [sp++]
+
 
 /* ---- resident tracker (res_tick runs on every my_app loop) --------------
  * A module can stay armed after the radio restarts: SAT TRACK's "start VFO
