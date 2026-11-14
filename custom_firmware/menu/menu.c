@@ -120,8 +120,16 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned modules = count > 1 ? count - 1 : 0;
 	
 	if (*KEY_HOLDED == 15) return 0; /* BACK */
-	if (*KEY_HOLDED == 19) return 0;
-	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK == SKIP_KBLOCK))) { /* SHARP */
+	if (*KEY_HOLDED == 19) { /* STAR */
+		if (*SKIP_CHECK != SKIP_KBLOCK) return 0;
+		int pc = find_passcode(api, count);
+        if (!pc) {
+            *SKIP_CHECK = SKIP_UNLOCKED;
+            return 0;
+        }
+        return (unsigned)pc;
+	};
+	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK == SKIP_KBLOCK)) { /* # */
 		int pc = find_passcode(api, count);
         if (!pc) *SKIP_CHECK = SKIP_UNLOCKED;
         else return (unsigned)pc;
