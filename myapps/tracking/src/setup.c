@@ -31,14 +31,14 @@ static void mode_label(unsigned i, char *o)
     if (TRK->step_mode == i) put(o, " <");
 }
 
-/* Seconds 5..3600: digits type the number (the first one replaces it),
- * Up / Down +-5, Menu OK, Back cancel. */
+/* Seconds 15..3600: digits type the number (the first one replaces it),
+ * Up / Down +-5, Menu OK (out-of-range values are clamped), Back cancel. */
 static void edit_time(struct trk *s)
 {
     unsigned v = s->step_time, dirty = 1, typed = 0;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     menu_title("STEP TIME");
-    gfx_text(4, 86, "5..3600 SECONDS", 15, 1, GFX_WHITE, GFX_BLACK);
+    gfx_text(4, 86, "15..3600 SECONDS", 16, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(4, 98, "0-9 TYPE  UP/DN +-5", 19, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(4, 110, "MENU OK  BACK CANCEL", 20, 1, GFX_WHITE, GFX_BLACK);
     for (;;) {
@@ -52,14 +52,14 @@ static void edit_time(struct trk *s)
         unsigned k = trk_key();
         if (k == H9_KEY_BACK) return;
         if (k == H9_KEY_MENU) {
-            s->step_time = (uint16_t)(v < 5 ? 5 : v > 3600 ? 3600 : v);
+            s->step_time = (uint16_t)(v < STEP_TIME_MIN ? STEP_TIME_MIN : v > STEP_TIME_MAX ? STEP_TIME_MAX : v);
             return;
         }
-        if (k == H9_KEY_UP) { v = v + 5 > 3600 ? 3600 : v + 5; dirty = 1; }
-        else if (k == H9_KEY_DOWN) { v = v > 10 ? v - 5 : 5; dirty = 1; }
+        if (k == H9_KEY_UP) { v = v + 5 > STEP_TIME_MAX ? STEP_TIME_MAX : v + 5; dirty = 1; }
+        else if (k == H9_KEY_DOWN) { v = v >= STEP_TIME_MIN + 5 ? v - 5 : STEP_TIME_MIN; dirty = 1; }
         else if (k >= 2 && k <= 11) {
             v = typed ? v * 10 + (k - 2) : k - 2;
-            if (v > 3600) v = k - 2;
+            if (v > STEP_TIME_MAX) v = k - 2;
             typed = dirty = 1;
         }
         h9_delay(10);
@@ -71,6 +71,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     (void)api; (void)self;
     struct trk *s = trk_open();
     if (!s) return 0;
+    if (s->step_time < STEP_TIME_MIN) s->step_time = STEP_TIME_MIN;   /* saved under the old 5 s minimum */
     unsigned sel = 0;
     for (;;) {
         int r = menu_run("SETTINGS", 6, sel, settings_label);

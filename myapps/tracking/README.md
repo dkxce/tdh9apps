@@ -52,8 +52,9 @@
 - **POINTS** — список точек с расстоянием/временем от старта; на пункте —
   полное описание и `SHOW` / `NAVIGATE`.
 - **SETTINGS** — `STORE PTS` (40…160), `STEP DIST` (10 м…5 км),
-  `FILTER 2KMH ON/OFF`, `STEP TIME` (5…3600 с), `STEP MODE` (DIST / TIME),
-  `CLEAR LOG`.
+  `FILTER 2KMH ON/OFF`, `STEP TIME` (15…3600 с), `STEP MODE` (DIST / TIME),
+  `CLEAR LOG`. В режиме DIST точка пишется не чаще раза в 15 с, даже если
+  шаг пройден быстрее.
 
 ## GPS и запись трека
 

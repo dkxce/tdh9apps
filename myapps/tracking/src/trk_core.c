@@ -152,10 +152,9 @@ void trk_track_add(struct trk *s)
     if (s->start_utc < 0 && s->utc[0]) s->start_utc = (trk_utc_now(s) - (int32_t)(sec % 86400u) + 86400) % 86400;
     if (!s->has_start) { s->slat = s->lat; s->slon = s->lon; s->has_start = 1; }
     if (s->count) {
-        unsigned n = s->count - 1u;
-        if (s->step_mode == STEP_TIME) {
-            if (sec < s->p_t[n] * 2u + s->step_time) return;
-        } else if (dist_between(s->p_lat[n], s->p_lon[n], s->lat, s->lon) < STEP_M[s->step]) return;
+        unsigned n = s->count - 1u, dist_mode = s->step_mode != STEP_TIME;
+        if (sec < s->p_t[n] * 2u + (dist_mode ? DIST_GAP : s->step_time)) return;
+        if (dist_mode && dist_between(s->p_lat[n], s->p_lon[n], s->lat, s->lon) < STEP_M[s->step]) return;
     } else {
         s->base_dist = dist_between(s->slat, s->slon, s->lat, s->lon);
     }

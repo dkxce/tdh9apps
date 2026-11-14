@@ -2,7 +2,7 @@
 
 Tracker app: shows current position, navigation to target
 (fixed coordinates or stored point), records track in memory
-radio and gives you a view on the radar and the map. Written for the TD-H9 platform
+radios and gives a view on the radar and the map. Written for the TD-H9 platform
 
 One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/setup) and five hidden screens`.TRK *`which
 switching.
@@ -27,7 +27,7 @@ switching.
 | --- | --- |
 | menu | in the menu - selection / confirmation;**on RADAR / MAP - recording / pause / continuation** |
 | Up/down | menu list; transition RADAR MAP |
-| 1..9. | Quick selection of menu item, entering numbers in editors |
+| 1..9. | Quick selection of menu items, entering numbers in editors |
 | 5 | Points |
 | 0 | RADAR/MAP: full screen or split with value field |
 | `*` | RADAR: Dial signatures (N E S W / 12 03 06 09 / 00 09 18 27); MAP: scale − |
@@ -102,7 +102,7 @@ After installation - application menu (holding back)**TRACKER**.
 ## Assembly and limitations
 
 * Flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`(anything)
-  CI drops the warning.
+  warning drops CI.
 * Without libc and without floating arithmetic; global`const`- tables,
   variable data - in`struct trk`.
 * Body of each module ≤ 8192 bytes; when overflowing`trk_open`show`MODULE TOO BIG +N`It doesn't start. Exact limits and techniques

@@ -24,6 +24,7 @@ enum { KEY_STAR = 0x13, KEY_HASH = 0x14, KEY_0 = 2, KEY_5 = 7 };
 enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x6F4, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
 enum { REC_OFF, REC_ON, REC_PAUSED };
 enum { STEP_DIST, STEP_TIME };
+enum { DIST_GAP = 15, STEP_TIME_MIN = 15, STEP_TIME_MAX = 3600 };   /* seconds: DIST mode records at most once per DIST_GAP */
 enum { FROM_MENU, FROM_RADAR, FROM_MAP };
 enum { SCR_MAIN, SCR_NAVTO };
 enum { MENU_BACK = -1 };
