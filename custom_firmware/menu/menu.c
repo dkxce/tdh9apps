@@ -40,7 +40,6 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_UNLOCKED 1u
 #define SKIP_LOCKED   2u
 #define SKIP_NORMAL   3u
-#define SKIP_NORMAL   3u
 
 #define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu)
 #define KB_UNLOCKED ((volatile unsigned char *)0x0C3C8u)
@@ -130,8 +129,7 @@ static char *hex(char *d, uint32_t v, unsigned n)
 
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
-	/* check keb locked */
-	//if (*KEY_HOLDED == 1) return 0;
+	
 	
     uint8_t header[H9_BUNDLE_HEADER];
     (void)self;
