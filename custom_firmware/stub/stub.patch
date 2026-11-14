@@ -1,7 +1,7 @@
 diff --git a/stub_base.s b/stub.s
 index 52428ba..59b58a2 100644
---- a/stub_base.s
-+++ b/stub.s
+--- a/src/stub.s
++++ b/src/stub.s
 @@ -1,46 +1,49 @@
 -/* H9 Toolbox module loader: the main-flash stub (offline, not yet flashed).
 - *
