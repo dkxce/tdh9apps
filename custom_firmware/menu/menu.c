@@ -39,10 +39,8 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu)
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
-#define SKIP_NORMAL   3u /* Пароль введен    */
 #define SKIP_KBLOCK   4u /* Перехват keylock */
-
-#define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu)
+#define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 
 #define PASSCODE_NAME "PASSLOCK"
 
@@ -121,10 +119,18 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;
 	
-	if (*KEY_HOLDED == 15) return 0;
-	if (*KEY_HOLDED == 19) return 0;
+	if (*KEY_HOLDED == 15) return 0; /* BACK */
+	if (*KEY_HOLDED == 19) { /* STAR */
+		if (*SKIP_CHECK != SKIP_KBLOCK) return 0;
+		int pc = find_passcode(api, count);
+        if (!pc) {
+            *SKIP_CHECK = SKIP_UNLOCKED;
+            return 0;
+        }
+        return (unsigned)pc;
+	};
 
-    /* on pwr on */
+    /* mostly on pwr on */
     if (*SKIP_CHECK == SKIP_LOCKED) {
         int pc = find_passcode(api, count);
         if (!pc) {
@@ -133,16 +139,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         }
         return (unsigned)pc;
 	}
- 
-	/* ERASE? */
-	if (*SKIP_CHECK == SKIP_NORMAL) {
-		*SKIP_CHECK = SKIP_UNLOCKED;
-		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
-         STOCK_REFRESH();
-         STOCK_REDRAW();
-		 h9_delay(120);
-         return 0;
-    }
 
     /* A module asked for another one: run it without showing the menu. */
     volatile struct h9_request *rq = H9_REQUEST;
