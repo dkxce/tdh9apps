@@ -1,5 +1,5 @@
 diff --git a/src/stub.s b/src/stub.s
-index 52428ba..bd1a246 100644
+index 52428ba..6aca6f8 100644
 --- a/src/stub.s
 +++ b/src/stub.s
 @@ -4,15 +4,22 @@
@@ -34,7 +34,7 @@ index 52428ba..bd1a246 100644
   * Every other pass, rec_tick saves stock's GPS fix to the resource chip
   * when it has moved (background recorder, below).
   *
-@@ -37,10 +44,27 @@
+@@ -37,10 +44,30 @@
      .globl ml_hotkey
  ml_hotkey:
      [--sp] = {rets, r4}
@@ -53,8 +53,11 @@ index 52428ba..bd1a246 100644
      r3 = 0x0000c3af
      r0 = b[r3+0] (u)
 -    if (r0 != 15) goto ml_back_released
-+    if (r0 == 20) goto mlk_hold  /* # 0x14 */
-+    if (r0 == 19) goto mlk_hold  /* * 0x13 */
++    if (r0 == 20) goto mlk_hold  /* # 0x14: always */
++    if (r0 != 19) goto mlk_keyup /* * 0x13 only while the keypad is locked */
++    r0 = r4 & 2
++    if (r0 != 0) goto mlk_hold   /* SKIP_KBLOCKED */
++mlk_keyup:
 +    r0 = 0
 +    [sp+76] = r0
 +    goto mlk_flags
@@ -63,7 +66,7 @@ index 52428ba..bd1a246 100644
      r2 = [sp+76]
      r1 = r2 >> 16
      r3 = 0xa5a5
-@@ -50,18 +74,53 @@ ml_hotkey:
+@@ -50,18 +77,54 @@ ml_hotkey:
      r2 = r2.l (u)
      if (r0 < r2) goto ml_arm_back_hold
      r0 -= r2
@@ -71,13 +74,14 @@ index 52428ba..bd1a246 100644
 +    if (r0 < 40) goto mlk_not_yet
 +    r3 = 0x0000c3af
 +    r0 = b[r3+0] (u)
-+    if (r0 != 20) goto mlk_star
-+    r1 = 4
-+    r4 |= r1                     /* SKIP_HASHPSSD */
-+    goto mlk_flags
-+mlk_star:
++    if (r0 == 20) goto mlk_hash
++    if (r0 != 19) goto mlk_flags
 +    r1 = 8
 +    r4 |= r1                     /* SKIP_STARPSSD */
++    goto mlk_flags
++mlk_hash:
++    r1 = 4
++    r4 |= r1                     /* SKIP_HASHPSSD */
 +    goto mlk_flags
  
 -    /* Held long enough. With no valid bundle, re-arm: the stock UI keeps
@@ -127,7 +131,7 @@ index 52428ba..bd1a246 100644
  
  ml_arm_back_hold:
      r3 = 0x0000c3b2
-@@ -82,6 +141,60 @@ ml_stock_loop_call:
+@@ -82,6 +145,60 @@ ml_stock_loop_call:
      call r3
      {pc, r4} = [sp++]
  
@@ -188,7 +192,7 @@ index 52428ba..bd1a246 100644
  /* ---- resident tracker (res_tick runs on every my_app loop) --------------
   * A module can stay armed after the radio restarts: SAT TRACK's "start VFO
   * tracking" fills the satshare struct (modules/satpass/satshare.h, 0x2B880) and
-@@ -296,15 +409,20 @@ rec_stock:
+@@ -296,15 +413,20 @@ rec_stock:
      call r3
      {pc, r14-r4} = [sp++]
  
@@ -211,7 +215,7 @@ index 52428ba..bd1a246 100644
      r11 = 0
  ml_run:
      r0 = r11
-@@ -316,15 +434,19 @@ ml_run:
+@@ -316,15 +438,19 @@ ml_run:
      r1 = r11
      call r3
      if (r11 != 0) goto ml_back_to_menu

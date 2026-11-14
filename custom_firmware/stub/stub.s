@@ -58,8 +58,11 @@ ml_hotkey:
 mlk_kb_unl:
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
-    if (r0 == 20) goto mlk_hold  /* # 0x14 */
-    if (r0 == 19) goto mlk_hold  /* * 0x13 */
+    if (r0 == 20) goto mlk_hold  /* # 0x14: always */
+    if (r0 != 19) goto mlk_keyup /* * 0x13 only while the keypad is locked */
+    r0 = r4 & 2
+    if (r0 != 0) goto mlk_hold   /* SKIP_KBLOCKED */
+mlk_keyup:
     r0 = 0
     [sp+76] = r0
     goto mlk_flags
@@ -77,13 +80,14 @@ mlk_hold:
     if (r0 < 40) goto mlk_not_yet
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
-    if (r0 != 20) goto mlk_star
-    r1 = 4
-    r4 |= r1                     /* SKIP_HASHPSSD */
-    goto mlk_flags
-mlk_star:
+    if (r0 == 20) goto mlk_hash
+    if (r0 != 19) goto mlk_flags
     r1 = 8
     r4 |= r1                     /* SKIP_STARPSSD */
+    goto mlk_flags
+mlk_hash:
+    r1 = 4
+    r4 |= r1                     /* SKIP_HASHPSSD */
     goto mlk_flags
 
 mlk_not_yet:
