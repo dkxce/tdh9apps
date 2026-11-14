@@ -302,7 +302,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-    if ((*SKIP_CHECK == SKIP_NEEDPASS)) {
+    if (*SKIP_CHECK == SKIP_NEEDPASS) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_UNLOCKED;
 			clear_all();
