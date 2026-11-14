@@ -37,6 +37,14 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 
 /* Owner-lock flag, shared with the main-flash stub (stub.s mlk_check). */
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu)
+#define SKIP_UNLOCKED 1u
+#define SKIP_LOCKED   2u
+#define SKIP_NORMAL   3u
+#define SKIP_NORMAL   3u
+
+#define KEY_HOLDED  ((volatile unsigned char *)0x0С3AFu)
+#define KB_UNLOCKED ((volatile unsigned char *)0x0C3C8u)
+
 #define SKIP_KBLOCKED    2u /*  признак блокировки клавиатуры */
 #define SKIP_HASHPSSD    4u /*  признак удержания # */
 #define SKIP_STARPSSD    8u /*  признак удержания * */
@@ -115,32 +123,56 @@ static void message(const char *text)
 
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
+	/* check keb locked */
+	//if (*KEY_HOLDED == 1) return 0;
+	
     uint8_t header[H9_BUNDLE_HEADER];
     (void)self;
     api->read(header, api->bundle, sizeof header);
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;
 	
-	*SKIP_CHECK |= SKIP_WANTMENU;
+	// SKIP_CHECK, KEY_HOLDED, KB_UNLOCKED
+	unsigned state = 0;
+	if (*KB_UNLOCKED == 1) state = 
+	
+/*	
+ *   ├─ (skip_check == 0 || skip_check == 0xFF) -> # первый проход
+ *   │   ├── skip_check |= SKIP_STARTED
+ *   │   └─► Читаем 0x716FF8 - 8 байт
+ *   │       └─► (Пароль присутствует) -> Да
+ *   │           └─► skip_check |= SKIP_PASSEXST
+ *   │ 
+ *   ├─ skip_check = skip_check & 0xF0
+ *   ├─ Проверяем заблокирована ли клавиатура (0x0C3C8)
+ *   │   └─► Клавиатура заблокирована -> Да
+ *   │       └─► skip_check |= SKIP_KBLOCKED
+ *   ├─ Проверяем удержана ли #
+ *   │   └─► Удержана # -> Да
+ *   │       └─► skip_check |= SKIP_HASHPSSD
+ *   ├─ Проверяем удержана ли *
+ *   │   └─► Удержана * -> Да
+ *   │       └─► skip_check |= SKIP_STARPSSD
+*/
 
-    if ((*SKIP_CHECK & (SKIP_PASSEXST | SKIP_PSWENTRD)) == SKIP_PASSEXST) {
+    /* on pwr on */
+    if (*KEY_HOLDED == 1) {
         int pc = find_passcode(api, count);
         if (!pc) {
-            *SKIP_CHECK |= SKIP_PSWENTRD;
-			if (!(*SKIP_CHECK & SKIP_HASHPSSD)) return 0;
+            *SKIP_CHECK = SKIP_UNLOCKED;
+            return 0;
         }
-		else return (unsigned)pc;
+        return (unsigned)pc;
 	}
 	
-	/* Return from passcode runned if no SKIP_PSWENTRD 
-	if ((*SKIP_CHECK & SKIP_HASHPSSD)) {
-		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+	if (*SKIP_CHECK == SKIP_NORMAL) {
+		*SKIP_CHECK = SKIP_UNLOCKED;
+		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
          STOCK_REDRAW();
 		 h9_delay(120);
          return 0;
     }
-	*/
 
     /* A module asked for another one: run it without showing the menu. */
     volatile struct h9_request *rq = H9_REQUEST;
@@ -175,6 +207,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	};
 
     unsigned items = modules + 1, selected = 0, top = 0;
+
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
     gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
