@@ -42,7 +42,7 @@ index 52428ba..4c2d52e 100644
 + * magic upper half 0xA5A5, stock hold count at arming below it.
 + *
 + * skip_check at 0x2B8DF bitmask:
-+ *   2   SKIP_KBLOCKED   keypad locked (0xC3C8 = 0)
++ *   2   SKIP_KBLOCKED   keypad locked (0xC3C8 != 0)
 + *   4   SKIP_HASHPSSD   # held ~0.4 s
 + *   8   SKIP_STARPSSD   * held ~0.4 s (while locked)
 + *   16  SKIP_PSWENTRD   password confirmed this session (set by menu)
@@ -60,7 +60,7 @@ index 52428ba..4c2d52e 100644
 +    r0 = 0xb0                        /* keep STARTED (128) | PASSEXST (32) | PSWENTRD (16) */
 +    r4 &= r0
 +
-+    /* Проверяем заблокирована ли клавиатура (0x0C3C8: 0 = unlocked, = 0 = locked) */
++    /* Проверяем заблокирована ли клавиатура (0x0C3C8: 0 = unlocked, != 0 = locked) */
 +    r3 = 0x0000c3c8
 +    r0 = b[r3+0] (u)
 +    if (r0 == 0) goto mlk_kb_unl
@@ -71,11 +71,11 @@ index 52428ba..4c2d52e 100644
 +    /* Проверяем клавишу: # (20) всегда, * (19) только при SKIP_KBLOCKED */
      r3 = 0x0000c3af
      r0 = b[r3+0] (u)
--    if (r0 = 15) goto ml_back_released
+-    if (r0 != 15) goto ml_back_released
 +    if (r0 == 20) goto mlk_hold
-+    if (r0 = 19) goto mlk_keyup
++    if (r0 != 19) goto mlk_keyup
 +    r0 = r4 & 2
-+    if (r0 = 0) goto mlk_hold
++    if (r0 != 0) goto mlk_hold
  
 +mlk_keyup:
 +    r0 = 0
@@ -97,7 +97,7 @@ index 52428ba..4c2d52e 100644
 +    r3 = 0x0000c3af
 +    r0 = b[r3+0] (u)
 +    if (r0 == 20) goto mlk_set_hash
-+    if (r0 = 19) goto mlk_eval_flags
++    if (r0 != 19) goto mlk_eval_flags
 +    r1 = 8                           /* SKIP_STARPSSD */
 +    r4 |= r1
 +    goto mlk_eval_flags
@@ -109,7 +109,7 @@ index 52428ba..4c2d52e 100644
 +    /* 1) (skip_check & (PASSEXST | KBLOCKED | PSWENTRD)) == PASSEXST */
 +    r0 = r4 & 0x32
 +    r1 = 0x20
-+    if (r0 = r1) goto mlk_check_c2
++    if (r0 != r1) goto mlk_check_c2
 +    r1 = 0x40                        /* SKIP_WANTMENU */
 +    r4 |= r1
 +
@@ -117,14 +117,14 @@ index 52428ba..4c2d52e 100644
 +    /* 2) (skip_check & (PASSEXST | KBLOCKED | STARPSSD)) == (PASSEXST | KBLOCKED | STARPSSD) */
 +    r0 = r4 & 0x2a
 +    r1 = 0x2a
-+    if (r0 = r1) goto mlk_check_c3
++    if (r0 != r1) goto mlk_check_c3
 +    r1 = 0xef                        /* ~SKIP_PSWENTRD */
 +    r4 &= r1
 +    r1 = 0x40                        /* SKIP_WANTMENU */
 +    r4 |= r1
 +
 +mlk_check_c3:
-+    /* 3) (skip_check & SKIP_HASHPSSD) = 0 */
++    /* 3) (skip_check & SKIP_HASHPSSD) != 0 */
 +    r0 = r4 & 0x04
 +    if (r0 == 0) goto mlk_commit
 +    r1 = 0x40                        /* SKIP_WANTMENU */
@@ -152,7 +152,7 @@ index 52428ba..4c2d52e 100644
 +mlk_no_bundle:
 +    /* Если бандла нет, но держали кнопку — перевзводим таймер, чтобы не спамить ml_check */
 +    r0 = r4 & 0x0c
-+    if (r0 = 0) goto ml_arm_back_hold
++    if (r0 != 0) goto ml_arm_back_hold
 +    goto ml_stock_loop_call
 +
 +mlk_save_only:
@@ -179,7 +179,7 @@ index 52428ba..4c2d52e 100644
 +    r4 = 0x0002b8df
 +    r0 = b[r4+0] (u)
 +    if (r0 == 0) goto mlk_fresh
-+    if (r0 = 0xff) goto mlk_done
++    if (r0 != 0xff) goto mlk_done
 +
 +mlk_fresh:
 +    r0 = 0x80                        /* SKIP_STARTED */
@@ -210,10 +210,10 @@ index 52428ba..4c2d52e 100644
 +mlkl_next:
 +    r8 = r8 >> 8
 +    r9 += 1
-+    if (r9 = 4) goto mlkl_cnt
++    if (r9 != 4) goto mlkl_cnt
 +    r8 = r6
 +mlkl_cnt:
-+    if (r9 = 8) goto mlkl_byte
++    if (r9 != 8) goto mlkl_byte
 +    if (r11 == 0) goto mlk_done
 +
 +    /* Пароль присутствует -> skip_check |= SKIP_PASSEXST (32) */
@@ -256,7 +256,7 @@ index 52428ba..4c2d52e 100644
 @@ -316,15 +431,19 @@ ml_run:
      r1 = r11
      call r3
-     if (r11 = 0) goto ml_back_to_menu
+     if (r11 != 0) goto ml_back_to_menu
 -    /* The menu returned: 0 = back to the radio, else the module to run. */
 -    if (r0 == 0) goto ml_reset
 +    /* The menu returned: 0 = back to the radio, else the module to run.
