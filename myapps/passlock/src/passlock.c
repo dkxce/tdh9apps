@@ -98,8 +98,10 @@
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu) 
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
-#define SKIP_NEEDPASS 3u /* Нужен пароль     */
+#define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define SKIP_KBLOCK   4u /* Перехват keylock */
+#define SKIP_NEEDPASS 5u /* Нужен пароль     */
+#define SKIP_NEEDLOCK 6u /* Перехват keylock */
 
 /* Loader API 2 (H9 Toolbox Firmware v0.1.4): a module other than the menu can
  * return 0xFFFF to leave for the radio at once, without loading the toolbox
@@ -279,11 +281,11 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                 h9_delay(60);
 			} else if (sel == KEYLOCK) {
 				if (pass_locked(pass)) {
-					*SKIP_CHECK = SKIP_KBLOCK;
+					*SKIP_CHECK = SKIP_NEEDLOCK;
 					gfx_text(4, 100, "SPY ACTIVATED", 10, 1, GFX_GREEN, GFX_BLACK);
 					h9_delay(200);
                 } else {
-					*SKIP_CHECK = SKIP_UNLOCKED;
+					*SKIP_CHECK = SKIP_NORMAL;
                     gfx_text(4, 100, "NEED PASSW", 12, 1, GFX_RED, GFX_BLACK);
 					h9_delay(200);
 				}
@@ -304,7 +306,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     if (*SKIP_CHECK == SKIP_NEEDPASS) {
         if (!pass_locked(pass)) {
-			*SKIP_CHECK = SKIP_UNLOCKED;
+			*SKIP_CHECK = SKIP_NORMAL;
 			clear_all();
 			return H9_RETURN_RADIO_LOCAL;
 		}
@@ -332,7 +334,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             h9_delay(200);
             goto okb;
         }
-        *SKIP_CHECK = SKIP_UNLOCKED;
+        *SKIP_CHECK = SKIP_NORMAL;
         clear_all();
         return H9_RETURN_RADIO_LOCAL;
     }
