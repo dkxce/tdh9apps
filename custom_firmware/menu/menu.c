@@ -39,6 +39,7 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu)
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
+#define SKIP_NEEDPASS 3u /* Нужен пароль     */
 #define SKIP_KBLOCK   4u /* Перехват keylock */
 #define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 
@@ -119,31 +120,18 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;
 	
+		
 	if (*KEY_HOLDED == 15) return 0; /* BACK */
-	if (*KEY_HOLDED == 19) { /* STAR */
-		if (*SKIP_CHECK != SKIP_KBLOCK) return 0;
-		int pc = find_passcode(api, count);
-        if (!pc) {
-            *SKIP_CHECK = SKIP_UNLOCKED;
-            return 0;
-        }
-        return (unsigned)pc;
-	};
-	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK == SKIP_KBLOCK)) { /* # */
-		int pc = find_passcode(api, count);
-        if (!pc) *SKIP_CHECK = SKIP_UNLOCKED;
-        else return (unsigned)pc;
-	};
-
-    /* mostly on pwr on */
-    if (*SKIP_CHECK == SKIP_LOCKED) {
+	if (*SKIP_CHECK == SKIP_LOCKED) *SKIP_CHECK = SKIP_NEEDPASS;
+	if (*SKIP_CHECK == SKIP_KBLOCK) *SKIP_CHECK = SKIP_NEEDPASS;	
+	if (*SKIP_CHECK == SKIP_NEEDPASS) {
         int pc = find_passcode(api, count);
         if (!pc) {
             *SKIP_CHECK = SKIP_UNLOCKED;
             return 0;
         }
         return (unsigned)pc;
-	}
+	} else if (*KEY_HOLDED == 19) return 0;  /* STAR */
 
     /* A module asked for another one: run it without showing the menu. */
     volatile struct h9_request *rq = H9_REQUEST;

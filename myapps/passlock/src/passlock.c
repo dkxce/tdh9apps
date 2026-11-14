@@ -98,6 +98,7 @@
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu) 
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
+#define SKIP_NEEDPASS 3u /* Нужен пароль     */
 #define SKIP_KBLOCK   4u /* Перехват keylock */
 
 /* Loader API 2 (H9 Toolbox Firmware v0.1.4): a module other than the menu can
@@ -270,20 +271,25 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                 if (write_pass(api, newpass) == 0) {
                     api->read(pass, PASS_ADDR, PASS_LEN);
                     gfx_text(4, 100, "UNLOCKED", 10, 1, GFX_GREEN, GFX_BLACK);
+					h9_delay(200);
                 } else {
                     gfx_text(4, 100, "WRITE FAIL", 12, 1, GFX_RED, GFX_BLACK);
+					h9_delay(200);
                 }
                 h9_delay(60);
 			} else if (sel == KEYLOCK) {
 				if (pass_locked(pass)) {
 					*SKIP_CHECK = SKIP_KBLOCK;
 					gfx_text(4, 100, "SPY ACTIVATED", 10, 1, GFX_GREEN, GFX_BLACK);
+					h9_delay(200);
                 } else {
 					*SKIP_CHECK = SKIP_UNLOCKED;
                     gfx_text(4, 100, "NEED PASSW", 12, 1, GFX_RED, GFX_BLACK);
+					h9_delay(200);
 				}
             } else if (sel == EXIT) {
-                return 0;
+				clear_all();
+                return H9_RETURN_RADIO_LOCAL;
             }
         }
         else if (k == H9_KEY_BACK) return 0;
@@ -296,7 +302,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-    if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLOCK)) {
+    if ((*SKIP_CHECK == SKIP_NEEDPASS)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_UNLOCKED;
 			clear_all();
@@ -312,6 +318,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		if ((rc == 1) && (*SKIP_CHECK == SKIP_KBLOCK)) {
 			h9_key();
 			h9_delay(90);
+			clear_all();
 			return H9_RETURN_RADIO_LOCAL;
 		}
         unsigned char cur[PASS_LEN];
@@ -322,7 +329,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
         if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
             gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
-            h9_delay(90);
+            h9_delay(200);
             goto okb;
         }
         *SKIP_CHECK = SKIP_UNLOCKED;
@@ -347,7 +354,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
         if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
             gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
-            h9_delay(90);
+            h9_delay(200);
             goto ok;
         }
     }
