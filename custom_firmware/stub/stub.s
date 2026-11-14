@@ -23,7 +23,7 @@ ml_hotkey:
     r4 &= r0
 
     /* Проверяем заблокирована ли клавиатура (0x0C3C8: 0 = unlocked, != 0 = locked) */
-    r3 = 0x0000c3c8
+    r3 = 0x0000c13d
     r0 = b[r3+0] (u)
     if (r0 == 0) goto mlk_kb_unl
     r0 = 2                           /* SKIP_KBLOCKED */
