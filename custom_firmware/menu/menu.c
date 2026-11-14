@@ -122,6 +122,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	
 		
 	if (*KEY_HOLDED == 15) return 0; /* BACK */
+	if (*KEY_HOLDED == 19) return 0; /* SHARP */
 	if (*SKIP_CHECK == SKIP_LOCKED) *SKIP_CHECK = SKIP_NEEDPASS;
 	if (*SKIP_CHECK == SKIP_KBLOCK) *SKIP_CHECK = SKIP_NEEDPASS;	
 	if (*SKIP_CHECK == SKIP_NEEDPASS) {
