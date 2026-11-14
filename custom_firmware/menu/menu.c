@@ -122,7 +122,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	if (*KEY_HOLDED == 15) return 0; /* BACK */
+	if (*KEY_HOLDED == 15){
+		*KEY_HOLDED = 0;
+		return 0; /* BACK */
+	};
 	if (*SKIP_CHECK == SKIP_LOCKED) *SKIP_CHECK = SKIP_NEEDPASS;
 	if (*SKIP_CHECK == SKIP_KBLOCK) *SKIP_CHECK = SKIP_NEEDPASS;	
 	if (*SKIP_CHECK == SKIP_NEEDPASS) {
@@ -132,7 +135,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             return 0;
         }
         return (unsigned)pc;
-	} else if (*KEY_HOLDED == 19) return 0;  /* STAR */
+	} else if (*KEY_HOLDED == 19) {
+		*KEY_HOLDED = 0;
+		return 0; /* BACK */
+	};
 	
 	if (*SKIP_CHECK == SKIP_NORMAL) {
 		*SKIP_CHECK = SKIP_UNLOCKED;

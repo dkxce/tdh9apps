@@ -266,32 +266,32 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                     } else {
                         gfx_text(4, 100, "WRITE FAIL", 12, 1, GFX_RED, GFX_BLACK);
                     }
-                    h9_delay(70);                    
+                    h9_delay(70);
                 }
 			} else if (sel == UNLOCK) {
                 for (i = 0; i < PASS_LEN; i++) newpass[i] = 0xFF;
                 if (write_pass(api, newpass) == 0) {
                     api->read(pass, PASS_ADDR, PASS_LEN);
                     gfx_text(4, 100, "UNLOCKED", 10, 1, GFX_GREEN, GFX_BLACK);
-					h9_delay(200);
+					h9_delay(70);
                 } else {
                     gfx_text(4, 100, "WRITE FAIL", 12, 1, GFX_RED, GFX_BLACK);
-					h9_delay(200);
+					h9_delay(70);
                 }
                 h9_delay(60);
 			} else if (sel == KEYLOCK) {
 				if (pass_locked(pass)) {
 					*SKIP_CHECK = SKIP_NEEDLOCK;
 					gfx_text(4, 100, "SPY ACTIVATED", 10, 1, GFX_GREEN, GFX_BLACK);
-					h9_delay(200);
+					h9_delay(70);
                 } else {
 					*SKIP_CHECK = SKIP_NORMAL;
                     gfx_text(4, 100, "NEED PASSW", 12, 1, GFX_RED, GFX_BLACK);
-					h9_delay(200);
+					h9_delay(70);
 				}
             } else if (sel == EXIT) {
 				clear_all();
-                return H9_RETURN_RADIO_LOCAL;
+                return 0;
             }
         }
         else if (k == H9_KEY_BACK) return 0;
@@ -331,7 +331,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
         if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
             gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
-            h9_delay(200);
+            h9_delay(70);
             goto okb;
         }
         *SKIP_CHECK = SKIP_NORMAL;
