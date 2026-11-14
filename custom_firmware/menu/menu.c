@@ -216,7 +216,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned items = modules + 1, selected = 0, top = 0;
 
 	char buf[3];          // 2 символа под сам байт + 1 под завершающий ноль '\0'
-	hex(buf, *KEY_HOLDED, 2); 
+	hex(buf, *KB_UNLOCKED, 2); 
 	
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
