@@ -288,7 +288,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
         }
         else if (k == H9_KEY_BACK) return 0;
     }
-	return 0;
+	return 0; 
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)
