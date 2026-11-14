@@ -37,20 +37,13 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 
 /* Owner-lock flag, shared with the main-flash stub (stub.s mlk_check). */
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu)
-#define SKIP_UNLOCKED 1u
-#define SKIP_LOCKED   2u
-#define SKIP_NORMAL   3u
+#define SKIP_UNLOCKED 1u /* Рация разлочена  */
+#define SKIP_LOCKED   2u /* Рация заблочена  */
+#define SKIP_NORMAL   3u /* Пароль введен    */
+#define SKIP_KBLOCK   4u /* Перехват keylock */
 
 #define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu)
-#define KB_UNLOCKED ((volatile unsigned char *)0x0C3C8u)
 
-#define SKIP_KBLOCKED    2u /*  признак блокировки клавиатуры */
-#define SKIP_HASHPSSD    4u /*  признак удержания # */
-#define SKIP_STARPSSD    8u /*  признак удержания * */
-#define SKIP_PSWENTRD   16u /*  признак что пароль подтвержден */
-#define SKIP_PASSEXST   32u /*  признак что пароль задан */
-#define SKIP_WANTMENU   64u /*  признак что запущен флоу menu mod */
-#define SKIP_STARTED   128u /*  признак что процесс работает */
 #define PASSCODE_NAME "PASSLOCK"
 
 static void read_entry(const struct h9_api *api, unsigned index, struct h9_entry *entry)
@@ -120,48 +113,19 @@ static void message(const char *text)
     gfx_text(4, ROW_Y + 8, text, 12, 2, GFX_YELLOW, GFX_BLACK);
 }
 
-static char *hex(char *d, uint32_t v, unsigned n)
-{
-    for (unsigned i = n; i--;) { d[i] = "0123456789ABCDEF"[v & 15]; v >>= 4; }
-    d[n] = 0;
-    return d + n;
-}
-
 unsigned module_main(const struct h9_api *api, unsigned self)
-{
-	
-	
+{	
     uint8_t header[H9_BUNDLE_HEADER];
     (void)self;
     api->read(header, api->bundle, sizeof header);
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;
 	
-	// SKIP_CHECK, KEY_HOLDED, KB_UNLOCKED
-	//unsigned state = 0;
-	//if (*KB_UNLOCKED == 1) state = 
-	
-/*	
- *   ├─ (skip_check == 0 || skip_check == 0xFF) -> # первый проход
- *   │   ├── skip_check |= SKIP_STARTED
- *   │   └─► Читаем 0x716FF8 - 8 байт
- *   │       └─► (Пароль присутствует) -> Да
- *   │           └─► skip_check |= SKIP_PASSEXST
- *   │ 
- *   ├─ skip_check = skip_check & 0xF0
- *   ├─ Проверяем заблокирована ли клавиатура (0x0C3C8)
- *   │   └─► Клавиатура заблокирована -> Да
- *   │       └─► skip_check |= SKIP_KBLOCKED
- *   ├─ Проверяем удержана ли #
- *   │   └─► Удержана # -> Да
- *   │       └─► skip_check |= SKIP_HASHPSSD
- *   ├─ Проверяем удержана ли *
- *   │   └─► Удержана * -> Да
- *   │       └─► skip_check |= SKIP_STARPSSD
-*/
+	if (*KEY_HOLDED == 15) return 0;
+	if (*KEY_HOLDED == 19) return 0;
 
     /* on pwr on */
-    if (*KEY_HOLDED == 1) {
+    if (*SKIP_CHECK == SKIP_LOCKED) {
         int pc = find_passcode(api, count);
         if (!pc) {
             *SKIP_CHECK = SKIP_UNLOCKED;
@@ -169,7 +133,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         }
         return (unsigned)pc;
 	}
-	
+ 
+	/* ERASE? */
 	if (*SKIP_CHECK == SKIP_NORMAL) {
 		*SKIP_CHECK = SKIP_UNLOCKED;
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
@@ -213,12 +178,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     unsigned items = modules + 1, selected = 0, top = 0;
 
-	char buf[3];          // 2 символа под сам байт + 1 под завершающий ноль '\0'
-	hex(buf, *KB_UNLOCKED, 2); 
-	
-
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
-    gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
+    gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
     gfx_text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, GFX_GREY, GFX_BLACK);
