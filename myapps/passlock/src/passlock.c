@@ -101,7 +101,8 @@
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define SKIP_KBLOCK   4u /* Перехват keylock */
 #define SKIP_NEEDPASS 5u /* Нужен пароль     */
-#define SKIP_NEEDLOCK 6u /* Перехват keylock */
+#define SKIP_NEEDLOCK 6u /* Нужен keylock    */
+#define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 
 /* Loader API 2 (H9 Toolbox Firmware v0.1.4): a module other than the menu can
  * return 0xFFFF to leave for the radio at once, without loading the toolbox
@@ -317,7 +318,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
 		if (rc == 2) goto okb; 
-		if ((rc == 1) && (*SKIP_CHECK == SKIP_KBLOCK)) {
+		if ((rc == 1) && (**KEY_HOLDED == 0xF0)) {
 			h9_key();
 			h9_delay(90);
 			clear_all();
@@ -356,7 +357,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
         if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
             gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
-            h9_delay(200);
+            h9_delay(70);
             goto ok;
         }
     }

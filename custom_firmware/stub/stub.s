@@ -122,9 +122,12 @@ mlk_check:
     [--sp] = {rets, r7-r4}
     r4 = 0x0002b8df
     r0 = b[r4+0] (u)
-    if (r0 == 1) goto mlk_done       /* already unlocked this session */
-    if (r0 == 2) goto mlk_done       /* already need enter password */
-    if (r0 == 4) goto mlk_done       /* watch keylock */
+    if (r0 == 1) goto mlk_done       /* Рация разлочена  */
+    if (r0 == 2) goto mlk_done       /* Рация заблочена  */
+    if (r0 == 3) goto mlk_done       /* Нужно разлочить  */
+    if (r0 == 4) goto mlk_done       /* Перехват keylock */
+    if (r0 == 5) goto mlk_done       /* Нужен пароль     */
+    if (r0 == 6) goto mlk_done       /* Нужен keylock    */
     /* fresh: read the 8 lock bytes */
     sp += -8
     r0 = sp + 0

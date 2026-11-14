@@ -42,7 +42,7 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define SKIP_KBLOCK   4u /* Перехват keylock */
 #define SKIP_NEEDPASS 5u /* Нужен пароль     */
-#define SKIP_NEEDLOCK 6u /* Перехват keylock */
+#define SKIP_NEEDLOCK 6u /* Нужен keylock    */
 #define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 
 #define PASSCODE_NAME "PASSLOCK"
@@ -127,7 +127,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		return 0; /* BACK */
 	};
 	if (*SKIP_CHECK == SKIP_LOCKED) *SKIP_CHECK = SKIP_NEEDPASS;
-	if (*SKIP_CHECK == SKIP_KBLOCK) *SKIP_CHECK = SKIP_NEEDPASS;	
+	if (*SKIP_CHECK == SKIP_KBLOCK) 
+	{
+		*KEY_HOLDED = 0xF0;
+		*SKIP_CHECK = SKIP_NEEDPASS;	
+	}
 	if (*SKIP_CHECK == SKIP_NEEDPASS) {
         int pc = find_passcode(api, count);
         if (!pc) {
@@ -138,7 +142,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	} else if (*KEY_HOLDED == 19) {
 		*KEY_HOLDED = 0;
 		return 0; /* BACK */
-	};
+	}
 	
 	if (*SKIP_CHECK == SKIP_NORMAL) {
 		*SKIP_CHECK = SKIP_UNLOCKED;
