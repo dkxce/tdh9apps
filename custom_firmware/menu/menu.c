@@ -139,9 +139,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*KEY_HOLDED == 19) return 0; /* Вход по    9 */		
 	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */       
 		if (*KB_LOCKED == 0) {			
-			ask_pass |= 2
+			ask_pass |= 2;
 		} else {
-			ask_pass |= 4
+			ask_pass |= 4;
 		}
 	}
 	
