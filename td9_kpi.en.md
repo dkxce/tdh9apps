@@ -4,7 +4,7 @@
 Bluetooth. Pictures are stored in a free area - the "tail" of the font party
 ?`0x717000..0x7FFFFF`), which the stock firmware does not use.
 
-Watch pictures on the radio will be an application**DKXCEPIC**(Back menu)
+Watch pictures on the radio will be an app**DKXCEPIC**(Back menu)
 DKXCEPIC; Up/Down scrolls through the loop, Back is the output.
 
 ## Format of the field
@@ -21,7 +21,7 @@ Title + pictures (raw RGB565 big-endian):
 
 ## Teams.
 
-Everything.`poetry run`.
+All through.`poetry run`.
 
 ### Check that the area is free
 
@@ -42,7 +42,7 @@ poetry run python td9_kpi.py write a.png b.jpg c.bin [--addr 0x717000]
 * `png/jpg`Pillow: resize to 160×128 → RGB565`.bin`- ready-made raw.
 * First reads the area:
 * if already recorded**identically**- omitted (Already written identically);
-* if**busy**other - erases the occupied sectors and writes;
+* if**busy**other – erases the occupied sectors and writes;
 * if**loosely**- She writes right away.
 * At the end, the record is verified (high-speed bulk reading).
 
@@ -63,7 +63,7 @@ poetry run python td9_kpi.py erase [--addr 0x717000]
 
 * If`--addr`DKXCEPIC packet - reads the count, calculates the exact
   size and erases exactly the sectors of the package.
-* If there is no headline, it erases.`--span`(Default 4 KB).
+* If there is no headline, erase it.`--span`(Default 4 KB).
 * Once erased, the sectors correspond to 0xFF - the area is free again.
 
 ### Unload area bytes
@@ -82,9 +82,9 @@ poetry run python td9_kpi.py dump --addr 0x717000 --span 0x1000 --out файл.b
 
 ## Speed and protocol
 
-* Recording goes through S2 write service over 32-byte blocks
+* Write via S2 Write Service over 32-byte blocks
   (erase → program → verify)`td9_logo.py`.
-* **Reading (check/check/check/dump)**uses**bulk-read (S1 fast)**:
+* **Reading (check/check/check/dump)**exploit**bulk-read (S1 fast)**:
   The radio streams data in packs of ~240B per request instead of 32B.
   verification is several times faster (about 3-4 KB / s instead of long ones).
   32-byte cycles.

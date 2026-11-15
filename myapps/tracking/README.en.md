@@ -1,10 +1,10 @@
-# Tracker – Navigation and Track Recording for TD-H9
+# Tracker Navigation and Track Recording for TD-H9
 
 Tracker app: shows current position, navigation to target
 (fixed coordinates or stored point), records track in memory
-radio and gives you a view on the radar and the map. Written for the TD-H9 platform
+radios and gives a view on the radar and the map. Written for the TD-H9 platform
 
-One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/set up) and five hidden screens`.TRK *`which
+One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/setup) and five hidden screens`.TRK *`which
 switching.
 
 ## Opportunities
@@ -16,7 +16,7 @@ switching.
 * **MAP**North-oriented map with track, start, goal, current
   position and scale (50 m.5000 km);
 * **Points**List of saved points: distance and time from start
-  clock, distance "from here", show on the map / navigate to it;
+  hours, distance "from here", show on the map / navigate to it;
 * **SETTINGS**the number of points saved, the recording step (by distance or
   time), course filter 2 km / h, log cleaning;
 * background recording of the track directly from the receiver (see below).
@@ -29,7 +29,7 @@ switching.
 | Up/down | menu list; transition RADAR MAP |
 | 1..9. | Quick selection of menu items, entering numbers in editors |
 | 5 | Points |
-| 0 | RADAR/MAP: Full screen or split with value field |
+| 0 | RADAR/MAP: full screen or split with value field |
 | `*` | RADAR: Dial signatures (N E S W / 12 03 06 09 / 00 09 18 27); MAP: scale − |
 | `#` | MAP: Scale + |
 | Back | back on the menu / on RADAR and MAP - to the application menu / exit |
@@ -43,12 +43,12 @@ switching.
   on RADAR,`PAUSE` / `RESUME`, `STOP`.
 * **RADAR**North on top, red triangle-pointer N, green
   arrow to target (red without fix), gray own course (with a filter)
-  2 km/h in motion only. Field on the right in split mode.
+  2 km/h in motion only. The field on the right is split mode.
 * **MAP**track blue, start green, target red, dot`SHOW`Lilac, his position with a white cross;`N`NAV pointer and arrow
   top left, scale bottom.
 * **Points**- a list of points with distance / time from the start; at the point -
   full description`SHOW` / `NAVIGATE`.
-* **SETTINGS** — `STORE PTS`(40...160),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME)`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
+* **SETTINGS** — `STORE PTS`(40...160),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME),`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
   The step is quicker.
 
 ## GPS and track recording
@@ -60,9 +60,9 @@ switching.
 * Points are written in step (distance)`STEP_DIST`time`STEP_TIME`)
   stored`struct trk`in RAM`STATE_BYTES=0x710`): latitude, longitude
   and time from start. Maximum -`STORE PTS`points (default 160).
-* It's starting.`base_dist`; when the track is full, the oldest
+* It's starting.`base_dist`When the track is full, the oldest
   points are eliminated, and the base distance is replenished so that the distance
-  It was still there.
+  It's still there.
 
 ## Modules and common code
 
