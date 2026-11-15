@@ -136,18 +136,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*SKIP_CHECK == SKIP_LOCKED) ask_pass |= 1;
 	if (*KEY_HOLDED == 02) return 0; /* Вход по    0 */		
 	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
+	if (*KEY_HOLDED == 19) return 0; /* Вход по    9 */		
 	
-	
-	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */       
-		if (*KB_LOCKED == 0) {			
-			ask_pass |= 2;
-		if (*KB_LOCKED == 1) {
-			ask_pass |= 4;
-		}
-	}
-	
-	
-	/* Пароль-на-входе */
+	/* Пароль-на-входе */ 
 	if (ask_pass & 1) {
         int pc = find_passcode(api, count);
         if (!pc) {
@@ -202,7 +193,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned items = modules + 1, selected = 0, top = 0;
 	
 	char buf[3];
-	hex(buf, ask_pass, 2); 
+	hex(buf, *KB_LOCKED, 2); 
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
     gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
