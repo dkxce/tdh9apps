@@ -155,6 +155,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*SKIP_CHECK == SKIP_NORMAL) {
 		*SKIP_CHECK = SKIP_UNLOCKED;
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
+		 clear_all();
          STOCK_REFRESH();
          STOCK_REDRAW();
 		 h9_delay(120);
@@ -164,6 +165,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*SKIP_CHECK == SKIP_NEEDLOCK) {
 		*SKIP_CHECK = SKIP_KBLOCK;
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
+		 clear_all();
          STOCK_REFRESH();
          STOCK_REDRAW();
 		 h9_delay(120);
@@ -222,6 +224,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             selected = selected + 1 < items ? selected + 1 : 0;
         } else if (key == H9_KEY_BACK) {
             gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
+			clear_all();
             STOCK_REFRESH();
             STOCK_REDRAW();
             return 0;
