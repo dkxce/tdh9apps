@@ -233,6 +233,24 @@ Chat-20/
 └── README.md            # этот файл
 ```
 
+### Документация (`.md`)
+
+| Документ | RU | EN |
+|---|---|---|
+| Корневой README | [README.md](README.md) | [README.en.md](README.en.md) |
+| Запароливание рации | [lock-pass.md](lock-pass.md) | [lock-pass.en.md](lock-pass.en.md) |
+| Карта памяти | [ram.md](ram.md) | [ram.en.md](ram.en.md) |
+| Установка приложений | [td9_apps.md](td9_apps.md) | [td9_apps.en.md](td9_apps.en.md) |
+| Boot-логотип | [td9_logo.md](td9_logo.md) | [td9_logo.en.md](td9_logo.en.md) |
+| Пакет картинок | [td9_kpi.md](td9_kpi.md) | [td9_kpi.en.md](td9_kpi.en.md) |
+| Настройки APRS/GNSS | [td9_aprs.md](td9_aprs.md) | — |
+| Кастомная прошивка | [custom_firmware/README.md](custom_firmware/README.md) | [custom_firmware/README.en.md](custom_firmware/README.en.md) |
+| Трекер | [myapps/tracking/README.md](myapps/tracking/README.md) | [myapps/tracking/README.en.md](myapps/tracking/README.en.md) |
+| Ограничения трекера | [myapps/tracking/LIMITS.md](myapps/tracking/LIMITS.md) | — |
+| Лицензия | [LICENSE.md](LICENSE.md) | — |
+| Сторонние компоненты | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | — |
+| Версия | [version.md](version.md) | — |
+
 ---
 
 ## 9. Безопасность и предупреждения
