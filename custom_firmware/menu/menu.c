@@ -50,6 +50,13 @@ static void read_entry(const struct h9_api *api, unsigned index, struct h9_entry
     api->read(entry, api->bundle + H9_BUNDLE_HEADER + H9_BUNDLE_ENTRY * index, sizeof *entry);
 }
 
+static char *hex(char *d, uint32_t v, unsigned n)
+{
+    for (unsigned i = n; i--;) { d[i] = "0123456789ABCDEF"[v & 15]; v >>= 4; }
+    d[n] = 0;
+    return d + n;
+}
+
 static void clear_all(void)
 {
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
@@ -191,9 +198,13 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	};
 
     unsigned items = modules + 1, selected = 0, top = 0;
+	
+	char buf[3];
+	hex(buf, *KEY_HOLDED, 2); 
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
-    gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
+    gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
+    //gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
     gfx_text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, GFX_GREY, GFX_BLACK);
