@@ -136,21 +136,16 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*SKIP_CHECK == SKIP_LOCKED) ask_pass |= 1;
 	if (*KEY_HOLDED == 02) return 0; /* Вход по    0 */		
 	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
-	if (*KEY_HOLDED == 19) return 0; /* Вход по    9 */		
-	
-	/* Вход по STAR */
 	
 	
-	
-	/* Вход по SHARP */ 
-	if (*KEY_HOLDED == 20) {            
+	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */       
 		if (*KB_LOCKED == 0) {			
 			ask_pass |= 2
-		} else {
+		if (*KB_LOCKED == 1) {
 			ask_pass |= 4
 		}
 	}
-	*/	
+	
 	
 	/* Пароль-на-входе */
 	if (ask_pass & 1) {
@@ -204,21 +199,17 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		if (!pc) return vis[0];
 	};
 
-    unsigned items = modules + 1, selected = 0, top = 0;	
+    unsigned items = modules + 1, selected = 0, top = 0;
 	
-	char keystate[3];
-    hex(keystate, *KB_LOCKED, 2); 
+	char buf[3];
+	hex(buf, ask_pass, 2); 
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
-    gfx_text(8, 3, keystate, 12, 2, GFX_WHITE, GFX_BLUE);
+    gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
     //gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
-	
-	hex(keystate, ask_pass, 2); 
-	
-    gfx_text(4, FOOT_Y, keystate, 26, 1, GFX_GREY, GFX_BLACK);
-    //gfx_text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, GFX_GREY, GFX_BLACK);
     gfx_fill(0, FOOT_Y + 8, H9_WIDTH, H9_HEIGHT - FOOT_Y - 8, GFX_BLACK);
     draw_list(api, items, modules, vis, top, selected);
 
