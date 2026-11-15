@@ -138,6 +138,25 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
 	if (*KEY_HOLDED == 19) return 0; /* Вход по    9 */		
 	
+	/* Вход по STAR */
+	
+	
+	/* Вход по SHARP */ 
+	if (*KEY_HOLDED == 20) {            
+		if (*KB_LOCKED == 0) {
+			char buf[3];
+			hex(buf, *KB_LOCKED, 2); 
+			gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_RED);
+			gfx_text(8, 3, buf, 12, 2, GFX_RED, GFX_BLACK);
+		} else {
+			char buf[3];
+			hex(buf, *KB_LOCKED, 2); 
+			gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
+			gfx_text(8, 3, buf, 12, 2, GFX_BLUE, GFX_BLACK);
+		}
+	}
+	*/	
+	
 	/* Пароль-на-входе */
 	if (ask_pass & 1) {
         int pc = find_passcode(api, count);
@@ -195,8 +214,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	char buf[3];
 	hex(buf, *KB_LOCKED, 2); 
 
-    gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
-    gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
+    //gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
+    //gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
     //gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
