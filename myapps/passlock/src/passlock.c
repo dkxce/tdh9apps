@@ -307,7 +307,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
-	*KB_UNLOCKED = 0;
+	*KB_UNLOCKED = 1;
 	gfx_wait_release();    
 	
     unsigned char pass[PASS_LEN];
@@ -316,7 +316,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KEYLCK)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
-			*KB_UNLOCKED = 1;
 			clear_all();
 			return H9_RETURN_RADIO_LOCAL;
 		}
