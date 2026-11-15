@@ -52,6 +52,11 @@ static void read_entry(const struct h9_api *api, unsigned index, struct h9_entry
     api->read(entry, api->bundle + H9_BUNDLE_HEADER + H9_BUNDLE_ENTRY * index, sizeof *entry);
 }
 
+static void clear_all(void)
+{
+    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+}
+
 /* Return the bundle index of the PASSCODE module, or 0 if there is none. */
 static int find_passcode(const struct h9_api *api, unsigned count)
 {
