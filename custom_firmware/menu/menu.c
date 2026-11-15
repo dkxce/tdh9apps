@@ -75,7 +75,7 @@ static int item_module(unsigned item, unsigned modules, const uint8_t *vis)
 
 static void draw_row(const struct h9_api *api, unsigned item, unsigned modules, const uint8_t *vis, unsigned row, int selected)
 {
-    uint16_t fg = selected ? GFX_BLACK : GFX_WHITE, bg = selected ? GFX_YELLOW : GFX_BLACK;
+    uint16_t fg = selected ? GFX_BLACK : GFX_WHITE, bg = selected ? GFX_GREY : GFX_BLACK;
     unsigned y = ROW_Y + row * ROW_H;
     struct h9_entry entry;
     const char *name;
@@ -181,9 +181,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     unsigned items = modules + 1, selected = 0, top = 0;
 
-    gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
-    gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
+    gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLACK);
+    gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_GREY, GFX_BLACK);	
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
+	gfx_fill(0, TITLE_H - 1, H9_WIDTH, 2, GFX_GREY);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
     gfx_text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, GFX_GREY, GFX_BLACK);
     gfx_fill(0, FOOT_Y + 8, H9_WIDTH, H9_HEIGHT - FOOT_Y - 8, GFX_BLACK);

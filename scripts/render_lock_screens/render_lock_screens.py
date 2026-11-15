@@ -151,28 +151,41 @@ def screen_new_passw():
     return s
 
 
+def text_width(s, scale):
+    """Width in px of `s` drawn at `scale` (6 px per char cell)."""
+    return len(s) * 6 * scale
+
+
 def _radio_widget(modules, selected):
     """menu.c: title bar + module list rows + footer."""
-    ROW_Y, ROW_H, ROWS, FOOT_Y = 26, 18, 5, 117
+    TITLE_H, ROW_Y, ROW_H, ROWS, FOOT_Y = 22, 26, 18, 5, 117
     s = Screen()
-    s.fill(0, 0, W, 22, "blue")
-    s.text(8, 3, "RADIO WIDGET", 12, 2, "white", "blue")
-    s.fill(0, 22, W, 4, "black")
+    # title bar
+    s.fill(0, 0, W, TITLE_H, "black")
+    s.text(8, 3, "RADIO WIDGET", 12, 2, "grey", "black")
+    # gap under the title, then the grey 2px underline at TITLE_H-1
+    s.fill(0, TITLE_H, W, ROW_Y - TITLE_H, "black")
+    s.fill(0, TITLE_H - 1, W, 2, "grey")
+    # footer area
+    s.fill(0, ROW_Y + ROWS * ROW_H, W, FOOT_Y - (ROW_Y + ROWS * ROW_H), "black")
     s.text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, "grey", "black")
     s.fill(0, FOOT_Y + 8, W, H - FOOT_Y - 8, "black")
     for row in range(ROWS):
         y = ROW_Y + row * ROW_H
-        s.fill(0, y, W, 1, "black")
-        s.fill(0, y + 17, W, 1, "black")
-        s.fill(0, y + 1, 4, 16, "black")
         if row < len(modules):
+            name = modules[row]
             sel = selected == row
-            fg, bg = ("black", "yellow") if sel else ("white", "black")
-            s.text(4, y + 1, modules[row], 12, 2, fg, bg)
-            s.fill(0, y, 1, 16, bg)
-            s.fill(0, y, 1, 1, bg)
+            fg, bg = ("black", "grey") if sel else ("white", "black")
+            x = text_width(name, 2)
+            s.text(4, y + 1, name, 12, 2, fg, bg)
+            s.fill(0, y, W, 1, bg)
+            s.fill(0, y + 17, W, 1, bg)
+            s.fill(0, y + 1, 4, 16, bg)
+            # tail of the row (text never fills the full width at 2x, 12 chars)
+            if x < W:
+                s.fill(4 + x, y + 1, W - (4 + x), 16, bg)
         else:
-            s.fill(0, y + 1, W, 16, "black")
+            s.fill(0, y, W, ROW_H, "black")
     return s
 
 
