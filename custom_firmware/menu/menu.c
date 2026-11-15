@@ -135,14 +135,15 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		
 	int ask_pass = 0;		
 	if (*SKIP_CHECK == SKIP_LOCKED) ask_pass = 1;
-	if (*KEY_HOLDED == 02) return 0; /* Вход по    0 */		
-	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
-	if (*KEY_HOLDED == 19) {         /* Вход по    9 */	
-		if (*KB_UNLOCKED == 1) ask_pass = 1;
+	if (*KEY_HOLDED == 02) return 0;  /* Вход по    0 */		
+	if (*KEY_HOLDED == 15) return 0;  /* Вход по BACK */		
+	if (*KEY_HOLDED == 19) {          /* Вход по    9 */	
+		gfx_wait_release();
+		if (*KB_UNLOCKED == 1) ask_pass = 0; // inverted
 		else return 0;
-	}	
+	}
 	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */       
-		if (*KB_UNLOCKED == 0) 
+		if (*KB_UNLOCKED == 0)               //  normal
 			ask_pass = 1;
 	}
 	
