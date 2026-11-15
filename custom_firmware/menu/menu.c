@@ -141,7 +141,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		gfx_wait_release();
 		if (*SKIP_CHECK == SKIP_KEYLCK) { 
 			//ask_pass = 1;
-			*SKIP_CHECK == SKIP_UNLOCKED;
+			*SKIP_CHECK = SKIP_UNLOCKED;
 			*KB_UNLOCKED = 1;
 			STOCK_REDRAW();
 			return 0;
