@@ -128,21 +128,36 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
 	int ask_pass = 0;
-	if (*KEY_HOLDED == 15)           /* Вход по BACK */	
+	
+	/* Вход по BACK */	
+	if (*KEY_HOLDED == 15)           
 		return 0; 
-	if (*KEY_HOLDED == 19) {         /* Вход по STAR */
+	
+	/* Вход по 0 */	
+	if (*KEY_HOLDED == 02) {		
+		*SKIP_CHECK = SKIP_KBLOCK;
+		return 0; 
+	}
+	
+	/* Вход по STAR */
+	if (*KEY_HOLDED == 19) {         
 		if (*SKIP_CHECK == SKIP_KBLOCK) 
 			ask_pass |= 1;
 		else 
 			return 0; /* BACK */	
 	}	
-	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */
+	
+	/* Вход по SHARP */
+	if (*KEY_HOLDED == 20) {         
 		if (*SKIP_CHECK == SKIP_KBLOCK) 
 			ask_pass |= 1;
 	}	
-	if (*SKIP_CHECK == SKIP_LOCKED) 
-		ask_pass |= 1;               /* Запароленное включение */
 	
+	/* Запароленное включение */
+	if (*SKIP_CHECK == SKIP_LOCKED) 
+		ask_pass |= 1;               
+	
+	/* Пароль-на-входе */
 	if (ask_pass & 1) {
         int pc = find_passcode(api, count);
         if (!pc) {

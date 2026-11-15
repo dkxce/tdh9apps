@@ -1,5 +1,5 @@
 diff --git a/src/stub.s b/src/stub.s
-index 52428ba..74ef2d1 100644
+index 52428ba..3c3673e 100644
 --- a/src/stub.s
 +++ b/src/stub.s
 @@ -4,7 +4,7 @@
@@ -37,10 +37,10 @@ index 52428ba..74ef2d1 100644
      r3 = 0x0000c3af
      r0 = b[r3+0] (u)
 -    if (r0 != 15) goto ml_back_released
-+	 /* Проверяем клавишу: # (20), * (19)  */
-+    if (r0 == 20) goto ml_holded   /* # (0x14) */
++	if (r0 == 20) goto ml_holded   /* # (0x14) */
 +    if (r0 == 19) goto ml_holded   /* * (0x13) */
 +    if (r0 == 15) goto ml_holded   /* BACK (0x0F) */
++    if (r0 == 02) goto ml_holded   /* 0 (0x0F) */
 +    goto ml_back_released
  
 +ml_holded:
