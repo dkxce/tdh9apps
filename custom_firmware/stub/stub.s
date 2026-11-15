@@ -58,8 +58,9 @@ ml_hotkey:
 ml_no_auto_open:
     r3 = 0x0000c3af
     r0 = b[r3+0] (u)
-	if (r0 == 20) goto ml_holded   /* SHARP (0x14) */
-    if (r0 == 19) goto ml_holded   /* STAR  (0x13) */
+	if (r0 == 20) goto ml_holded   /* # (0x14) */
+    if (r0 == 19) goto ml_holded   /* * (0x13) */
+    // if (r0 == 15) goto ml_holded   /* BACK (0x0F) */
     goto ml_back_released
 
 ml_holded:
