@@ -307,8 +307,8 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
-	gfx_wait_release();
-   *KB_UNLOCKED = 0; // всегда
+	*KB_UNLOCKED = 0;
+	gfx_wait_release();    
 	
     unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
