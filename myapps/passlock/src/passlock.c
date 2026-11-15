@@ -274,7 +274,9 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                 }
                 h9_delay(60);
             } else if (sel == EXIT) {
-                return 0;
+                STOCK_REFRESH();
+				STOCK_REDRAW();
+				return H9_RETURN_RADIO_LOCAL;
             }
         }
         else if (k == H9_KEY_BACK) return 0;
@@ -293,7 +295,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     if (*SKIP_CHECK == SKIP_LOCKED) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
-			clear_all();
+			STOCK_REFRESH();
+            STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		}
         char buf[PASS_LEN + 1];
@@ -314,7 +317,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             goto okb;
         }
         *SKIP_CHECK = SKIP_NORMAL;
-        clear_all();
+        STOCK_REFRESH();
+        STOCK_REDRAW();
         return H9_RETURN_RADIO_LOCAL;
     }
 

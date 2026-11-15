@@ -42,6 +42,7 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u)
+#define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu)
 
 #define PASSCODE_NAME "PASSLOCK"
 
@@ -134,6 +135,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             *SKIP_CHECK = SKIP_UNLOCKED;
             return 0;
         }
+		*MDL_LOADED = (unsigned)pc;
         return (unsigned)pc;
 	}
 	
@@ -156,9 +158,17 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             unsigned k = 0;
             read_entry(api, i, &entry);
             while (k < H9_NAME_BYTES && entry.name[k] == rq->name[k] && entry.name[k]) k++;
-            if (k == H9_NAME_BYTES || entry.name[k] == rq->name[k]) return i;
+            if (k == H9_NAME_BYTES || entry.name[k] == rq->name[k]) {
+				*MDL_LOADED = i;
+				return i;
+			}
         }
     }
+	
+	// MENU NAVIGATION
+	unsigned items = modules + 1, selected = 0, top = 0;
+	
+	
     /* Visible modules: names starting with '.' are helper screens that other
      * modules open by request; they are not listed. */
     uint8_t vis[MAX_ITEMS];
@@ -166,7 +176,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     for (unsigned i = 1; i < count && shown < MAX_ITEMS; i++) {
         char first;
         api->read(&first, api->bundle + H9_BUNDLE_HEADER + H9_BUNDLE_ENTRY * i, 1);
-        if (first != '.') vis[shown++] = (uint8_t)i;
+        if (first != '.') {
+			if (*MDL_LOADED == (uint8_t)i) selected = shown;
+			vis[shown++] = (uint8_t)i;			
+		};
     }
     modules = shown;
 
@@ -176,9 +189,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	{
 		int pc = find_passcode(api, count);
 		if (!pc) return vis[0];
-	};
-
-    unsigned items = modules + 1, selected = 0, top = 0;
+	};    	
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
     gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
@@ -208,6 +219,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 h9_usb_loader();
             }
             message("LOADING");
+			*MDL_LOADED = (unsigned)which;
             return (unsigned)which;
         } else {
             continue;
