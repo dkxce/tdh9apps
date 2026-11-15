@@ -137,7 +137,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*KEY_HOLDED == 02) return 0; /* Вход по    0 */		
 	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
 	if (*KEY_HOLDED == 19) return 0; /* Вход по    9 */		
-		/* Пароль-на-входе */
+	
+	/* Пароль-на-входе */
 	if (ask_pass & 1) {
         int pc = find_passcode(api, count);
         if (!pc) {
@@ -192,7 +193,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned items = modules + 1, selected = 0, top = 0;
 	
 	char buf[3];
-	hex(buf, *KEY_HOLDED, 2); 
+	hex(buf, *KB_LOCKED, 2); 
 
     gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
     gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
