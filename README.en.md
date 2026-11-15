@@ -242,7 +242,7 @@ Chat-20/
 | APRS/GNSS settings | [td9 aprs. md](td9_aprs.md) | — |
 | Custom firmware | [custom firmware/README. md](custom_firmware/README.md) | [custom firmware/README.en. md](custom_firmware/README.en.md) |
 | tracker | [myapps/tracking/README. md](myapps/tracking/README.md) | [myapps/tracking/README.en. md](myapps/tracking/README.en.md) |
-| Tracker restrictions | [myapps/tracking/LIMITS. md](myapps/tracking/LIMITS.md) | — |
+| Tracker restrictions | [myapps/tracking/LIMITS. md](myapps/tracking/LIMITS.md) | [myapps/tracking/LIMITS.en. md](myapps/tracking/LIMITS.en.md) |
 | License. | [LICENSE. md](LICENSE.md) | — |
 | Third-party components | [THIRD PARTY NOTICES. md](THIRD_PARTY_NOTICES.md) | — |
 | Version. | [version. md](version.md) | — |
