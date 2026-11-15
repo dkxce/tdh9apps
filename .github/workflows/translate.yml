@@ -7,7 +7,7 @@ on:
     paths:
       - 'README.md'
       - 'custom_firmware/README.md'
-      - 'tracking/LIMITS.md'
+      - 'myapps/tracking/LIMITS.md'
       - 'myapps/tracking/README.md'
       - 'lock-pass.md'
       - 'ram.md'
@@ -31,7 +31,7 @@ jobs:
           translate_paths: |
             README.md
             custom_firmware/README.md
-            tracking/LIMITS.md
+            myapps/tracking/LIMITS.md
             myapps/tracking/README.md
             lock-pass.md
             ram.md
