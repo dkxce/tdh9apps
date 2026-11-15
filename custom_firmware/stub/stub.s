@@ -124,9 +124,9 @@ mlk_check:
     if (r0 == 1) goto mlk_done       /* Рация разлочена  */
     if (r0 == 2) goto mlk_done       /* Рация заблочена  */
     if (r0 == 3) goto mlk_done       /* Нужно разлочить  */
-    if (r0 == 4) goto mlk_done       /* Перехват keylock */
-    if (r0 == 5) goto mlk_done       /* Нужен пароль     */
-    if (r0 == 6) goto mlk_done       /* Нужен keylock    */
+    if (r0 == 4) goto mlk_done 
+    if (r0 == 5) goto mlk_done
+    if (r0 == 6) goto mlk_done
     /* fresh: read the 8 lock bytes */
     sp += -8
     r0 = sp + 0

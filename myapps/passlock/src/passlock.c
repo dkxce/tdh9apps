@@ -23,6 +23,7 @@
  * <RADIO LOCK FLOW>
  * define SKIP_UNLOCKED 1u - Рация разлочена  
  * define SKIP_LOCKED   2u - Рация заблочена  
+ * define SKIP_NORMAL   3u - Нужно разлочить
  *
  * skip_check = 0 # включение питания (0x2B8DF)
  * <stub>
@@ -33,22 +34,12 @@
  *   │   └─► (Пароль присутствует) -> 
  *   │       └─► skip_check = 2 # надо проверить
  *   │
- *   ├─ (Удержан back или # или * или 0 или skip_check == 2) -> menu app
+ *   ├─ (Удержан back или # или * или skip_check == 2) -> menu app
  *   │ <menu>
  *   │   ├── (hold Back) -> да
  *   │   │   └─► Выход из меню, возврат к стоку  
- *   │   ├── (hold 0) -> да
- *   │   │   ├── skip_check = 4
- *   │   │   └─► Выход из меню, возврат к стоку  
  *   │   ├── (hold *) -> да
- *   │   │   ├─► (skip_check != 4) ->
- *   │   │   │   └─► Выход из меню, возврат к стоку  
- *   │   │   └─► (skip_check == 4) ->
- *   │   │       ├── (Модуля passcode нет) ->
- *   │   │       │   ├── skip_check = 1
- *   │   │       │   └─► Выход из меню, возврат к стоку  
- *   │   │       └─► (Модуль passcode есть) -> passcode app
- *   │   │           └─► Вызов passcode
+ *   │   │   └─► Выход из меню, возврат к стоку  
  *   │   ├── (skip_check == 2) ->
  *   │   │   ├── (Модуля passcode нет) ->
  *   │   │   │   ├── skip_check = 1
@@ -77,7 +68,6 @@
  *   │   │           ├─ skip_check = 4
  *   │   │           └─► Вернуться в меню menu app
  *   │   └─► (skip_check != 2) ->
- *   │       ├─► Вывод меню модулей
  *   │       └─► Вывод меню модулей
  *   │           ├── passcode
  *   │           │    └──► passcode: flow аналогичный вышеприведенному
@@ -230,13 +220,12 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
     }
 }
 
-
 /* Menu of the radio-lock manager. Returns 1 (H9_RETURN_RADIO_LOCAL) when the
  * user chose LOCK NOW (password written, leave to the radio immediately with
  * the lock armed); otherwise returns 0 (back to the toolbox menu). */
 static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 {
-	enum { LOCK, UNLOCK, EXIT } sel = LOCK;
+    enum { LOCK, UNLOCK, EXIT } sel = LOCK;
     for (;;) {
         title_line();
 		clear_body();
@@ -271,7 +260,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                     } else {
                         gfx_text(4, 100, "WRITE FAIL", 12, 1, GFX_RED, GFX_BLACK);
                     }
-                    h9_delay(70);
+                    h9_delay(70);                    
                 }
 			} else if (sel == UNLOCK) {
                 for (i = 0; i < PASS_LEN; i++) newpass[i] = 0xFF;
@@ -284,15 +273,13 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 					h9_delay(70);
                 }
                 h9_delay(60);
-			} else if (sel == EXIT) {
+            } else if (sel == EXIT) {
                 return 0;
             }
         }
-        else if (k == H9_KEY_BACK) {
-			return 0;
-		}
+        else if (k == H9_KEY_BACK) return 0;
     }
-	return 0; 
+	return 0;
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)
@@ -345,15 +332,13 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
         if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
             gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
-            h9_delay(70);
+            h9_delay(90);
             goto ok;
         }
     }
 	
-    menu_loop(api, pass);
+    unsigned r = menu_loop(api, pass);
+	clear_body();
 	
-	clear_all();	
-	STOCK_REFRESH();
-    STOCK_REDRAW();
-    return 0; /* back to the menu */
+    return r;
 }

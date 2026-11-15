@@ -50,11 +50,6 @@ static void read_entry(const struct h9_api *api, unsigned index, struct h9_entry
     api->read(entry, api->bundle + H9_BUNDLE_HEADER + H9_BUNDLE_ENTRY * index, sizeof *entry);
 }
 
-static void clear_all(void)
-{
-    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-}
-
 /* Return the bundle index of the PASSCODE module, or 0 if there is none. */
 static int find_passcode(const struct h9_api *api, unsigned count)
 {
@@ -118,7 +113,7 @@ static void message(const char *text)
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)
-{	
+{
     uint8_t header[H9_BUNDLE_HEADER];
     (void)self;
     api->read(header, api->bundle, sizeof header);
@@ -147,12 +142,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*SKIP_CHECK == SKIP_NORMAL) {
 		*SKIP_CHECK = SKIP_UNLOCKED;
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
-		 clear_all();
          STOCK_REFRESH();
          STOCK_REDRAW();
 		 h9_delay(120);
          return 0;
-    }	
+    }
 
     /* A module asked for another one: run it without showing the menu. */
     volatile struct h9_request *rq = H9_REQUEST;
@@ -187,8 +181,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	};
 
     unsigned items = modules + 1, selected = 0, top = 0;
-	
-	gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
+
+    gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
     gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
@@ -206,7 +200,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             selected = selected + 1 < items ? selected + 1 : 0;
         } else if (key == H9_KEY_BACK) {
             gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
-			clear_all();
             STOCK_REFRESH();
             STOCK_REDRAW();
             return 0;
