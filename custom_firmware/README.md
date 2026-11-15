@@ -20,31 +20,39 @@
 |---|---|
 | `stub/stub.s` | полный источник загрузчика с lock-проверкой (для копирования в `module-loader/src/stub.s`) |
 | `stub/stub.patch` | git-diff патч к текущему `stub.s` репозитория h9toolbox |
-| `passlock/passlock.c` | модуль PASSLOCK с unlock-only веткой (для копирования в `myapps/passlock/src/passlock.c`) |
-| `build-lock.yml` | GitHub Actions workflow: сборка прошивки со stub через ваш CI (см. ниже) |
+| `menu/menu.c` | меню с owner-lock boot-путём (`skip_check == 2` → запуск `PASSCODE` или fail-open; для копирования в `module-loader/modules/menu/menu.c`) |
+| [TD-H9-V1.0.38DKXCE.fw](TD-H9-V1.0.38DKXCE.fw) | готовая прошивка со stub (lock-проверкой на включении) |
+
+Папка `stub/` дополнительно содержит `stub_base.s` (исходный загрузчик) и
+`make_diff.py` (генерация `stub.patch`). Сам модуль `PASSLOCK` живёт в
+`myapps/passlock/src/passlock.c` и собирается отдельно (см. ниже).
 
 ## Готовые сборки
 
 | Файл | Назначение |
 |---|---|
-| [TD-H9-V1.0.38_dkxce_passlock.fw](TD-H9-V1.0.38_dkxce_passlock.fw) | Поддержка passlock, загрузка через Back |
-| [TD-H9-V1.0.38_dkxce_passlock_sharp.fw.fw](TD-H9-V1.0.38_dkxce_passlock_sharp.fw.fw) | Поддержка passlock, загрузка через # |
+| [TD-H9-V1.0.38DKXCE.fw](TD-H9-V1.0.38DKXCE.fw) | Прошивка со stub: поддержка passlock, загрузка через Back |
+
+Какую клавишу слушает stub для входа в меню (`Back`, `#` или `*`), задаёт
+`stub/stub.s` (проверка `0xC3AF`), а не конкретный `.fw` файл.
 
 ## Автосборка через GitHub Actions (рекомендуется)
 
-Без доступа к `melidosian/h9toolbox` вам не нужен: workflow `build-lock.yml`
-клонирует его как публичный vendor, применяет `stub/stub.patch`, извлекает
-stock `app.bin` из `firmware/TD-H9-V1.0.38.fw` в вашем репо, скачивает JieLi
-toolchain из вашего релиза `toolchain` и собирает прошивку.
+Без доступа к `melidosian/h9toolbox` вам не нужен: workflow
+[`build-lock-firmware.yml`](../.github/workflows/build-lock-firmware.yml) (`Build
+TD-H9 lock firmware`) клонирует его как публичный vendor, применяет
+`stub/stub.patch`, ставит `menu/menu.c`, извлекает stock `app.bin` из
+`firmware/TD-H9-V1.0.38.fw` в вашем репо, скачивает JieLi toolchain из вашего
+релиза `toolchain` и собирает прошивку.
 
 Установка:
-1. Положите `custom_firmware/` в репозиторий `dkxce/tdh9apps` (рядом с `firmware/`).
-2. Скопируйте `custom_firmware/build-lock.yml` в
-   `.github/workflows/build_lock.yml`.
-3. Убедитесь, что в релизе `tdh9apps` с тегом `toolchain` есть asset `.tar.xz`
-   с тулчейном (папка внутри содержит `pi32v2/bin/clang`).
-4. Actions → **Build TD-H9 lock firmware** → Run workflow.
-5. Артефакт `lock-firmware` содержит `h9_toolbox_modules_OFFLINE_EXPERIMENT.fw`
+1. README и файлы уже лежат в репозитории `dkxce/tdh9apps`
+   (`custom_firmware/` рядом с `firmware/`, workflow в `.github/workflows/`).
+2. Убедитесь, что в релизе `tdh9apps` с тегом `toolchain` есть asset `.tar.xz`
+   с тулчейном (папка внутри содержит `pi32v2/bin/clang`), и в релизе с тегом
+   `buildable` — asset `buildable.zip` (минимальный vendor-архив h9toolbox).
+3. Actions → **Build TD-H9 lock firmware** → Run workflow.
+4. Артефакт `lock-firmware` содержит `h9_toolbox_modules_OFFLINE_EXPERIMENT.fw`
    (прошивка со stub), `h9_modules.bin` и манифест.
 
 Заливка: `h9_flash.py --fw <файл.fw>` (HID, PTT+2).
@@ -69,7 +77,7 @@ toolchain из вашего релиза `toolchain` и собирает про�
 
 ### 2. Модуль (`passlock.c`)
 Репозиторий: `dkxce/tdh9apps` (TDH9Unbrick).
-- Скопируйте `passlock/passlock.c` в `myapps/passlock/src/passlock.c`.
+- Исходник уже лежит в `myapps/passlock/src/passlock.c`.
 - Соберите модуль через CI `Build myapps modules`
   (`build_one.py passlock`), получите `passlock.h9mod`, установите на рацию.
 
