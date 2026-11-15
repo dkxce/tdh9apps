@@ -40,8 +40,9 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
+#define SKIP_KEYLCK   4u /* Клава залочена   */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_LOCKED     ((volatile unsigned char *)0x0C3C8u)
+#define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u)
 
 #define PASSCODE_NAME "PASSLOCK"
 
@@ -133,16 +134,16 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
 	int ask_pass = 0;		
-	if (*SKIP_CHECK == SKIP_LOCKED) ask_pass |= 1;
+	if ((*SKIP_CHECK & 0x03) == SKIP_LOCKED) ask_pass |= 1;
 	if (*KEY_HOLDED == 02) return 0; /* Вход по    0 */		
 	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
-	if (*KEY_HOLDED == 19) return 0; /* Вход по    9 */		
+	if (*KEY_HOLDED == 19) {         /* Вход по    9 */	
+		if (*KB_UNLOCKED == 0) ask_pass |= 1;
+		else return 0
+	}	
 	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */       
-		if (*KB_LOCKED == 0) {			
-			ask_pass |= 2;
-		} else {
-			ask_pass |= 4;
-		}
+		if (*KB_UNLOCKED == 0) 
+			ask_pass |= 1;
 	}
 	
 	/* Пароль-на-входе */ 
