@@ -1,0 +1,24 @@
+**Кастомизированная прошивка** на основе v1.0.3.8 и h9toolbox от melidosian/h9toolbox.      
+Основной функционал:
+- добавлена блокировка рации по паролю (стек: **TD-H9-V1.0.38DKXCE.fw** + **menu.h9mod** + **passlock.h9mod**)
+- добавлена смена bootscreen через скрипт (стек: **td9_logo.exe**)
+- добавлен просмотр bootscreen через модуль (стек: **bootscreen.h9mod**)
+- добавлена загрузка картинок через скрипт и просмотр на рации (стек: **td9_kpi.exe** +**dkxcepic.h9mod**)
+- добавлена загрузка приложений через скрипт (стек: **TD-H9-V1.0.38DKXCE.fw** + **td9_apps.exe**)
+- добавлена загрузка/выгрузка aprs-настроек (стек: **td9_aprs.exe**)
+- добавлен раскирпичиватель рации через HID (стек: **h9_ui_flash.exe**)
+- добавлен модуль GPS-трекера-навигатора (стек: **tracking.h9mod**)
+
+---
+
+**Custom firmware** based on v1.0.3.8, utilizing the h9toolbox by melidosian/h9toolbox.       
+Key features:
+- Added password-based radio locking (stack: TD-H9-V1.0.38DKXCE.fw + menu.h9mod + passlock.h9mod)
+- Added the ability to change the boot screen via a script (stack: td9_logo.exe)
+- Added a boot screen viewer module (stack: bootscreen.h9mod)
+- Added the ability to upload images via a script and view them on the radio (stack: td9_kpi.exe + dkxcepic.h9mod)
+- Added the ability to load applications via a script (stack: TD-H9-V1.0.38DKXCE.fw + td9_apps.exe)
+- Added the ability to upload/download APRS settings (stack: td9_aprs.exe)
+- Added a "brick" recovery tool for the radio via HID (stack: h9_ui_flash.exe)
+- Added then 'TRACKER' GPS-tracker-navigator  (stack: **tracking.h9mod**)
+
