@@ -319,7 +319,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLOCK)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
-			x H9_RETURN_RADIO_LOCAL;
+			return H9_RETURN_RADIO_LOCAL;
 		}
         char buf[PASS_LEN + 1];
         okb: ;
