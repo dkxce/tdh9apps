@@ -92,7 +92,8 @@
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u)
+#define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
+#define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
 
 #ifndef STOCK_REFRESH
 #define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
