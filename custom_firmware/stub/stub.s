@@ -60,8 +60,7 @@ ml_no_auto_open:
     r0 = b[r3+0] (u)
 	if (r0 == 20) goto ml_holded   /* # (0x14) */
     if (r0 == 19) goto ml_holded   /* * (0x13) */
-    if (r0 == 15) goto ml_holded   /* BACK (0x0F) */
-    if (r0 == 02) goto ml_holded   /* 0 (0x0F) */
+    // if (r0 == 15) goto ml_holded   /* BACK (0x0F) */
     goto ml_back_released
 
 ml_holded:

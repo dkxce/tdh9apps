@@ -23,7 +23,6 @@
  * <RADIO LOCK FLOW>
  * define SKIP_UNLOCKED 1u - Рация разлочена  
  * define SKIP_LOCKED   2u - Рация заблочена  
- * define SKIP_KBLOCK   4u - Перехват keylock 
  *
  * skip_check = 0 # включение питания (0x2B8DF)
  * <stub>
@@ -102,10 +101,8 @@
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
-#define SKIP_KBLOCK   4u /* Перехват keylock */
-#define SKIP_NEEDPASS 5u /* Нужен пароль     */
-#define SKIP_NEEDLOCK 6u /* Нужен keylock    */
-#define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
+#define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
+#define KB_UNLOCKED   ((volatile unsigned char *)0xC3C8u)
 
 #ifndef STOCK_REFRESH
 #define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
@@ -238,7 +235,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
  * the lock armed); otherwise returns 0 (back to the toolbox menu). */
 static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 {
-    enum { LOCK, UNLOCK, KEYLOCK, EXIT } sel = LOCK;
+    enum { LOCK, UNLOCK, EXIT } sel = LOCK;
     for (;;) {
         title_line();
 		clear_body();
@@ -247,8 +244,6 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                  sel == LOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(4, 60, sel == UNLOCK  ? "[UNLOCK]    Clear pass" : " UNLOCK     Clear pass", 24, 1,
                  sel == UNLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
-		gfx_text(4, 76, sel == KEYLOCK  ? "[KEYLOCK]    Keylock Spy" : " KEYLOCK    Keylock Spy", 24, 1,
-                 sel == KEYLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
 		gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Menu" : " EXIT       Menu", 24, 1,
                  sel == EXIT ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(2, 118, "UP/DN: MOVE      BACK: OK", 30, 1, GFX_GREY, GFX_BLACK);
@@ -288,18 +283,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 					h9_delay(70);
                 }
                 h9_delay(60);
-			} else if (sel == KEYLOCK) {
-				if (pass_locked(pass)) {
-					*SKIP_CHECK = SKIP_NEEDLOCK;
-					gfx_text(4, 100, "SPY ACTIVATED", 10, 1, GFX_GREEN, GFX_BLACK);
-					h9_delay(70);
-					return 0;
-                } else {
-					*SKIP_CHECK = SKIP_NORMAL;
-                    gfx_text(4, 100, "NEED PASSW", 12, 1, GFX_RED, GFX_BLACK);
-					h9_delay(70);
-				}
-            } else if (sel == EXIT) {
+			} else if (sel == EXIT) {
                 return 0;
             }
         }
@@ -316,9 +300,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     read_pass(api, pass);    
 
 	*KEY_HOLDED = 0;
-    if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLOCK)) {
+    if ((*SKIP_CHECK == SKIP_LOCKED) || (*KB_UNLOCKED == 0)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
+			if (*SKIP_CHECK != SKIP_LOCKED) *KB_UNLOCKED = 1;
 			return H9_RETURN_RADIO_LOCAL;
 		}
         char buf[PASS_LEN + 1];
@@ -328,7 +313,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
 		if (rc == 2) goto okb; 
-		if ((rc == 1) && (*SKIP_CHECK == SKIP_KBLOCK)) {
+		if ((rc == 1) && (*SKIP_CHECK != SKIP_LOCKED)) {
+			*KB_UNLOCKED = 1;
 			h9_key();
 			h9_delay(90);
 			clear_all();

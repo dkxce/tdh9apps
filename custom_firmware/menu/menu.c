@@ -40,10 +40,8 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
-#define SKIP_KBLOCK   4u /* Перехват keylock */
-#define SKIP_NEEDPASS 5u /* Нужен пароль     */
-#define SKIP_NEEDLOCK 6u /* Нужен keylock    */
-#define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
+#define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
+#define KB_UNLOCKED   ((volatile unsigned char *)0xC3C8u)
 
 #define PASSCODE_NAME "PASSLOCK"
 
@@ -127,36 +125,18 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	int ask_pass = 0;
-	
-	/* Вход по BACK */	
-	if (*KEY_HOLDED == 15)           
-		return 0; 
-	
-	/* Вход по 0 */	
-	if (*KEY_HOLDED == 02) {		
-		*SKIP_CHECK = SKIP_KBLOCK;
-		gfx_text(1, 3, "I", 4, 2, GFX_WHITE, GFX_BLACK);
-		return 0; 
-	};
-	
-	/* Вход по STAR */
-	if (*KEY_HOLDED == 19) {         
-		if (*SKIP_CHECK == SKIP_KBLOCK) 
-			ask_pass |= 1;
-		else 
-			return 0; /* BACK */	
-	}	
-	
-	/* Вход по SHARP */
-	if (*KEY_HOLDED == 20) {         
-		if (*SKIP_CHECK == SKIP_KBLOCK) 
+	int ask_pass = 0;		
+	if (*SKIP_CHECK == SKIP_LOCKED) ask_pass |= 1;
+	if (*KEY_HOLDED == 02) return 0; /* Вход по    0 */		
+	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
+	if (*KEY_HOLDED == 19) {         /* Вход по STAR */
+		if (*KB_UNLOCKED == 0)  ask_pass |= 1;
+		else return 0;
+	}		
+	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */     
+		if (*KB_UNLOCKED == 0) 
 			ask_pass |= 1;
 	}	
-	
-	/* Запароленное включение */
-	if (*SKIP_CHECK == SKIP_LOCKED) 
-		ask_pass |= 1;               
 	
 	/* Пароль-на-входе */
 	if (ask_pass & 1) {
@@ -176,17 +156,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
          STOCK_REDRAW();
 		 h9_delay(120);
          return 0;
-    }
-	
-	if (*SKIP_CHECK == SKIP_NEEDLOCK) {
-		*SKIP_CHECK = SKIP_KBLOCK;
-		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
-		 clear_all();
-         STOCK_REFRESH();
-         STOCK_REDRAW();
-		 h9_delay(120);
-         return 0;
-    }
+    }	
 
     /* A module asked for another one: run it without showing the menu. */
     volatile struct h9_request *rq = H9_REQUEST;
