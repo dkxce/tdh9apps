@@ -319,7 +319,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLOCK)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
-			return H9_RETURN_RADIO_LOCAL;
+			x H9_RETURN_RADIO_LOCAL;
 		}
         char buf[PASS_LEN + 1];
         okb: ;
@@ -376,8 +376,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         }
     }
 	
-    unsigned r = menu_loop(api, pass);
-	clear_all();
+    menu_loop(api, pass);
+	
+	clear_all();	
 	STOCK_REFRESH();
     STOCK_REDRAW();
     return 0; /* back to the menu */
