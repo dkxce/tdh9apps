@@ -123,12 +123,17 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
 	int ask_pass = 0;
-	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */	
+	if (*KEY_HOLDED == 15)           /* Вход по BACK */	
+		return 0; 
 	if (*KEY_HOLDED == 19) {         /* Вход по STAR */
 		if (*SKIP_CHECK == SKIP_KBLOCK) 
 			ask_pass |= 1;
 		else 
 			return 0; /* BACK */	
+	}	
+	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */
+		if (*SKIP_CHECK == SKIP_KBLOCK) 
+			ask_pass |= 1;
 	}	
 	if (*SKIP_CHECK == SKIP_LOCKED) 
 		ask_pass |= 1;               /* Запароленное включение */

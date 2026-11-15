@@ -104,6 +104,11 @@
 #define SKIP_NEEDLOCK 6u /* Нужен keylock    */
 #define KEY_HOLDED  ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 
+#ifndef STOCK_REFRESH
+#define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
+#define STOCK_REDRAW() ((void (*)(unsigned))0x01E53306)(0)    /* marks the three display rows for redraw */
+#endif
+
 /* Loader API 2 (H9 Toolbox Firmware v0.1.4): a module other than the menu can
  * return 0xFFFF to leave for the radio at once, without loading the toolbox
  * menu. The shared h9mod.h here is API 1, so define the constant locally. */
@@ -285,13 +290,17 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 					*SKIP_CHECK = SKIP_NEEDLOCK;
 					gfx_text(4, 100, "SPY ACTIVATED", 10, 1, GFX_GREEN, GFX_BLACK);
 					h9_delay(70);
+					STOCK_REFRESH();
+					STOCK_REDRAW();
+					return 0;
                 } else {
 					*SKIP_CHECK = SKIP_NORMAL;
                     gfx_text(4, 100, "NEED PASSW", 12, 1, GFX_RED, GFX_BLACK);
 					h9_delay(70);
 				}
             } else if (sel == EXIT) {
-				clear_all();
+				STOCK_REFRESH();
+				STOCK_REDRAW();
                 return 0;
             }
         }
@@ -309,7 +318,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLOCK)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
-			clear_all();
+			STOCK_REFRESH();
+			STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		}
         char buf[PASS_LEN + 1];
@@ -322,7 +332,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		if ((rc == 1) && (*SKIP_CHECK == SKIP_KBLOCK)) {
 			h9_key();
 			h9_delay(90);
-			clear_all();
+			STOCK_REFRESH();
+			STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		}
         unsigned char cur[PASS_LEN];
@@ -337,7 +348,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             goto okb;
         }
         *SKIP_CHECK = SKIP_NORMAL;
-        clear_all();
+        STOCK_REFRESH();
+		STOCK_REDRAW();
         return H9_RETURN_RADIO_LOCAL;
     }
 
@@ -366,5 +378,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned r = menu_loop(api, pass);
 	clear_body();
 	
+	STOCK_REFRESH();
+    STOCK_REDRAW();
     return r;
 }
