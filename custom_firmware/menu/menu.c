@@ -140,9 +140,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	
 	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */       
 		if (*KB_LOCKED == 0) {			
-			ask_pass |= 2
+			ask_pass |= 2;
 		if (*KB_LOCKED == 1) {
-			ask_pass |= 4
+			ask_pass |= 4;
 		}
 	}
 	
