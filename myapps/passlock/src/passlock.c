@@ -284,6 +284,9 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
+	(void)api; (void)self;
+	volatile struct h9_request *rq = H9_REQUEST;
+	
 	unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
@@ -337,8 +340,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         }
     }
 	
-    unsigned r = menu_loop(api, pass);
-	clear_body();
-	
-    return r;
+    menu_loop(api, pass);
+	rq->magic = 0;	
+    return 0;
 }
