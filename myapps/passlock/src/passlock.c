@@ -299,7 +299,35 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-	if (pass_locked(pass)) {
+    if (*SKIP_CHECK == SKIP_LOCKED) {
+        if (!pass_locked(pass)) {
+			*SKIP_CHECK = SKIP_NORMAL;
+			clear_all();
+			return H9_RETURN_RADIO_LOCAL;
+		}
+        char buf[PASS_LEN + 1];
+        okb: ;
+        clear_all();
+        gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
+        gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
+        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto okb;
+        unsigned char cur[PASS_LEN];
+        read_pass(api, cur);
+        char ascii[PASS_LEN + 1];
+        pass_ascii(cur, ascii);
+        unsigned i = 0;
+        while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
+        if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
+            gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
+            h9_delay(90);
+            goto okb;
+        }
+        *SKIP_CHECK = SKIP_NORMAL;
+        clear_all();
+        return H9_RETURN_RADIO_LOCAL;
+    }
+
+    if (pass_locked(pass)) {
         char buf[PASS_LEN + 1];
         ok: ;
         clear_all();
