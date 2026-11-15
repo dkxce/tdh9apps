@@ -135,24 +135,22 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		
 	int ask_pass = 0;		
 	if (*SKIP_CHECK == SKIP_LOCKED) ask_pass = 1;
-	if (*KEY_HOLDED == 02) return 0;  /* Вход по    0 */		
-	if (*KEY_HOLDED == 15) return 0;  /* Вход по BACK */		
-	if (*KEY_HOLDED == 19) {          /* Вход по    * */			
+	if (*KEY_HOLDED == 02) return 0;  /* Вход по    0  */		
+	if (*KEY_HOLDED == 15) return 0;  /* Вход по BACK  */
+	if (*KEY_HOLDED == 20)            /* Вход по SHARP */       
+		if (*KB_UNLOCKED == 0)
+			return 0;
+	if (*KEY_HOLDED == 19) {          /* Вход по     * */			
 		//if (*KB_UNLOCKED == 0)
 		if (*SKIP_CHECK == SKIP_KEYLCK) { 
-			//ask_pass = 1;
+			ask_pass = 1;
 			*SKIP_CHECK = SKIP_UNLOCKED;			
-			return 0;
+			//return 0;
 		} else {
 			*SKIP_CHECK = SKIP_KEYLCK;
 			return 0;
 		}
-	}
-	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */       
-		//if (*KB_UNLOCKED == 0)
-		if (*SKIP_CHECK == SKIP_KEYLCK)
-			ask_pass = 1;
-	}
+	}	
 	
 	/* Пароль-на-входе */ 
 	if (ask_pass == 1) {
