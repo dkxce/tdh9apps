@@ -102,7 +102,7 @@
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_UNLOCKED   ((volatile unsigned char *)0xC3C8u)
+#define KB_LOCKED   ((volatile unsigned char *)0xC3C8u)
 
 #ifndef STOCK_REFRESH
 #define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
@@ -300,10 +300,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     read_pass(api, pass);    
 
 	*KEY_HOLDED = 0;
-    if ((*SKIP_CHECK == SKIP_LOCKED) || (*KB_UNLOCKED == 0)) {
+    if ((*SKIP_CHECK == SKIP_LOCKED) || (*KB_LOCKED == 1)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
-			if (*SKIP_CHECK != SKIP_LOCKED) *KB_UNLOCKED = 1;
+			if (*SKIP_CHECK != SKIP_LOCKED) *KB_LOCKED = 0;
 			return H9_RETURN_RADIO_LOCAL;
 		}
         char buf[PASS_LEN + 1];
@@ -314,7 +314,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
 		if (rc == 2) goto okb; 
 		if ((rc == 1) && (*SKIP_CHECK != SKIP_LOCKED)) {
-			*KB_UNLOCKED = 1;
+			*KB_LOCKED = 0;
 			h9_key();
 			h9_delay(90);
 			clear_all();
