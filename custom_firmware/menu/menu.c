@@ -136,7 +136,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	/* Вход по 0 */	
 	if (*KEY_HOLDED == 02) {		
 		*SKIP_CHECK = SKIP_KBLOCK;
-		gfx_fill(0, 0, H9_WIDTH, TITLE_H - 1, GFX_BLACK);
 		gfx_text(1, 3, "I", 4, 2, GFX_WHITE, GFX_BLACK);
 		return 0; 
 	};

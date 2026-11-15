@@ -34,9 +34,12 @@
  *   │   └─► (Пароль присутствует) -> 
  *   │       └─► skip_check = 2 # надо проверить
  *   │
- *   ├─ (Удержан back или # или * или skip_check == 2) -> menu app
+ *   ├─ (Удержан back или # или * или 0 или skip_check == 2) -> menu app
  *   │ <menu>
  *   │   ├── (hold Back) -> да
+ *   │   │   └─► Выход из меню, возврат к стоку  
+ *   │   ├── (hold 0) -> да
+ *   │   │   ├── skip_check = 4
  *   │   │   └─► Выход из меню, возврат к стоку  
  *   │   ├── (hold *) -> да
  *   │   │   ├─► (skip_check != 4) ->
@@ -72,7 +75,7 @@
  *   │   │       └─► меню блокировки рации
  *   │   │           ├─ разблокировать рацию (удаление пароля), если есть пароль
  *   │   │           ├─ заблокировать рацию (просмотр, ввод и запись пароля)
- *   │   │           ├─ отлавливать блокировку клавиатуры
+ *   │   │           ├─ skip_check = 4
  *   │   │           └─► Вернуться в меню menu app
  *   │   └─► (skip_check != 2) ->
  *   │       ├─► Вывод меню модулей
@@ -290,9 +293,6 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 					*SKIP_CHECK = SKIP_NEEDLOCK;
 					gfx_text(4, 100, "SPY ACTIVATED", 10, 1, GFX_GREEN, GFX_BLACK);
 					h9_delay(70);
-					clear_all();
-					STOCK_REFRESH();
-					STOCK_REDRAW();
 					return 0;
                 } else {
 					*SKIP_CHECK = SKIP_NORMAL;
@@ -300,16 +300,10 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 					h9_delay(70);
 				}
             } else if (sel == EXIT) {
-				clear_all();
-				STOCK_REFRESH();
-				STOCK_REDRAW();
                 return 0;
             }
         }
         else if (k == H9_KEY_BACK) {
-			clear_all();
-			STOCK_REFRESH();
-			STOCK_REDRAW();
 			return 0;
 		}
     }
@@ -325,9 +319,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLOCK)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
-			clear_all();
-			STOCK_REFRESH();
-			STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		}
         char buf[PASS_LEN + 1];
@@ -386,10 +377,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     }
 	
     unsigned r = menu_loop(api, pass);
-	clear_body();
-	
 	clear_all();
 	STOCK_REFRESH();
     STOCK_REDRAW();
-    return r;
+    return 0; /* back to the menu */
 }
