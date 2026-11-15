@@ -146,7 +146,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 			STOCK_REDRAW();
 			return 0;
 		} else {
-			*SKIP_CHECK == SKIP_KEYLCK;
+			*SKIP_CHECK = SKIP_KEYLCK;
 			*KB_UNLOCKED = 0;
 			STOCK_REDRAW();
 			return 0;
