@@ -122,26 +122,24 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	if (*KEY_HOLDED == 15){
-		*KEY_HOLDED = 0;
-		return 0; /* BACK */
-	};
-	if (*SKIP_CHECK == SKIP_LOCKED) *SKIP_CHECK = SKIP_NEEDPASS;
-	if (*SKIP_CHECK == SKIP_KBLOCK) 
-	{
-		*KEY_HOLDED = 0xF0;
-		*SKIP_CHECK = SKIP_NEEDPASS;	
-	}
-	if (*SKIP_CHECK == SKIP_NEEDPASS) {
+	int ask_pass = 0;
+	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */	
+	if (*KEY_HOLDED == 19) {         /* Вход по STAR */
+		if (*SKIP_CHECK == SKIP_KBLOCK) 
+			ask_pass |= 1;
+		else 
+			return 0; /* BACK */	
+	}	
+	if (*SKIP_CHECK == SKIP_LOCKED) 
+		ask_pass |= 1;               /* Запароленное включение */
+	
+	if (ask_pass & 1) {
         int pc = find_passcode(api, count);
         if (!pc) {
             *SKIP_CHECK = SKIP_UNLOCKED;
             return 0;
         }
         return (unsigned)pc;
-	} else if (*KEY_HOLDED == 19) {
-		*KEY_HOLDED = 0;
-		return 0; /* BACK */
 	}
 	
 	if (*SKIP_CHECK == SKIP_NORMAL) {

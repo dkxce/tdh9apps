@@ -305,7 +305,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-    if (*SKIP_CHECK == SKIP_NEEDPASS) {
+	*KEY_HOLDED = 0;
+    if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLOCK)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
 			clear_all();
@@ -318,7 +319,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
         int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
 		if (rc == 2) goto okb; 
-		if ((rc == 1) && (*KEY_HOLDED == 0xF0)) {
+		if ((rc == 1) && (*SKIP_CHECK == SKIP_KBLOCK)) {
 			h9_key();
 			h9_delay(90);
 			clear_all();
