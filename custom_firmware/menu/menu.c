@@ -120,8 +120,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	if (*KEY_HOLDED == 02) return 0;  /* Вход по    0  */		
-	if (*KEY_HOLDED == 15) return 0;  /* Вход по BACK  */
 	if (*KEY_HOLDED == 19) return 0;  /* Вход по     * */	    
 	if (*KEY_HOLDED == 20)            /* Вход по SHARP */ 
 	{
