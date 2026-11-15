@@ -40,7 +40,6 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
-#define SKIP_KEYLCK   4u /* Клава залочена   */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u)
 
@@ -49,13 +48,6 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 static void read_entry(const struct h9_api *api, unsigned index, struct h9_entry *entry)
 {
     api->read(entry, api->bundle + H9_BUNDLE_HEADER + H9_BUNDLE_ENTRY * index, sizeof *entry);
-}
-
-static char *hex(char *d, uint32_t v, unsigned n)
-{
-    for (unsigned i = n; i--;) { d[i] = "0123456789ABCDEF"[v & 15]; v >>= 4; }
-    d[n] = 0;
-    return d + n;
 }
 
 static void clear_all(void)
@@ -133,27 +125,18 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	int ask_pass = 0;		
-	if (*SKIP_CHECK == SKIP_LOCKED) ask_pass = 1;
 	if (*KEY_HOLDED == 02) return 0;  /* Вход по    0  */		
 	if (*KEY_HOLDED == 15) return 0;  /* Вход по BACK  */
-	if (*KEY_HOLDED == 20)            /* Вход по SHARP */       
-		if (*SKIP_CHECK == SKIP_KEYLCK)
+	if (*KEY_HOLDED == 19) return 0;  /* Вход по     * */	    
+	if (*KEY_HOLDED == 20)            /* Вход по SHARP */ 
+	{
+		gfx_wait_release();
+		if (*KB_UNLOCKED == 0)
 			return 0;
-	if (*KEY_HOLDED == 19) {          /* Вход по     * */			
-		//if (*KB_UNLOCKED == 0)
-		if (*SKIP_CHECK == SKIP_KEYLCK) { 
-			ask_pass = 1;
-			*SKIP_CHECK = SKIP_UNLOCKED;			
-			//return 0;
-		} else {
-			*SKIP_CHECK = SKIP_KEYLCK;
-			return 0;
-		}
-	}	
+	};
 	
 	/* Пароль-на-входе */ 
-	if (ask_pass == 1) {
+	if (*SKIP_CHECK == SKIP_LOCKED) {
         int pc = find_passcode(api, count);
         if (!pc) {
             *SKIP_CHECK = SKIP_UNLOCKED;
@@ -206,12 +189,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     unsigned items = modules + 1, selected = 0, top = 0;
 	
-	char buf[3];
-	hex(buf, *KB_UNLOCKED, 2); 
-
-    gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
-    gfx_text(8, 3, buf, 12, 2, GFX_WHITE, GFX_BLUE);
-    //gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
+	gfx_fill(0, 0, H9_WIDTH, TITLE_H, GFX_BLUE);
+    gfx_text(8, 3, "RADIO WIDGET", 12, 2, GFX_WHITE, GFX_BLUE);
     gfx_fill(0, TITLE_H, H9_WIDTH, ROW_Y - TITLE_H, GFX_BLACK);
     gfx_fill(0, ROW_Y + ROWS * ROW_H, H9_WIDTH, FOOT_Y - (ROW_Y + ROWS * ROW_H), GFX_BLACK);
     gfx_text(4, FOOT_Y, "MENU: RUN   BACK: RADIO", 26, 1, GFX_GREY, GFX_BLACK);

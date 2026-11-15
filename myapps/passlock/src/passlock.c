@@ -101,7 +101,6 @@
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
-#define SKIP_KEYLCK   4u /* Клава залочена   */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u)
 
@@ -231,22 +230,13 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
     }
 }
 
-static char *hex(char *d, uint32_t v, unsigned n)
-{
-    for (unsigned i = n; i--;) { d[i] = "0123456789ABCDEF"[v & 15]; v >>= 4; }
-    d[n] = 0;
-    return d + n;
-}
 
 /* Menu of the radio-lock manager. Returns 1 (H9_RETURN_RADIO_LOCAL) when the
  * user chose LOCK NOW (password written, leave to the radio immediately with
  * the lock armed); otherwise returns 0 (back to the toolbox menu). */
 static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 {
-	char buf[3];
-	hex(buf, *KB_UNLOCKED, 2);
-	
-    enum { LOCK, UNLOCK, EXIT } sel = LOCK;
+	enum { LOCK, UNLOCK, EXIT } sel = LOCK;
     for (;;) {
         title_line();
 		clear_body();
@@ -307,13 +297,10 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
-	*KB_UNLOCKED = 1;
-	gfx_wait_release();    
-	
-    unsigned char pass[PASS_LEN];
+	unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-    if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KEYLCK)) {
+    if (*SKIP_CHECK == SKIP_LOCKED) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
 			clear_all();
