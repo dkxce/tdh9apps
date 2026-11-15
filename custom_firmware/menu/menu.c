@@ -128,9 +128,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*KEY_HOLDED == 02) return 0;  /* Вход по    0  */		
 	if (*KEY_HOLDED == 15) return 0;  /* Вход по BACK  */
 	if (*KEY_HOLDED == 19) return 0;  /* Вход по     * */	    
-	if (*KEY_HOLDED == 20) {          /* Вход по SHARP */ 
+	if (*KEY_HOLDED == 20)            /* Вход по SHARP */ 
+	{
 		if (*KB_UNLOCKED == 0)
 			return 0;
+	};
 	
 	/* Пароль-на-входе */ 
 	if (*SKIP_CHECK == SKIP_LOCKED) {
