@@ -102,7 +102,7 @@
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_LOCKED   ((volatile unsigned char *)0xC3C8u)
+#define KB_LOCKED     ((volatile unsigned char *)0x0C3C8u)
 
 #ifndef STOCK_REFRESH
 #define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
@@ -299,48 +299,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-	*KEY_HOLDED = 0;
-    if ((*SKIP_CHECK == SKIP_LOCKED) || (*KB_LOCKED == 1)) {
-        if (!pass_locked(pass)) {
-			*SKIP_CHECK = SKIP_NORMAL;
-			if (*SKIP_CHECK != SKIP_LOCKED) *KB_LOCKED = 0;
-			return H9_RETURN_RADIO_LOCAL;
-		}
-        char buf[PASS_LEN + 1];
-        okb: ;
-        clear_all();
-        gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
-        gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
-        int rc = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
-		if (rc == 2) goto okb; 
-		if ((rc == 1) && (*SKIP_CHECK != SKIP_LOCKED)) {
-			*KB_LOCKED = 0;
-			h9_key();
-			h9_delay(90);
-			clear_all();
-			STOCK_REFRESH();
-			STOCK_REDRAW();
-			return H9_RETURN_RADIO_LOCAL;
-		}
-        unsigned char cur[PASS_LEN];
-        read_pass(api, cur);
-        char ascii[PASS_LEN + 1];
-        pass_ascii(cur, ascii);
-        unsigned i = 0;
-        while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
-        if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
-            gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
-            h9_delay(70);
-            goto okb;
-        }
-        *SKIP_CHECK = SKIP_NORMAL;
-		clear_all();
-        STOCK_REFRESH();
-		STOCK_REDRAW();
-        return H9_RETURN_RADIO_LOCAL;
-    }
-
-    if (pass_locked(pass)) {
+	if (pass_locked(pass)) {
         char buf[PASS_LEN + 1];
         ok: ;
         clear_all();

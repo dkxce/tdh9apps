@@ -32,7 +32,7 @@ enum { ITEM_USB = -2 };
 enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #ifndef STOCK_REFRESH
 #define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
-#define STOCK_REDRAW() ((void (*)(unsigned))0x01E53306)(0)    /* marks the three display rows for redraw */
+#define STOCK_REDRAW()  ((void (*)(unsigned))0x01E53306)(0)    /* marks the three display rows for redraw */
 #endif
 
 /* Owner-lock flag, shared with the main-flash stub (stub.s mlk_check). */
@@ -41,7 +41,7 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_LOCKED   ((volatile unsigned char *)0xC3C8u)
+#define KB_LOCKED     ((volatile unsigned char *)0x0C3C8u)
 
 #define PASSCODE_NAME "PASSLOCK"
 
@@ -130,11 +130,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*KEY_HOLDED == 02) return 0; /* Вход по    0 */		
 	if (*KEY_HOLDED == 15) return 0; /* Вход по BACK */		
 	if (*KEY_HOLDED == 19) {         /* Вход по STAR */
-		if (*KB_LOCKED == 1)  ask_pass |= 1;
+		if (*KB_LOCKED == 0)  ask_pass |= 1;
 		else return 0;
 	}		
 	if (*KEY_HOLDED == 20) {         /* Вход по SHARP */     
-		if (*KB_LOCKED == 1) 
+		if (*KB_LOCKED == 0) 
 			ask_pass |= 1;
 	}	
 	
