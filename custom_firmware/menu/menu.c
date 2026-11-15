@@ -41,12 +41,8 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-<<<<<<< Updated upstream
-#define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u)
-=======
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
->>>>>>> Stashed changes
 
 #define PASSCODE_NAME "PASSLOCK"
 
