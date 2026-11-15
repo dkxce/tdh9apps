@@ -11,9 +11,11 @@
  *
  * Keys: Up = previous image, Down = next image (wrap around), Back = exit.
  * Freestanding: no globals, no libc. */
+ 
 #include "h9mod.h"
 #include "gfx.h"
 
+#define LOGO_ADDRESS 0xA00000u
 #define PACK_ADDR 0x717000u
 #define IMG_W 160u
 #define IMG_H 128u
@@ -25,6 +27,16 @@ static uint32_t max_images(void)
     /* The pack header + count + count*IMG_BYTES must fit between PACK_ADDR
      * and the end of the font tail (0x800000). */
     return (0x800000u - PACK_ADDR - 8u) / IMG_BYTES;
+}
+
+static void show_logo(const struct h9_api *api)
+{
+    uint8_t buffer[CHUNK];
+    h9_lcd_window(0, 0, IMG_W - 1, IMG_H - 1);
+    for (uint32_t offset = 0; offset < IMG_BYTES; offset += CHUNK) {
+        api->read(buffer, LOGO_ADDRESS + offset, CHUNK);
+        h9_lcd_write(buffer, CHUNK);
+    }
 }
 
 /* Show image `index` (0-based) by streaming its RGB565 bytes to the LCD. */
@@ -50,9 +62,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         count = (unsigned)hdr[7];
     }
     if (count == 0 || count > max_images()) {
-        gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-        gfx_text(2, 50, "NO PICTURES", 12, 2, GFX_RED, GFX_BLACK);
-        gfx_text(2, 90, "RUN td9_kpi.py write ...", 26, 1, GFX_GREY, GFX_BLACK);
+        show_logo(api);
         gfx_wait_release();
         for (;;) {
             unsigned k = h9_key();
@@ -61,6 +71,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         }
     }
 
+	count += 1;
     unsigned cur = 0;
     show_image(api, cur);
     gfx_wait_release();
@@ -69,13 +80,16 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         unsigned k = h9_key();
         if (k != last && k != H9_KEY_NONE) {
             last = k;
-            if (k == H9_KEY_BACK) break;
+            if (k == H9_KEY_BACK) 
+				break;
             if (k == H9_KEY_UP) {
                 cur = cur == 0 ? count - 1 : cur - 1;
-                show_image(api, cur);
+				if (cur == count - 1) show_logo(api);
+                else show_image(api, cur);
             } else if (k == H9_KEY_DOWN) {
                 cur = (cur + 1) % count;
-                show_image(api, cur);
+                if (cur == count - 1) show_logo(api);
+                else show_image(api, cur);
             }
         } else if (k == H9_KEY_NONE) {
             last = H9_KEY_NONE;
