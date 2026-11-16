@@ -1,5 +1,8 @@
 # Tidradio TD-H9 Руководство по установке виджетов
 
+[РАЗКИРПИЧИТЬ РУК-ВО](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
+[ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
+
 Скопируйте из [релизов](https://github.com/dkxce/tdh9apps/releases) **кастомную прошивку** для
 TIDRADIO TD-H9 с набором инструментов для управления приложениями.
 
