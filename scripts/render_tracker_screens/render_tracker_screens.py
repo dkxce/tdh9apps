@@ -357,13 +357,13 @@ def screen_radar():
     course = 30
     radar_dial(s, cx, 64, brg, rgb24(COLORS["green"]), course)
     view_status(s, 2, 2, 1)                        # green dot: RECORDING
-    view_value(s, 0, "DST KM", km_text(nav_distance(dx, dy)), COLORS["white"])
+    view_value(s, 0, "DST", km_text(nav_distance(dx, dy)), COLORS["white"])
     view_value(s, 1, "HDG", "%03d" % course, COLORS["white"])
     view_value(s, 2, "BRG", "%03d" % brg, COLORS["yellow"])
-    view_value(s, 3, "SPD KMH", fixed(55, 1), COLORS["white"])
+    view_value(s, 3, "SPD", fixed(55, 1), COLORS["white"])
     view_value(s, 4, "LAT", "55.75123", COLORS["white"])
     view_value(s, 5, "LON", "37.61842", COLORS["white"])
-    view_value(s, 6, "ALT M", "142", COLORS["white"])
+    view_value(s, 6, "ALT", "142", COLORS["white"])
     s.text(2, 119, "SATS:5 PTS:5", 17, 1, rgb24(COLORS["white"]), rgb24(COLORS["black"]))
     return s
 
@@ -418,13 +418,14 @@ def screen_map():
     s.text(4, 108, "1KM", 6, 1, rgb24(COLORS["white"]), rgb24(COLORS["black"]))
 
     view_status(s, W - 11, 1, 1)
-    view_value(s, 0, "FIX", "OK:5", COLORS["green"])
-    view_value(s, 1, "DST KM", km_text(nav_distance(*nav_delta(own[0], own[1], target[0], target[1]))), COLORS["white"])
-    view_value(s, 2, "HDG", "030", COLORS["white"])
-    view_value(s, 3, "BRG", "%03d" % nav_bearing(*nav_delta(own[0], own[1], target[0], target[1])), COLORS["yellow"])
-    view_value(s, 4, "ALT M", "142", COLORS["white"])
-    view_value(s, 5, "SPD KMH", fixed(55, 1), COLORS["white"])
-    view_value(s, 6, "PTS", "5", C_CYAN)
+    view_value(s, 0, "FIX", "V5", COLORS["green"])
+    view_value(s, 1, "DST", km_text(nav_distance(*nav_delta(own[0], own[1], target[0], target[1]))), COLORS["white"])
+    ## /* убрано, иначе модуль слишком большой получается */
+    # view_value(s, 2, "HDG", "030", COLORS["white"])
+    # view_value(s, 3, "BRG", "%03d" % nav_bearing(*nav_delta(own[0], own[1], target[0], target[1])), COLORS["yellow"])
+    # view_value(s, 4, "ALT M", "142", COLORS["white"])
+    view_value(s, 2, "SPD", fixed(55, 1), COLORS["white"])
+    view_value(s, 3, "PTS", "5", C_CYAN)
     return s
 
 
@@ -448,7 +449,7 @@ def screen_point():
 
 
 # --- settings (setup.c) ---------------------------------------------------
-STEP_M = [10, 25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450,
+STEP_M = [10, 25, 50, 75, 100, 200, 300, 400,
           500, 1000, 2500, 5000]
 
 

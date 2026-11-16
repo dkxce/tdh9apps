@@ -1,4 +1,4 @@
-**Кастомизированная прошивка** на основе v1.0.3.8 и h9toolbox от melidosian/h9toolbox.      
+**Кастомизированная прошивка** trck-153 на основе v1.0.3.8 и h9toolbox от melidosian/h9toolbox.      
 Основной функционал:
 - добавлена блокировка рации по паролю (стек: **TD-H9-V1.0.38DKXCE.fw** + **menu.h9mod** + **passlock.h9mod**)
 - добавлена смена bootscreen через скрипт (стек: **td9_logo.exe**)

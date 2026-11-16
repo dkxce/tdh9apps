@@ -96,6 +96,7 @@ static void draw_panel(const struct trk *s)
     num(d, s->sats, 1);
     view_value(0, "FIX", b, live ? GFX_GREEN : GFX_RED);
     view_value(1, "DST", nav ? (km_text(b, nav_distance(dx, dy)), b) : 0, GFX_WHITE);
+	/* убрано, иначе модуль слишком большой получается */
     /* view_value(2, "HDG", trk_heading_ok() ? (num(b, s->course, 3), b) : 0, GFX_WHITE); */
     /* view_value(3, "BRG", nav ? (num(b, nav_bearing(dx, dy), 3), b) : 0, GFX_YELLOW); */
     /* view_value(4, "ALT", s->have_fix ? (fixed(b, s->alt10 / 10, 0), b) : 0, GFX_WHITE); */
