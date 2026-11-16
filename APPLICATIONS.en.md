@@ -1,10 +1,10 @@
 # Tidradio TD-H9 Widget Installation Guide
 
 [Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
-[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
+[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
 
 Copy from[releases](https://github.com/dkxce/tdh9apps/releases) **custom**for
-TIDRADIO TD-H9 with a set of tools for managing applications.
+TIDRADIO TD-H9 with application management toolset.
 
 > In this instruction, the app menu opens**retention`#`**on the radio. No need to hold back.
 
@@ -16,11 +16,11 @@ TIDRADIO TD-H9 with a set of tools for managing applications.
 | --- | --- |
 | `firmware/*.fw` | **Custom firmware**(with support for password lock and application manager) |
 | `firmware/Update App.exe` | official sewer`.fw`) |
-| `h9_ui_flash.exe` | scatterer / scatterer through HID (`--help`for regimes) |
+| `h9_ui_flash.exe` | scatterer/producer via HID (`--help`for regimes) |
 | `td9_apps.exe` | Application management (installation/removal)`.h9mod`) |
 | `td9_kpi.exe` | loading`DKXCEPIC`) + setting/resetting the radio password |
 | `td9_logo.exe` | boot-logo |
-| `td9_aprs.exe` | read/write APRS/GNSS settings |
+| `td9_aprs.exe` | Read/write APRS/GNSS settings |
 | `myapps/*.h9mod` | finished application modules (`passlock`, `dkxcepic`, `bootscreen`, `tracking`) |
 | `hidapi.dll` | Bluetooth communication library (should lie next to the`.exe`) |
 
@@ -35,15 +35,15 @@ No Python is needed. It is enough to unpack the archive and run`.exe`.
 1. Unpack the archive in a separate folder.
 2. Go to the file.`firmware`.
 3. Launch it.**`Update App.exe`**(official sewer).
-4. Put the radio in firmware mode:**turn off**Hold it.**PTT + button`[2]`**And without letting go, turn on the walkie-talkie, and it's defined as an HID device.
+4. Put the radio in firmware mode:**turn off**Hold it.**PTT + button`[2]`**And, without letting go, turn on the walkie-talkie, and it will be defined as an HID device.
    Or hold it in the normal mode.**8**.
    Connect by USB (data transfer cable).
-5. Select a file**`TD-H9-V1.0.38DKXCE.fw`**or**. fw**and press it.
+5. Select the file**`TD-H9-V1.0.38DKXCE.fw`**or**. fw**and press it.
 6. Once completed, turn off the USB and turn off/on the radio.
 
 > Make sure that the firmware is used, simple: retention`#`menu
 > Applications (stock firmware does not have such a menu).
-> Entering DTMF codes will be turned off.
+> Entering DTMF codes will be disabled.
 
 ## 1.2. Install applications (td9 apps.exe)
 
@@ -128,8 +128,8 @@ td9_kpi.exe pass --password 1234
 ```
 
 * Password: 1 to 8 digits.
-* After installation, turn off and turn on the radio: when turned on, ask for a password.
-* Unlock:`td9_kpi.exe passclear`.
+* After installation, turn off and turn on the radio: when turned on, it will ask for a password.
+* Remove the lock:`td9_kpi.exe passclear`.
 
 > Blocking works only with the installed application`passlock`.
 > Don’t lose your password and keep Bluetooth on while you check that everything works.
@@ -151,7 +151,7 @@ The same functionality, but the original scripts`td9_apps.py`, `td9_kpi.py`,
 
 ## 2.1. Environment preparation
 
-You need Python.**3. 10. +**(recommended 3.11) and`pip`.
+We need Python.**3. 10 +**(recommended 3.11) and`pip`.
 
 ```
 # 1) Склонировать проект (или взять исходники из репозитория)
@@ -175,7 +175,7 @@ environment activated).
 
 ## Firmware (HID)
 
-Flasher works via HID mode (PTT+2 when turned on):
+Flasher works through HID mode (PTT+2 when turned on):
 
 ```
 poetry run python h9_flash.py --fw firmware/TD-H9-V1.0.38DKXCE.fw --backup before.bin
@@ -183,7 +183,7 @@ poetry run python h9_flash.py --fw firmware/TD-H9-V1.0.38DKXCE.fw --backup befor
 
 Flag reference:`h9_flash.py --help`.
 
-## 2.3. Appendices (td9 apps.py)
+## 2.3. Applications (td9 apps.py)
 
 ```
 poetry run python td9_apps.py list
@@ -214,7 +214,7 @@ poetry run python td9_kpi.py pass --password 1234
 poetry run python td9_kpi.py passclear
 ```
 
-## 2.7. APRS settings (td9 aprs.py)
+## APRS settings (td9 aprs.py)
 
 ```
 poetry run python td9_aprs.py show
@@ -226,7 +226,7 @@ poetry run python td9_aprs.py set callsign R2AKA
 
 # Part 3. For those who want to build firmware and applications themselves
 
-Everything is collected by your GitHub Actions from source.
+Everything is collected from your GitHub Actions source.
 
 ## 3.1. Structure of the project
 
@@ -243,14 +243,14 @@ tdh9apps/
 ## 3.2. About assembly of modules (demo: new module)
 
 Modules - C-files without libc, link under jeli-tulchain.
-New Module = Just Create a Catalogue`.c`:
+A new module = just create a directory with one`.c`:
 
 ```
 myapps/<app>/src/<app>.c      # функция module_main(const struct h9_api*, unsigned)
 ```
 
 CI workflow`build-module.yml`(GitHub Actions) Downloads JieLi-Tulchain
-release`toolchain`will`build_one.py <app>`give away`myapps/<app>.h9mod`.
+release`toolchain`will`build_one.py <app>`give`myapps/<app>.h9mod`.
 
 Multi-track application - add`myapps/<app>/build.json`listed
 modules and their sources (example -`myapps/tracking`).
@@ -259,9 +259,9 @@ Download yours:`td9_apps.py install <app>`.
 
 ## 3.3. About firmware assembly
 
-The firmware is assembled in CI (`build-lock-firmware.yml`): runoff is taken`firmware/TD-H9-V1.0.38.fw`from it is extracted`app.bin`superimposed
+The firmware is assembled in CI (`build-lock-firmware.yml`): runoff is taken`firmware/TD-H9-V1.0.38.fw`from it is extracted`app.bin`overlay
 yours`custom_firmware/stub/stub.s`(patch) placed`custom_firmware/menu/menu.c`.
-And the firmware is assembled with a built-in application manager.
+And it assembles the firmware with the built-in application manager.
 
 Locally (without GitHub) - see`custom_firmware/README.md`:
 
@@ -286,7 +286,7 @@ For its correct assembly, you need an actual stub.
 
 ## Requirements and observations
 
-* **Bluetooth**for all`.exe`/`.py`(Apart from the HID, the radio should be
+* **Bluetooth**for everyone`.exe`/`.py`(Apart from the HID, the radio should be
   switched on, Bluetooth active, radio next to PC.
 * **hidapi**: should lie next to`.exe`(It is already in the archive.)
 * When using lock firmware, keep Bluetooth on until
@@ -299,10 +299,10 @@ For its correct assembly, you need an actual stub.
 
 | What? | Meaning. |
 | --- | --- |
-| Image area of DKXCEPIC | resource`0x717000` |
-| Boot logo | resource`0xA00000`(160×128 RGB565) |
+| Image area of DKXCEPIC | resource resource`0x717000` |
+| Boot logo | resource resource`0xA00000`(160×128 RGB565) |
 | Lock flag`skip_check` | Ram.`0x2B8DF` |
-| Modules | resource`0xCC0000`(catalogue), data`0xCC1000` |
+| Modules | resource resource`0xCC0000`(catalogue), data`0xCC1000` |
 | RAM slot module | `0x29F00..0x2BEFF`(8 KB) |
 
 ---
