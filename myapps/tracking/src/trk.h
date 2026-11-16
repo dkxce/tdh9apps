@@ -21,7 +21,7 @@
 
 enum { C_DGREY = 0x4208, C_LGREY = 0xC618, C_CYAN = 0x07ff, C_FUCHSIA = 0xF81F };
 enum { KEY_STAR = 0x13, KEY_HASH = 0x14, KEY_0 = 2, KEY_2 = 4, KEY_4 = 6, KEY_5 = 7, KEY_6 = 8, KEY_8 = 10 };
-enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x6F4, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
+enum { NMEA = 84, MAX_PTS = 153, FIX_TIMEOUT = 500, STATE_BYTES = 0x6F4, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
 enum { REC_OFF, REC_ON, REC_PAUSED };
 enum { STEP_DIST, STEP_TIME };
 enum { DIST_GAP = 15, STEP_TIME_MIN = 15, STEP_TIME_MAX = 3600 };   /* seconds: DIST mode records at most once per DIST_GAP */
@@ -32,6 +32,7 @@ enum { VIEW_W = 106 };   /* radar / map area in split mode; the value panel is t
 
 #define TICK (*(const volatile uint32_t *)0x1D8B0)   /* 100 Hz */
 
+/* SIZE 1780dec 0x6F4, STARTS FROM 0x2B7EC */
 struct trk {
     uint32_t magic;
     uint8_t cmd, frame_len, escape, nmea_len;   /* frame_len: 0 before the command byte, then 1 */
@@ -52,8 +53,12 @@ struct trk {
     uint8_t main_sel, view_w;
     int8_t pan_x, pan_y;              /* MAP: view pan, px from the screen centre */
     int16_t show, cur;                /* point to highlight on the map (-1 none), POINTS cursor */
-    int32_t p_lat[MAX_PTS], p_lon[MAX_PTS];
+    char unused1[64];                 /* offset = 178dec, 0x2B89E..0x2B89D */
+    uint8_t unused2;                  /* offset = 242dec, 0x2B8DE */
+    uint8_t skip_check;               /* offset = 243dec, 0x2B8DF owner-lock flag; stub/menu read it */
+    int32_t p_lat[MAX_PTS], p_lon[MAX_PTS];  /* offset = 244dec */
     uint16_t p_t[MAX_PTS];            /* seconds from start / 2 */
+	char unused3[6];                  /* offset = 1774dec..1779dec */
 };
 
 #define TRK ((struct trk *)(H9_SHARED_TOP - STATE_BYTES))

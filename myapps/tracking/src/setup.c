@@ -13,10 +13,14 @@ static void settings_label(unsigned i, char *o)
     else put(o, "CLEAR LOG");
 }
 
+static const uint16_t CAPS[] = { 40u, 80u, 120u, MAX_PTS };
+
+#define CAPS_COUNT ((int)(sizeof CAPS / sizeof CAPS[0]))
+
 static void cap_label(unsigned i, char *o)
 {
-    o = num(o, (i + 1) * 40, 1);
-    put(o, TRK->cap == (i + 1) * 40 ? " PTS <" : " PTS");
+    o = num(o, CAPS[i], 1);
+    put(o, TRK->cap == CAPS[i] ? " PTS <" : " PTS");
 }
 
 static void step_label(unsigned i, char *o)
@@ -78,8 +82,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (r < 0) { trk_run("TRACKER"); return 0; }
         sel = (unsigned)r;
         if (r == 0) {
-            int c = menu_run("STORE PTS", 4, s->cap / 40u - 1u, cap_label);
-            if (c >= 0) trk_set_cap(((unsigned)c + 1) * 40);
+            int cur = 0;
+            while (cur < CAPS_COUNT && CAPS[cur] < s->cap) cur++;
+            if (cur >= CAPS_COUNT) cur = CAPS_COUNT - 1;
+            int c = menu_run("STORE PTS", CAPS_COUNT, cur, cap_label);
+            if (c >= 0) trk_set_cap(CAPS[c]);
         } else if (r == 1) {
             int c = menu_run("STEP DIST", 16, s->step, step_label);
             if (c >= 0) s->step = (uint8_t)c;

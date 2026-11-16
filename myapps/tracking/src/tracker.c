@@ -14,8 +14,13 @@ static void state_init(void)
 {
     struct trk *s = TRK;
     if (s->magic == TRK_MAGIC || (uint32_t)&trk_end + sizeof trk_end > (uint32_t)s) return;
+    /* The owner-lock flag lives at 0x2B8DF, which sits inside the tracker's
+     * state range (satshare overlaps struct trk). Preserve it across the zero
+     * fill so initialising the tracker never clears the radio's lock. */
+    uint8_t save_skip = s->skip_check;
     uint8_t *z = (uint8_t *)s;
     for (unsigned i = 0; i < sizeof *s; i++) z[i] = 0;
+    s->skip_check = save_skip;
     s->magic = TRK_MAGIC;
     s->cap = MAX_PTS;
     s->zoom = 4;   /* 1KM */
