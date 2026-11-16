@@ -9,7 +9,12 @@ TIDRADIO TD-H9 с набором инструментов для управле�
 > В этой инструкции: «меню приложений» открывается **удержанием `#`**
 > на рации. Back удерживать не нужно.
 
----
+<img src="scripts/render_lock_screens/screen_radio_lock_locked.png"/> <img src="scripts/render_lock_screens/screen_radio_lock_menu.png"/> <img src="scripts/render_lock_screens/screen_new_passw.png"/>       
+<img src="scripts/render_lock_screens/screen_radio_lock_menu_selected.png"/> <img src="scripts/render_lock_screens/screen_radio_widget.png"/> <img src="scripts/render_lock_screens/screen_radio_widget_selected.png"/>       
+
+<img src="scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="scripts/render_tracker_screens/screen_map.png"/> <img src="scripts/render_tracker_screens/screen_menu.png"/>       
+<img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/>       
+<img src="scripts/render_tracker_screens/screen_radar.png"/> <img src="scripts/render_tracker_screens/screen_settings.png"/> <img src="scripts/render_tracker_screens/screen_step_dist.png"/>  
 
 ## Что есть в архиве
 
@@ -306,6 +311,10 @@ JIELI_TOOLCHAIN=<toolchain> python -I firmware-research/.../build.py \
 | Флаг блокировки `skip_check` | RAM `0x2B8DF` |
 | Модули | resource flash `0xCC0000` (каталог), данные `0xCC1000` |
 | RAM-слот модуля | `0x29F00..0x2BEFF` (8 КиБ) |
+
+## Real Photos
+
+<img src="dkxcepics/realtimetracking.jpg" width="400"/>   
 
 ---
 
