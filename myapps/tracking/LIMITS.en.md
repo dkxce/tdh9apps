@@ -57,7 +57,7 @@ The state undergoes module switching until a larger module is loaded.
 | Reserve.`STATE_BYTES` | `0x6F4`= 1,780 bytes |
 | Size`struct trk` | flatly`0x6F4`byte; excess of reserve catches`_Static_assert` |
 | Address of status | `0x2BEE0 − 0x6F4 = 0x2B7EC`(quantum 4) |
-| Of course. | 160 points × 10 bytes (latitude, longitude, time) = 1,600 bytes |
+| Of course. | 153 points × 10 bytes (latitude, longitude, time) = 1,530 bytes |
 | Body limit of tracker module | `0x2B7EC − 0x29F00`= 6,380 bytes |
 
 Field`struct trk`packed: counters, flags and keycodes are stored in`uint8_t`.
