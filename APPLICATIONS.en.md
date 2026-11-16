@@ -1,5 +1,8 @@
 # Tidradio TD-H9 Widget Installation Guide
 
+[Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
+[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
+
 Copy from[releases](https://github.com/dkxce/tdh9apps/releases) **custom**for
 TIDRADIO TD-H9 with a set of tools for managing applications.
 
