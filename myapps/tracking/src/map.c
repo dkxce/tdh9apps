@@ -124,10 +124,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (k == KEY_HASH && s->zoom + 1 < ZOOMS) { s->zoom++; dirty = 1; }
         if (k == KEY_0) { s->map_full = (uint8_t)!s->map_full; dirty = 1; }
         if (k == KEY_2 || k == KEY_8 || k == KEY_4 || k == KEY_6) {
-            if (k == KEY_8) s->pan_y += 5;
-            else if (k == KEY_2) s->pan_y -= 5;
-            else if (k == KEY_6) s->pan_x += 5;
-            else s->pan_x -= 5;
+            if (k == KEY_8) s->pan_y -= 10;
+            else if (k == KEY_2) s->pan_y += 10;
+            else if (k == KEY_6) s->pan_x -= 10;
+            else s->pan_x += 10;
             dirty = 1;
         }
         if (k == H9_KEY_MENU) view_rec_key();

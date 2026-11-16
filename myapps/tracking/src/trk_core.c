@@ -10,7 +10,7 @@
 
 _Static_assert(sizeof(struct trk) <= STATE_BYTES, "state must fit below the request mailbox");
 
-const uint16_t STEP_M[16] = { 10, 25, 50, 100, 200, 300, 400, 500, 1000, 2500, 5000 };
+const uint16_t STEP_M[11] = { 10, 25, 50, 100, 200, 300, 400, 500, 1000, 2500, 5000 };
 
 /* ---- text ------------------------------------------------------------------ */
 
