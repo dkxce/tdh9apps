@@ -48,7 +48,7 @@ switching.
   top left, scale bottom.
 * **Points**- a list of points with distance / time from the start; at the point -
   full description`SHOW` / `NAVIGATE`.
-* **SETTINGS** — `STORE PTS`(40...160),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME),`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
+* **SETTINGS** — `STORE PTS`(40...153),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME),`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
   The step is quicker.
 
 ## GPS and track recording
@@ -58,10 +58,11 @@ switching.
   The module reads the ring itself.`trk_service`So it's only going on.
   While one of the tracker screens is open.
 * Points are written in step (distance)`STEP_DIST`time`STEP_TIME`)
-  stored`struct trk`in RAM`STATE_BYTES=0x710`): latitude, longitude
-  and time from start. Maximum -`STORE PTS`points (default 160).
-* It's starting.`base_dist`When the track is full, the oldest
-  points are eliminated, and the base distance is replenished so that the distance
+  stored`struct trk`in RAM`STATE_BYTES=0x6F4`): latitude, longitude
+  and time from start. Maximum -`STORE PTS`points (by default 153);
+  hardware limit`MAX_PTS`= 153.
+  It's starting.`base_dist`; when the track is overflowing (`cap`most
+  old points are eliminated, and the base distance is replenished so that the distance
   It's still there.
 
 ## Modules and common code
