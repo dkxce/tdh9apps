@@ -18,7 +18,7 @@ static uint32_t zoom_m(unsigned i)
     return v;
 }
 
-struct view { int32_t lat, lon, scale; int mx; };
+struct view { int32_t lat, lon, scale; int mx; int pan_x, pan_y; };
 
 /* Screen position of a point; 0 when it is too far off the view to draw a line to. */
 static int to_xy(const struct view *v, int32_t lat, int32_t lon, int *x, int *y)
@@ -26,8 +26,8 @@ static int to_xy(const struct view *v, int32_t lat, int32_t lon, int *x, int *y)
     int32_t dx, dy;
     nav_delta(v->lat, v->lon, lat, lon, &dx, &dy);
     if ((uint32_t)dx + 20000000u > 40000000u || (uint32_t)dy + 20000000u > 40000000u) return 0;
-    *x = v->mx + (int)(dx * BAR / v->scale);
-    *y = MY - (int)(dy * BAR / v->scale);
+    *x = v->mx + (int)(dx * BAR / v->scale) + v->pan_x;
+    *y = MY - (int)(dy * BAR / v->scale) + v->pan_y;
     return (unsigned)*x + FAR < 2u * FAR && (unsigned)*y + FAR < 2u * FAR;
 }
 
@@ -46,6 +46,8 @@ static void draw_map(const struct trk *s)
     view_frame(s->map_full);
     v.mx = s->view_w / 2;
     v.scale = (int32_t)zoom_m(s->zoom);
+    v.pan_x = s->pan_x;
+    v.pan_y = s->pan_y;
     if (show) { v.lat = s->p_lat[s->show]; v.lon = s->p_lon[s->show]; }
     else if (s->have_fix) { v.lat = s->lat; v.lon = s->lon; }
     else if (s->has_start) { v.lat = s->slat; v.lon = s->slon; }
@@ -121,6 +123,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (k == KEY_STAR && s->zoom) { s->zoom--; dirty = 1; }
         if (k == KEY_HASH && s->zoom + 1 < ZOOMS) { s->zoom++; dirty = 1; }
         if (k == KEY_0) { s->map_full = (uint8_t)!s->map_full; dirty = 1; }
+        if (k == KEY_2 || k == KEY_8 || k == KEY_4 || k == KEY_6) {
+            int8_t d = (int8_t)5;
+            if (k == KEY_8) s->pan_y += d;
+            else if (k == KEY_2) s->pan_y -= d;
+            else if (k == KEY_6) s->pan_x += d;
+            else s->pan_x -= d;
+            dirty = 1;
+        }
         if (k == H9_KEY_MENU) view_rec_key();
 
         uint32_t now = TICK;

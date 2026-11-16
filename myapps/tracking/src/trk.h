@@ -20,7 +20,7 @@
 #include "h9mod.h"
 
 enum { C_DGREY = 0x4208, C_LGREY = 0xC618, C_CYAN = 0x07ff, C_FUCHSIA = 0xF81F };
-enum { KEY_STAR = 0x13, KEY_HASH = 0x14, KEY_0 = 2, KEY_5 = 7 };
+enum { KEY_STAR = 0x13, KEY_HASH = 0x14, KEY_0 = 2, KEY_2 = 4, KEY_4 = 6, KEY_5 = 7, KEY_6 = 8, KEY_8 = 10 };
 enum { NMEA = 84, MAX_PTS = 160, FIX_TIMEOUT = 500, STATE_BYTES = 0x6F4, TRK_MAGIC = 0x324B5254 /* "TRK2" */ };
 enum { REC_OFF, REC_ON, REC_PAUSED };
 enum { STEP_DIST, STEP_TIME };
@@ -49,7 +49,8 @@ struct trk {
     uint16_t cap, count, step_time;   /* step_time: seconds */
     uint8_t step, step_mode, hdg_filter, zoom;
     uint8_t radar_mode, radar_full, map_full, from;
-    uint8_t main_sel, view_w, spare[2];
+    uint8_t main_sel, view_w;
+    int8_t pan_x, pan_y;              /* MAP: view pan, px from the screen centre */
     int16_t show, cur;                /* point to highlight on the map (-1 none), POINTS cursor */
     int32_t p_lat[MAX_PTS], p_lon[MAX_PTS];
     uint16_t p_t[MAX_PTS];            /* seconds from start / 2 */
