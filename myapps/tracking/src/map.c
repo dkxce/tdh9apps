@@ -92,16 +92,16 @@ static void draw_panel(const struct trk *s)
     int32_t dx = 0, dy = 0;
     int nav = s->have_fix && s->have_target;
     if (nav) nav_delta(s->lat, s->lon, s->tlat, s->tlon, &dx, &dy);
-    d = put(b, live ? "OK:" : "BAD:");
+    d = put(b, live ? "V" : "X");
     num(d, s->sats, 1);
     view_value(0, "FIX", b, live ? GFX_GREEN : GFX_RED);
-    view_value(1, "DST KM", nav ? (km_text(b, nav_distance(dx, dy)), b) : 0, GFX_WHITE);
-    view_value(2, "HDG", trk_heading_ok() ? (num(b, s->course, 3), b) : 0, GFX_WHITE);
-    view_value(3, "BRG", nav ? (num(b, nav_bearing(dx, dy), 3), b) : 0, GFX_YELLOW);
-    view_value(4, "ALT M", s->have_fix ? (fixed(b, s->alt10 / 10, 0), b) : 0, GFX_WHITE);
-    view_value(5, "SPD KMH", s->have_fix ? (fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1), b) : 0, GFX_WHITE);
+    view_value(1, "DST", nav ? (km_text(b, nav_distance(dx, dy)), b) : 0, GFX_WHITE);
+    /* view_value(2, "HDG", trk_heading_ok() ? (num(b, s->course, 3), b) : 0, GFX_WHITE); */
+    /* view_value(3, "BRG", nav ? (num(b, nav_bearing(dx, dy), 3), b) : 0, GFX_YELLOW); */
+    /* view_value(4, "ALT", s->have_fix ? (fixed(b, s->alt10 / 10, 0), b) : 0, GFX_WHITE); */
+    view_value(2, "SPD", s->have_fix ? (fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1), b) : 0, GFX_WHITE);
     num(b, s->count, 1);
-    view_value(6, "PTS", b, C_CYAN);
+    view_value(3, "PTS", b, C_CYAN);
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)
@@ -124,11 +124,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (k == KEY_HASH && s->zoom + 1 < ZOOMS) { s->zoom++; dirty = 1; }
         if (k == KEY_0) { s->map_full = (uint8_t)!s->map_full; dirty = 1; }
         if (k == KEY_2 || k == KEY_8 || k == KEY_4 || k == KEY_6) {
-            int8_t d = (int8_t)5;
-            if (k == KEY_8) s->pan_y += d;
-            else if (k == KEY_2) s->pan_y -= d;
-            else if (k == KEY_6) s->pan_x += d;
-            else s->pan_x -= d;
+            if (k == KEY_8) s->pan_y += 5;
+            else if (k == KEY_2) s->pan_y -= 5;
+            else if (k == KEY_6) s->pan_x += 5;
+            else s->pan_x -= 5;
             dirty = 1;
         }
         if (k == H9_KEY_MENU) view_rec_key();

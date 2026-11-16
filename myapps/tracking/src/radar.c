@@ -34,13 +34,13 @@ static void panel(const struct trk *s, int nav, int32_t dx, int32_t dy, int live
     char b[12];
     int fix = s->have_fix;
     uint16_t pos = live ? GFX_WHITE : GFX_GREY;
-    view_value(0, "DST KM", nav ? (km_text(b, nav_distance(dx, dy)), b) : 0, GFX_WHITE);
+    view_value(0, "DST", nav ? (km_text(b, nav_distance(dx, dy)), b) : 0, GFX_WHITE);
     view_value(1, "HDG", trk_heading_ok() ? (num(b, s->course, 3), b) : 0, GFX_WHITE);
     view_value(2, "BRG", nav ? (num(b, nav_bearing(dx, dy), 3), b) : 0, GFX_YELLOW);
-    view_value(3, "SPD KMH", fix ? (fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1), b) : 0, GFX_WHITE);
+    view_value(3, "SPD", fix ? (fixed(b, (int32_t)(s->spd10 * 1852u / 1000u), 1), b) : 0, GFX_WHITE);
     view_value(4, "LAT", fix ? (deg_text(b, s->lat), b) : 0, pos);
     view_value(5, "LON", fix ? (deg_text(b, s->lon), b) : 0, pos);
-    view_value(6, "ALT M", fix ? (fixed(b, s->alt10 / 10, 0), b) : 0, GFX_WHITE);
+    view_value(6, "ALT", fix ? (fixed(b, s->alt10 / 10, 0), b) : 0, GFX_WHITE);
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)
