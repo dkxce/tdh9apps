@@ -37,7 +37,7 @@ skip_check = 0 # включение питания (0x2B8DF)
   │   └─► (Пароль присутствует) -> 
   │       └─► skip_check = 2 # надо проверить
   │
-  ├─ (Удержан back или skip_check > 1) -> menu app
+  ├─ (Удержан # (или *) или skip_check > 1) -> menu app
   │ <menu>
   │   ├── (skip_check == 2) ->
   │   │   ├── (Модуля passcode нет) ->
@@ -79,14 +79,14 @@ skip_check = 0 # включение питания (0x2B8DF)
 
 | Компонент | Файл | Статус |
 |---|---|---|
-| Стуб: выставление `skip_check` по `0x716FF8` + вход в меню по Back или `skip_check>1` | патч `custom_firmware/stub/stub.s` | работает |
+| Стуб: выставление `skip_check` по `0x716FF8` + вход в меню по `#` или `skip_check>1` | патч `custom_firmware/stub/stub.s` | работает |
 | Меню: при `skip_check==2` ищет и запускает `PASSLOCK`, иначе fail-open; при `skip_check!=2` — обычный список модулей | `custom_firmware/menu/menu.c` (база `menu_base.c`) | работает |
 | Модуль `PASSLOCK`: boot-ветка (`skip_check==2` → ввод+проверка), обычная ветка (`menu_loop`: LOCK/UNLOCK/LOCK NOW) | `myapps/passlock/src/passlock.c` | работает |
 | Чтение через `api->read` | `0x716FF8`, 8 байт | подтверждено |
 | Запись пароля через S2 (erase+program, обход защиты font) | `td9_kpi.py pass / passclear / passread` | работает |
 
 Примечания по реализации:
-- stub читает `0x716FF8` через `ml_read` (стоковый `0x01E4FF22`) только на первом проходе; далее по `skip_check` — авто-вход в меню (если 2) или обычный hold-Back.
+- stub читает `0x716FF8` через `ml_read` (стоковый `0x01E4FF22`) только на первом проходе; далее по `skip_check` — авто-вход в меню (если 2) или обычный hold-# (`0x14`).
 - `ml_main` в stub сделан возвращаемым (keep frame) — меню и PASSCODE не роняют/не ребутят рацию при выходе.
 - Меню при `skip_check==2` не рисует список, а сразу возвращает индекс `PASSLOCK` (или fail-open `skip_check=1` при его отсутствии).
 - `PASSLOCK` при `skip_check==2` показываeт только экран ввода пароля, до совпадения (неверный пароль → снова ввод).

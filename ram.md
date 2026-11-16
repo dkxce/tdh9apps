@@ -107,4 +107,4 @@ handbook секция 3 [STATIC]; таблица полей — из наших 
 | **PTT + 2** при включении | Vendor HID `4C4A:4155` (веб-флешер) [HW] |
 | Удержание **8** при включении | ROM USB loader `4C4A:2342`, mass storage [HW] |
 | **PTT + 1 / +3 / +7** | Serial / USB-serial updater / APRS [HW] |
-| Удержание **Back** (модульный loader) | меню приложений [HW] |
+| Удержание **#** (модульный loader) | меню приложений [HW] |
