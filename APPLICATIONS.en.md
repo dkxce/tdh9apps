@@ -8,7 +8,12 @@ TIDRADIO TD-H9 with a set of tools for managing applications.
 
 > In this instruction, the app menu opens**retention`#`**on the radio. No need to hold back.
 
----
+<img src="scripts/render_lock_screens/screen_radio_lock_locked.png"/> <img src="scripts/render_lock_screens/screen_radio_lock_menu.png"/> <img src="scripts/render_lock_screens/screen_new_passw.png"/>   
+<img src="scripts/render_lock_screens/screen_radio_lock_menu_selected.png"/> <img src="scripts/render_lock_screens/screen_radio_widget.png"/> <img src="scripts/render_lock_screens/screen_radio_widget_selected.png"/>
+
+<img src="scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="scripts/render_tracker_screens/screen_map.png"/> <img src="scripts/render_tracker_screens/screen_menu.png"/>   
+<img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/>   
+<img src="scripts/render_tracker_screens/screen_radar.png"/> <img src="scripts/render_tracker_screens/screen_settings.png"/> <img src="scripts/render_tracker_screens/screen_step_dist.png"/>
 
 ## What's in the archive?
 
@@ -312,6 +317,10 @@ For its correct assembly, you need an actual stub.
 | Lock flag`skip_check` | Ram.`0x2B8DF` |
 | Modules | resource`0xCC0000`(catalogue), data`0xCC1000` |
 | RAM slot module | `0x29F00..0x2BEFF`(8 KB) |
+
+## Real Photos
+
+<img src="dkxcepics/realtimetracking.jpg" width="400"/>
 
 ---
 
