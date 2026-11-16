@@ -64,7 +64,7 @@ struct trk {
 #define TRK ((struct trk *)(H9_SHARED_TOP - STATE_BYTES))
 
 extern const uint32_t trk_end;
-extern const uint16_t STEP_M[16];
+extern const uint16_t STEP_M[11];
 
 /* trk_core.c */
 struct trk *trk_open(void);          /* 0: body overlaps the state (message shown), or no state yet (TRACKER requested) */
