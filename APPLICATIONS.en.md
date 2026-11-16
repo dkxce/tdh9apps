@@ -42,8 +42,8 @@ No Python is needed. It is enough to unpack the archive and run`.exe`.
 6. Once completed, turn off the USB and turn off/on the radio.
 
 > Make sure that the firmware is used, simple: retention`#`menu
-> Applications (stock firmware does not have such a menu).
-> Entering DTMF codes will be disabled.
+> Applications (stock firmware does not have such a menu). Entering DTMF codes will be disabled.
+> But first you have to install widgets.
 
 ## 1.2. Install applications (td9 apps.exe)
 
