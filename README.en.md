@@ -1,6 +1,7 @@
 Tidradio TD-H9 HID Unbricker + Custom Apps
 
-[RU](README.md) | [EN](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
+[Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
+[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
 
 Tools for debugging the main flash memory of the radio station**TIDRADIO TD-H9**
 в **HID mode**(without switching the chip to UBOOT mode). The project consists of two parts:
@@ -301,7 +302,7 @@ Chat-20/
 
 ### Real Photos
 
-<img src="dkxcepics/realtimetracking.jpg"/>
+<img src="dkxcepics/realtimetracking.jpg" width="400"/>
 
 ---
 
