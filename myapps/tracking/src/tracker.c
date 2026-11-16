@@ -44,8 +44,8 @@ static void main_label(unsigned i, char *o)
 
 static void navto_label(unsigned i, char *o)
 {
-    static const char *const T[5] = { "FIXED", "CURRENT", "START", "PAUSE", "STOP" };
-    put(o, i == 3 && TRK->rec == REC_PAUSED ? "RESUME" : T[i]);
+    static const char *const T[6] = { "FIXED", "CURRENT", "START POINT", "START", "PAUSE", "STOP" };
+    put(o, i == 4 && TRK->rec == REC_PAUSED ? "RESUME" : T[i]);
 }
 
 /* "N 55.75123" */
@@ -54,6 +54,21 @@ static void hemi_text(char *d, int32_t micro, char pos, char neg)
     *d++ = micro < 0 ? neg : pos;
     *d++ = ' ';
     deg_text(d, micro < 0 ? -micro : micro);
+}
+
+static void started(struct trk *s)
+{
+	char a[16], b[16];
+	if (s->count > 0 && s->has_start) {
+		s->tlat = s->slat;
+		s->tlon = s->slon;
+		s->have_target = 1;
+		trk_msg("<TO START>", a, b, 0);      
+		hemi_text(a, s->lat, 'N', 'S');
+		hemi_text(b, s->lon, 'E', 'W');
+		return;
+	}
+	trk_msg("<NO START>", 0, 0, 80);
 }
 
 static void current(struct trk *s)
@@ -115,17 +130,19 @@ static int navto(struct trk *s)
 {
     unsigned sel = 0;
     for (;;) {
-        int r = menu_run("NAV TO", 5, sel, navto_label);
+        int r = menu_run("NAV TO", 6, sel, navto_label);
         if (r < 0) return 0;
         sel = (unsigned)r;
         if (r == 0) { s->screen = SCR_NAVTO; trk_run(".TRK FIXED"); return 1; }
         if (r == 1) current(s);
         else if (r == 2) {
+            started(s);
+        } else if (r == 3) {
             trk_start();
             trk_msg("<STARTED>", 0, 0, 80);
             trk_run(".TRK RADAR");
             return 1;
-        } else if (r == 3) {
+        } else if (r == 4) {
             if (s->rec == REC_ON) { s->rec = REC_PAUSED; trk_msg("<PAUSED>", 0, 0, 80); }
             else if (s->rec == REC_PAUSED) {
                 s->rec = REC_ON;
