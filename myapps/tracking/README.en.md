@@ -2,7 +2,7 @@
 
 Tracker app: shows current position, navigation to target
 (fixed coordinates or stored point), records track in memory
-radios and gives a view on the radar and the map. Written for the TD-H9 platform
+radio and gives you a view on the radar and the map. Written for the TD-H9 platform
 
 One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/setup) and five hidden screens`.TRK *`which
 switching.
@@ -27,12 +27,13 @@ switching.
 | --- | --- |
 | menu | in the menu - selection / confirmation;**on RADAR / MAP - recording / pause / continuation** |
 | Up/down | menu list; transition RADAR MAP |
-| 1..9. | Quick selection of menu items, entering numbers in editors |
+| 1..9. | Quick selection of menu item, entering numbers in editors |
 | 5 | Points |
 | 0 | RADAR/MAP: full screen or split with value field |
 | `*` | RADAR: Dial signatures (N E S W / 12 03 06 09 / 00 09 18 27); MAP: scale − |
 | `#` | MAP: Scale + |
-| Back | back on the menu / on RADAR and MAP - to the application menu / exit |
+| 2 / 4 / 6 / 8 | MAP: pan the map up / left / right / down |
+| Back | back on the menu / on RADAR and MAP - to the main menu TRACKER |
 
 ## Screens.
 
@@ -45,7 +46,8 @@ switching.
   arrow to target (red without fix), gray own course (with a filter)
   2 km/h in motion only. The field on the right is split mode.
 * **MAP**track blue, start green, target red, dot`SHOW`Lilac, his position with a white cross;`N`NAV pointer and arrow
-  top left, scale bottom.
+  top left, scale bottom. You can move the map with keys.
+  2/4/6/8 (panning around the center), scale`*`/`#`.
 * **Points**- a list of points with distance / time from the start; at the point -
   full description`SHOW` / `NAVIGATE`.
 * **SETTINGS** — `STORE PTS`(40...153),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME),`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
@@ -99,12 +101,12 @@ Installation on the radio - App Manager:
 poetry run python td9_apps.py install tracking
 ```
 
-After installation - application menu (holding back)**TRACKER**.
+After installation - application menu (holding)`#`?**TRACKER**.
 
 ## Assembly and limitations
 
 * Flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`(anything)
-  warning drops CI.
+  CI drops the warning.
 * Without libc and without floating arithmetic; global`const`- tables,
   variable data - in`struct trk`.
 * Body of each module ≤ 8192 bytes; when overflowing`trk_open`show`MODULE TOO BIG +N`It doesn't start. Exact limits and techniques

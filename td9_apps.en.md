@@ -33,7 +33,7 @@ poetry run python td9_apps.py install gps apron aprs_monitor vfo_probe
   catalogue`0xCC0000`data`0xCC1000`), read back and checked,
   marker`H9DATA-COMPLETE`.
 
-After installation: hold**Back**on the radio → menu with applications.
+After installation: hold**#**on the radio → menu with applications.
 
 ### Read what is established
 

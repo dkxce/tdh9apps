@@ -63,7 +63,7 @@ The state undergoes module switching until a larger module is loaded.
 Field`struct trk`packed: counters, flags and keycodes are stored in`uint8_t`.
 course, speed and number of satellites`uint16_t`. Place the new fields like this.
 so that there are no alignment holes: each byte of state is taken away
-The body of all the modules.
+The body of all modules.
 
 The state only adjusts.`TRACKER` (`state_init` в `tracker.c`): reset,
 omissions and the latest GPS stock fix. Hidden modules are opened only
@@ -75,6 +75,15 @@ settings and track reset: old value`magic`It's out of place.
 
 You can increase the track only due to the body of the modules: each point takes 10 bytes.
 All tracker modules at once.
+
+### Satshare and the lock flag
+
+Range of status`0x2B7EC..0x2BEE0`includes a stock satshare zone`0x2B880..0x2B8DF`. In order not to break the radio lock,`struct trk`nearer
+This area has a field`skip_check` (`0x2B8DF`The owner-lock flag reads the stub and
+menu).
+
+`state_init`(tracker.c) saves and returns`skip_check`first
+start so that the zero state does not reset the radio lock.
 
 ## Body layout and size
 
@@ -111,9 +120,9 @@ The function that one module needs remains in its own file.
 The procedure for increasing the price:
 
 1. Remove from shared files what this module does not need (see table above).
-2. Replace tables with computation and a repetitive figure with a common function.
+2. Replace tables with computation and the repetitive figure with a common function.
 3. Shorten the lines: they are in`.rodata`and count in the body.
-4. Divide the screen into two modules and switch through the mailbox.
+4. Split the screen into two modules and switch through the mailbox.
    The total volume of the package (124 KB) almost never interferes with 8 KB per module.
 
 ## Environment of implementation
@@ -139,4 +148,5 @@ The procedure for increasing the price:
 * Keys`h9_key`byte`0xC3AF`): d → d + 2, Menu 12, Up 13 .
   Down 14, Back 15,`*`0x13 .`#`0x14. You need an antidrug for two identical
   Reading in a row, he's in`trk_key`.
+* On MAP, the numbers 2/4/6/8 shift the map (panning around the center).`*`/`#`They change scale.
 * Retention`#`about 0.4 seconds opens the application menu (stab).
