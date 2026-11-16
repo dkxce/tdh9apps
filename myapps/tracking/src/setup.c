@@ -88,7 +88,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             int c = menu_run("STORE PTS", CAPS_COUNT, cur, cap_label);
             if (c >= 0) trk_set_cap(CAPS[c]);
         } else if (r == 1) {
-            int c = menu_run("STEP DIST", 16, s->step, step_label);
+            int c = menu_run("STEP DIST", 11, s->step, step_label);
             if (c >= 0) s->step = (uint8_t)c;
         } else if (r == 2) {
             s->hdg_filter = (uint8_t)!s->hdg_filter;
