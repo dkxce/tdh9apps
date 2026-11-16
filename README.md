@@ -1,6 +1,7 @@
 ﻿# Tidradio TD-H9 HID Unbricker + Custom Apps
 
-[RU](README.md) | [EN](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)      
+[РАЗКИРПИЧИТЬ РУК-ВО](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
+[ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
 
 Инструменты для раскирпичивания основной flash-памяти радиостанции **TIDRADIO TD-H9**
 в **HID-режиме** (без перехода чипа в UBOOT-режим). Проект состоит из двух частей:
@@ -306,7 +307,7 @@ Chat-20/
 
 ### Real Photos
 
-<img src="dkxcepics/realtimetracking.jpg"/>          
+<img src="dkxcepics/realtimetracking.jpg" width="400"/>     
 
 ---
 

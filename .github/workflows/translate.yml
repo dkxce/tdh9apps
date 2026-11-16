@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'README.md'
+      - 'APPLICATIONS.md'
       - 'custom_firmware/README.md'
       - 'myapps/tracking/LIMITS.md'
       - 'myapps/tracking/README.md'
@@ -30,6 +31,7 @@ jobs:
         with:
           translate_paths: |
             README.md
+            APPLICATIONS.md
             custom_firmware/README.md
             myapps/tracking/LIMITS.md
             myapps/tracking/README.md
