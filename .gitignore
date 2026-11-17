@@ -8,3 +8,5 @@
 /myapp/__pycache__
 /.releases
 /tools/*.zip
+/tracksvr-sector-backup.bin
+/tracksvr_points.json

@@ -27,7 +27,8 @@ TIDRADIO TD-H9 с набором инструментов для управле�
 | `td9_kpi.exe` | загрузка набора картинок (`DKXCEPIC`) + установка/сброс пароля рации |
 | `td9_logo.exe` | смена boot-логотипа |
 | `td9_aprs.exe` | чтение/запись APRS/GNSS-настроек |
-| `myapps/*.h9mod` | готовые модули приложений (`passlock`, `dkxcepic`, `bootscreen`, `tracking`) |
+| `td9_tracksvr.exe` | редактор/импорт/экспорт точек приложения `TRACKER SAVER` |
+| `myapps/*.h9mod` | готовые модули приложений (`passlock`, `dkxcepic`, `bootscreen`, `tracking`, `tracksvr`) |
 | `hidapi.dll` | библиотека для связи по Bluetooth (должна лежать рядом с `.exe`) |
 
 ---
@@ -66,7 +67,7 @@ td9_apps.exe list
 
 Установить нужные (имена берём из вывода `list`; меню ставится автоматически):
 ```
-td9_apps.exe install dkxcepic tracking passlock
+td9_apps.exe install dkxcepic tracking tracksvr passlock
 ```
 
 Посмотреть, что установлено:
@@ -142,7 +143,24 @@ td9_kpi.exe pass --password 1234
 td9_apps.exe install passlock
 ```
 
-## 1.6. Сбросить «кирпич» (h9_ui_flash.exe)
+## 1.6. Точки TRACKER SAVER (td9_tracksvr.exe)
+
+Редактор пользовательских точек приложения `TRACKER SAVER` (см. `myapps/tracksvr/README.md`).
+Точки читаются/пишутся в сектор `0x7FE000` по Bluetooth.
+
+```
+td9_tracksvr.exe show          # показать точки из рации в консоль
+td9_tracksvr.exe dump          # сохранить точки из рации в tracksvr_points.json
+td9_tracksvr.exe load          # записать points.json в рацию (с бэкапом сектора)
+```
+
+- Формат файла `tracksvr_points.json`: `{"points": [{"name": "HOME", "lat": 55.7558, "lon": 37.6173}, ...]}`;
+  кастомный путь — `--file <путь>`.
+- `load` стирает сектор и пишет таблицу целиком; перед стиранием сохраняет
+  старый сектор в `tracksvr-sector-backup.bin` (или `--backup <файл>`).
+- Рация должна быть включена, Bluetooth активен.
+
+## 1.7. Сбросить «кирпич» (h9_ui_flash.exe)
 
 Если рация перестала загружаться — вы можете перепрошить её через HID:
 ```
@@ -154,7 +172,7 @@ h9_ui_flash.exe --help
 # Часть 2. Для тех, кто хочет запускать Python-скрипты
 
 Та же функциональность, но исходные скрипты (`td9_apps.py`, `td9_kpi.py`,
-`td9_logo.py`, `td9_aprs.py`) вместо `.exe`.
+`td9_logo.py`, `td9_aprs.py`, `td9_tracksvr.py`) вместо `.exe`.
 
 ## 2.1. Подготовка окружения
 
@@ -225,6 +243,14 @@ poetry run python td9_kpi.py passclear
 poetry run python td9_aprs.py show
 poetry run python td9_aprs.py get callsign
 poetry run python td9_aprs.py set callsign R2AKA
+```
+
+## 2.8. Точки TRACKER SAVER (td9_tracksvr.py)
+
+```
+poetry run python td9_tracksvr.py show
+poetry run python td9_tracksvr.py dump [--file tracksvr_points.json]
+poetry run python td9_tracksvr.py load [--file tracksvr_points.json]
 ```
 
 ---
@@ -307,6 +333,7 @@ JIELI_TOOLCHAIN=<toolchain> python -I firmware-research/.../build.py \
 | Что | Значение |
 |---|---|
 | Область картинок DKXCEPIC | resource flash `0x717000` |
+| Точки TRACKER SAVER | resource flash `0x7FE000` (4 КиБ, magic `DKXCETRACKSAVES`) |
 | Boot-логотип | resource flash `0xA00000` (160×128 RGB565) |
 | Флаг блокировки `skip_check` | RAM `0x2B8DF` |
 | Модули | resource flash `0xCC0000` (каталог), данные `0xCC1000` |

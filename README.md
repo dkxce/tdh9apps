@@ -247,6 +247,7 @@ Chat-20/
 | Настройки APRS/GNSS | [td9_aprs.md](td9_aprs.md) | — |
 | Кастомная прошивка | [custom_firmware/README.md](custom_firmware/README.md) | [custom_firmware/README.en.md](custom_firmware/README.en.md) |
 | Трекер | [myapps/tracking/README.md](myapps/tracking/README.md) | [myapps/tracking/README.en.md](myapps/tracking/README.en.md) |
+| Путевые точки | [myapps/tracksvr/README.md](myapps/tracksvr/README.md) | [myapps/tracksvr/README.en.md](myapps/tracksvr/README.en.md) |
 | Ограничения трекера | [myapps/tracking/LIMITS.md](myapps/tracking/LIMITS.md) | [myapps/tracking/LIMITS.en.md](myapps/tracking/LIMITS.en.md) |
 | Лицензия | [LICENSE.md](LICENSE.md) | — |
 | Сторонние компоненты | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | — |

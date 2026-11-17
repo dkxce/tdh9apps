@@ -461,7 +461,7 @@ static int point_view(const struct h9_api *api, int n, int idx)
     gfx_text(4, 36, b, 24, 1, GFX_WHITE, GFX_BLACK);
     d = put(b, "LON "); coord_str(d, p.lon);
     gfx_text(4, 50, b, 24, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(4, 72, " 5 NAVTO", 12, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 72, "5 NAVTO", 12, 1, GFX_GREY, GFX_BLACK);
     gfx_text(4, 84, "MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
     gfx_text(4, 96, "*/0/# = DELETE", 28, 1, GFX_GREY, GFX_BLACK);
     gfx_text(4, 108, "BACK = LIST", 28, 1, GFX_GREY, GFX_BLACK);

@@ -75,6 +75,13 @@ jobs:
           if (Test-Path td9_logo.txt) { Remove-Item td9_logo.txt }
           .\tools\upx.exe -9f dist\td9_logo.exe
 
+      - name: Build td9_tracksvr EXE
+        run: |
+          & "$env:USERPROFILE\.local\bin\poetry" run create-version-file td9_tracksvr.yaml --outfile td9_tracksvr.txt
+          & "$env:USERPROFILE\.local\bin\poetry" run pyinstaller --clean td9_tracksvr.spec
+          if (Test-Path td9_tracksvr.txt) { Remove-Item td9_tracksvr.txt }
+          .\tools\upx.exe -9f dist\td9_tracksvr.exe
+
       - name: Build td9_kpi EXE
         run: |
           & "$env:USERPROFILE\.local\bin\poetry" run create-version-file td9_kpi.yaml --outfile td9_kpi.txt
@@ -110,6 +117,13 @@ jobs:
         with:
           name: td9_logo
           path: dist/td9_logo.exe
+          compression-level: 0
+
+      - name: Save td9_tracksvr EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: td9_tracksvr
+          path: dist/td9_tracksvr.exe
           compression-level: 0
 
       - name: Save td9_kpi EXE
