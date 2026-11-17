@@ -116,13 +116,13 @@ static unsigned trk_key(void)
     return k;
 }
 
-/* ---- standalone NMEA (GGA/RMC) reader, for Save GPS Point without the
- * tracker. Mirrors trk_core.c poll_ring/nmea_byte/sentence/coord, but with
- * its own small state so we don't clobber the tracker's (it is not running
- * when we use this). Returns 1 when a fresh fix is available. */
+/* ---- standalone NMEA (GGA-only) reader, for Save GPS Point without the
+ * tracker. Mirrors trk_core.c poll_ring/nmea_byte/coord, but with its own
+ * small state so we don't clobber the tracker's. Returns 1 when a GGA fix is
+ * available. GGA-only keeps the module small enough to not overlap struct trk. */
 static unsigned nmea_digit(char c) { return c >= '0' && c <= '9' ? (unsigned)(c - '0') : 0; }
 
-static int32_t nmea_val(const char *s, unsigned frac)
+static int32_t nmea_num(const char *s, unsigned frac)
 {
     int neg = *s == '-';
     uint32_t v = 0;
@@ -140,38 +140,30 @@ static int nmea_coord(const char *f, unsigned deg, char hemi, int32_t *out)
     unsigned i;
     for (i = 0; i < deg; i++) d = d * 10 + nmea_digit(f[i]);
     if (!f[i] || f[i + 2] != '.') return 0;
-    uint32_t micro = d * 1000000u + (uint32_t)nmea_val(f + i, 4) * 5u / 3u;
+    uint32_t micro = d * 1000000u + (uint32_t)nmea_num(f + i, 4) * 5u / 3u;
     if (hemi == 'S' || hemi == 'W') *out = -(int32_t)micro;
     else if (hemi == 'N' || hemi == 'E') *out = (int32_t)micro;
     else return 0;
     return 1;
 }
 
+/* Parse $GPGGA: $GPGGA,time,lat,N,lon,W,quality,... Returns 1 on a fix. */
 static int nmea_sentence(const char *p, unsigned len, int32_t *lat, int32_t *lon)
 {
     unsigned n = 0, i;
     char b[NMEABUF];
     char *f[16];
-    if (len < 6 || p[0] != '$' || len >= NMEABUF) return 0;
-    for (i = 0; i < len + 1; i++) b[i] = p[i];   /* copy + nul terminator */
+    if (len < 8 || p[0] != '$' || p[3] != 'G' || p[4] != 'G' || p[5] != 'A' || len >= NMEABUF)
+        return 0;
+    for (i = 0; i < len + 1; i++) b[i] = p[i];
     for (i = 0; i < len && n < 16; i++) {
         if (b[i] == '*') { b[i] = 0; break; }
         if (b[i] == ',') { b[i] = 0; f[n++] = b + i + 1; }
     }
-    int rmc = n >= 8 && b[3] == 'R' && b[4] == 'M' && b[5] == 'C';
-    int gga = n >= 9 && b[3] == 'G' && b[4] == 'G' && b[5] == 'A';
+    if (n < 6 || !nmea_num(f[5], 0)) return 0;           /* quality 0 = no fix */
     int32_t la, lo;
-    if (rmc) {
-        if (f[1][0] != 'A') return 0;
-        if (!nmea_coord(f[2], 2, f[3][0], &la) || !nmea_coord(f[4], 3, f[5][0], &lo)) return 0;
-        *lat = la; *lon = lo; return 1;
-    }
-    if (gga) {
-        if (!nmea_val(f[5], 0)) return 0;                    /* quality = 0 -> no fix */
-        if (!nmea_coord(f[1], 2, f[2][0], &la) || !nmea_coord(f[3], 3, f[4][0], &lo)) return 0;
-        *lat = la; *lon = lo; return 1;
-    }
-    return 0;
+    if (!nmea_coord(f[1], 2, f[2][0], &la) || !nmea_coord(f[3], 3, f[4][0], &lo)) return 0;
+    *lat = la; *lon = lo; return 1;
 }
 
 /* Consumer state for our own ring draining (local, not in struct trk). */
@@ -182,26 +174,19 @@ static char     gps_buf[NMEABUF];
 static int gps_poll(int32_t *lat, int32_t *lon)
 {
     unsigned w = RING_WRITE & RING_MASK, r = gps_rd;
-    /* pick up where we left; if the ring wrapped past us while we weren't
-     * reading (tracker ran first), re-sync to the modem's tail so we don't
-     * chew stale data/desync the SLIP stream. */
-    if (r > w && (w - r) & RING_MASK) r = w;
-    /* if we're too far behind (modem wrote > half a ring), jump to tail too. */
-    if (((w - r) & RING_MASK) > RING_MASK / 2) r = w;
     while (r != w) {
-        uint8_t b = RING[r];
+        uint8_t x = RING[r];
         r = (r + 1) & RING_MASK;
-        if (b == 0xC0) { gps_flen = 0; gps_esc = 0; continue; }
-        if (gps_esc) { b = b == 0xDC ? 0xC0 : b == 0xDD ? 0xDB : b; gps_esc = 0; }
-        else if (b == 0xDB) { gps_esc = 1; continue; }
-        if (!gps_flen) { gps_cmd = b; gps_flen = 1; }
+        if (x == 0xC0) { gps_flen = 0; gps_esc = 0; continue; }
+        if (gps_esc) { x = x == 0xDC ? 0xC0 : x == 0xDD ? 0xDB : x; gps_esc = 0; }
+        else if (x == 0xDB) { gps_esc = 1; continue; }
+        if (!gps_flen) { gps_cmd = x; gps_flen = 1; }
         else if (gps_cmd == 0x10 && gps_used < NMEABUF)
-            gps_buf[gps_used++] = (char)b;
+            gps_buf[gps_used++] = (char)x;
     }
     gps_rd = (uint16_t)r;
     RING_READ = (uint16_t)r;
     if (gps_used) {
-        /* safety: if we somehow accumulated a full buffer, cap the terminator */
         if (gps_used >= NMEABUF) gps_used = NMEABUF - 1;
         gps_buf[gps_used] = 0;
         int ok = nmea_sentence(gps_buf, gps_used, lat, lon);
