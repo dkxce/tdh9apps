@@ -472,7 +472,7 @@ static int point_view(const struct h9_api *api, int n, int idx)
         if (k == KEY_5) {                    /* [5] NAVTO */
             if (TRK->magic != TRK_MAGIC) { msg("<NO TRACKER>", 0); continue; }
             TRK->tlat = p.lat; TRK->tlon = p.lon; TRK->have_target = 1;
-            msg("<SET NAVTO>, 0");
+            msg("<SET NAVTO>", 0);
             continue;
         }
         if (k == H9_KEY_MENU) {
@@ -484,14 +484,14 @@ static int point_view(const struct h9_api *api, int n, int idx)
                 struct point np = p;
                 if (coord_edit("LAT", &np.lat, 2, 'N', 'S') && coord_edit("LON", &np.lon, 3, 'E', 'W')) {
                     point_replace(api, idx, n, &np);
-                    msg("<SAVED>, 0");
+                    msg("<SAVED>", 0);
                 }
             }
             return 1;
         }
         if (k == KEY_STAR || k == KEY_0 || k == KEY_HASH) {
             point_delete(api, (unsigned)idx, n);
-            msg("<DELETED>, 0");
+            msg("<DELETED>", 0);
             return 1;
         }
         h9_delay(10);
@@ -524,8 +524,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 gfx_text(0, 100, "MENU=YES BACK=NO", 16, 1, GFX_GREY, GFX_BLACK);
                 for (;;) {
                     unsigned c = trk_key();
-                    if (c == H9_KEY_MENU) { STOCK_ERASE(SECTOR_IDX); msg("<CLEARED>, 0"); break; }
-                    if (c == H9_KEY_BACK) { msg("<NOT CLEARED>, 0"); break; }
+                    if (c == H9_KEY_MENU) { STOCK_ERASE(SECTOR_IDX); msg("<CLEARED>", 0); break; }
+                    if (c == H9_KEY_BACK) { msg("<NOT CLEARED>", 0); break; }
                     h9_delay(10);
                 }
                 dirty = 1;
@@ -542,7 +542,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 struct point p;
                 for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
                 p.lat = lat; p.lon = lon;
-                if (point_append(api, &p)) msg("<SAVED>, 0");
+                if (point_append(api, &p)) msg("<SAVED>", 0);
                 dirty = 1;
                 continue;
             }
