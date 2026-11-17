@@ -501,8 +501,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     gfx_wait_release();          /* don't let the opening key select an item */
     unsigned sel = 0, dirty = 1;
     for (;;) {
-        if (dirty) {
+        if (dirty) {             /* full redraw on entry AND on return from any item */
             main_menu(sel);
+            gfx_wait_release();
             dirty = 0;
         }
         unsigned k = trk_key();
