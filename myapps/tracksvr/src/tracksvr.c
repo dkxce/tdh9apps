@@ -385,6 +385,8 @@ static void main_menu(unsigned sel)
 
 /* ---- saved points list + point view ---------------------------------------- */
 
+static void point_view(const struct h9_api *api, int n, int idx);
+
 static void saved_row(const struct h9_api *api, unsigned top_r, unsigned r, unsigned sel)
 {
     struct point p;
