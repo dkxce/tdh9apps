@@ -37,6 +37,14 @@
 
 #define TICK (*(const volatile uint32_t *)0x1D8B0)   /* 100 Hz */
 
+/* Modem NMEA ring (same as tracking trk_core.c): the APRS/GNSS modem decodes
+ * raw GPS sentences into this RAM ring; cmd 0x10 = NMEA payload (SLIP-framed). */
+#define RING        ((volatile uint8_t *)0x16634u)
+#define RING_MASK   2047u                           /* ring size (2 KiB) */
+#define RING_WRITE  (*(volatile uint16_t *)0x16E34u) /* modem write index */
+#define RING_READ   (*(volatile uint16_t *)0x16E36u) /* consumer read index (ours) */
+#define NMEABUF     96u
+
 /* Menu geometry (like trk_menu.c). */
 enum { ROW_Y = 16, ROW_H = 14, ROWS = 7 };
 
@@ -106,6 +114,114 @@ static unsigned trk_key(void)
     if (k == H9_KEY_NONE) { TRK->key_seen = H9_KEY_NONE; return 0; }
     TRK->key_seen = (uint8_t)k;
     return k;
+}
+
+/* ---- standalone NMEA (GGA/RMC) reader, for Save GPS Point without the
+ * tracker. Mirrors trk_core.c poll_ring/nmea_byte/sentence/coord, but with
+ * its own small state so we don't clobber the tracker's (it is not running
+ * when we use this). Returns 1 when a fresh fix is available. */
+static unsigned nmea_digit(char c) { return c >= '0' && c <= '9' ? (unsigned)(c - '0') : 0; }
+
+static int32_t nmea_val(const char *s, unsigned frac)
+{
+    int neg = *s == '-';
+    uint32_t v = 0;
+    if (neg) s++;
+    while (*s >= '0' && *s <= '9') v = v * 10 + nmea_digit(*s++);
+    if (*s == '.') s++;
+    for (unsigned k = 0; k < frac; k++)
+        v = v * 10 + (*s >= '0' && *s <= '9' ? nmea_digit(*s++) : 0);
+    return neg ? -(int32_t)v : (int32_t)v;
+}
+
+static int nmea_coord(const char *f, unsigned deg, char hemi, int32_t *out)
+{
+    uint32_t d = 0;
+    unsigned i;
+    for (i = 0; i < deg; i++) d = d * 10 + nmea_digit(f[i]);
+    if (!f[i] || f[i + 2] != '.') return 0;
+    uint32_t micro = d * 1000000u + (uint32_t)nmea_val(f + i, 4) * 5u / 3u;
+    if (hemi == 'S' || hemi == 'W') *out = -(int32_t)micro;
+    else if (hemi == 'N' || hemi == 'E') *out = (int32_t)micro;
+    else return 0;
+    return 1;
+}
+
+static int nmea_sentence(const char *p, unsigned len, int32_t *lat, int32_t *lon)
+{
+    unsigned n = 0, i;
+    char b[NMEABUF];
+    char *f[16];
+    if (len < 6 || p[0] != '$' || len >= NMEABUF) return 0;
+    for (i = 0; i < len + 1; i++) b[i] = p[i];   /* copy + nul terminator */
+    for (i = 0; i < len && n < 16; i++) {
+        if (b[i] == '*') { b[i] = 0; break; }
+        if (b[i] == ',') { b[i] = 0; f[n++] = b + i + 1; }
+    }
+    int rmc = n >= 8 && b[3] == 'R' && b[4] == 'M' && b[5] == 'C';
+    int gga = n >= 9 && b[3] == 'G' && b[4] == 'G' && b[5] == 'A';
+    int32_t la, lo;
+    if (rmc) {
+        if (f[1][0] != 'A') return 0;
+        if (!nmea_coord(f[2], 2, f[3][0], &la) || !nmea_coord(f[4], 3, f[5][0], &lo)) return 0;
+        *lat = la; *lon = lo; return 1;
+    }
+    if (gga) {
+        if (!nmea_val(f[5], 0)) return 0;                    /* quality = 0 -> no fix */
+        if (!nmea_coord(f[1], 2, f[2][0], &la) || !nmea_coord(f[3], 3, f[4][0], &lo)) return 0;
+        *lat = la; *lon = lo; return 1;
+    }
+    return 0;
+}
+
+/* Consumer state for our own ring draining (local, not in struct trk). */
+static uint16_t gps_rd = 0;
+static uint8_t  gps_cmd = 0, gps_flen = 0, gps_esc = 0, gps_used = 0;
+static char     gps_buf[NMEABUF];
+
+static int gps_poll(int32_t *lat, int32_t *lon)
+{
+    unsigned w = RING_WRITE & RING_MASK, r = gps_rd;
+    /* pick up where we left; if the ring wrapped past us while we weren't
+     * reading (tracker ran first), re-sync to the modem's tail so we don't
+     * chew stale data/desync the SLIP stream. */
+    if (r > w && (w - r) & RING_MASK) r = w;
+    /* if we're too far behind (modem wrote > half a ring), jump to tail too. */
+    if (((w - r) & RING_MASK) > RING_MASK / 2) r = w;
+    while (r != w) {
+        uint8_t b = RING[r];
+        r = (r + 1) & RING_MASK;
+        if (b == 0xC0) { gps_flen = 0; gps_esc = 0; continue; }
+        if (gps_esc) { b = b == 0xDC ? 0xC0 : b == 0xDD ? 0xDB : b; gps_esc = 0; }
+        else if (b == 0xDB) { gps_esc = 1; continue; }
+        if (!gps_flen) { gps_cmd = b; gps_flen = 1; }
+        else if (gps_cmd == 0x10 && gps_used < NMEABUF)
+            gps_buf[gps_used++] = (char)b;
+    }
+    gps_rd = (uint16_t)r;
+    RING_READ = (uint16_t)r;
+    if (gps_used) {
+        /* safety: if we somehow accumulated a full buffer, cap the terminator */
+        if (gps_used >= NMEABUF) gps_used = NMEABUF - 1;
+        gps_buf[gps_used] = 0;
+        int ok = nmea_sentence(gps_buf, gps_used, lat, lon);
+        gps_used = 0;
+        return ok;
+    }
+    return 0;
+}
+
+/* Wait up to `ms` ms for a fix from the modem ring; returns 1 and fills
+ * lat/lon. Aborts early (returns -1) if BACK is pressed during the wait. */
+static int gps_wait_fix(int32_t *lat, int32_t *lon, unsigned ms)
+{
+    unsigned start = TICK;
+    while ((unsigned)(TICK - start) < ms / 10) {
+        if (gps_poll(lat, lon)) return 1;
+        if (trk_key() == H9_KEY_BACK) return -1;
+        h9_delay(10);
+    }
+    return 0;
 }
 
 static void msg(const char *line1, const char *line2)
@@ -541,6 +657,28 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 				dirty = 1;
 				continue;
             }
+            if (sel == 3) {                    /* Save GPS Point: standalone via modem ring */
+                int32_t glat, glon;
+                if (TRK->magic == TRK_MAGIC && TRK->have_fix) {
+                    glat = TRK->lat; glon = TRK->lon;
+                    const char *t = "SAVE GPS";
+                    do_save(api, t, glat, glon);
+                } else {
+                    gps_rd = (uint16_t)(RING_WRITE & RING_MASK);   /* start fresh */
+                    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+                    center(40, "WAIT GPS FIX", 1);
+                    gfx_text(4, 100, "BACK TO CANCEL", 16, 1, GFX_GREY, GFX_BLACK);
+                    gfx_wait_release();
+                    int r = gps_wait_fix(&glat, &glon, 15000);
+                    if (r == -1) { dirty = 1; continue; }          /* cancelled */
+                    if (!r) { msg("<NO FIX>", 0); dirty = 1; continue; }
+                    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+                    const char *t = "SAVE GPS";
+                    do_save(api, t, glat, glon);
+                }
+                dirty = 1;
+                continue;
+            }
             if (TRK->magic != TRK_MAGIC) { msg("<LAUNCH>","<TRACKER FIRST>"); dirty = 1; continue; }
             int32_t lat = TRK->lat, lon = TRK->lon;
             switch (sel) {
@@ -553,12 +691,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 				case 2: lat = TRK->tlat; lon = TRK->tlon; 
 					if (!TRK->have_target) { msg("<NO TARGET>",0); dirty=1; continue; } 
 					break;
-				case 3: lat = TRK->lat;  lon = TRK->lon;  
-					if (!TRK->have_fix)    { msg("<NO FIX>",0);    dirty=1; continue; } 
-					break;
             }
             const char *t = sel == 0 ? "SAVE START" : sel == 1 ? "SAVE CURRENT"
-                          : sel == 2 ? "SAVE NAVTO" : "SAVE GPS";
+                          : "SAVE NAVTO";
             do_save(api, t, lat, lon);
             dirty = 1;
         }
