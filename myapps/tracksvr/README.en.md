@@ -15,8 +15,8 @@ deterrence`#`).
 * **Save NavTo Point**Maintain the navigation point (targets);
 * **Save GPS Point**Maintain your current position (main/reserve);
 * **Save My Own**Enter the name (T9) and coordinates manually, without a tracker;
-* **Saved Points.**- list of saved points: viewing coordinates,
-  name/coordinate editing, deletion, navigation to a point
+* **Saved Points.**- list of saved points: view coordinates,
+  name/coordinate editing, deletion, navigation to a point;
 * **Clear.**Erase all points (with confirmation).
 
 Operations 1-4 take coordinates from the running tracker (see below);
@@ -29,7 +29,7 @@ tracker not running - the app shows`<LAUNCH TRACKER FIRST>`.
 | --- | --- |
 | menu | selection/confirmation; in the editor, save |
 | Up/down | navigation through menu and list of points |
-| Back | back / cancel; in the main menu - exit from the application |
+| Back | back / cancellation; in the main menu - exit from the application |
 | 0-9 | T9-Name input; coordinate digits input |
 | `*` / `#` | in the name - cursor left / right; in the list of points - delete |
 | `[5]` | In view of the point - navigation to it (`NAVTO`) |
@@ -77,7 +77,7 @@ which does not use the runoff:
  ...   (до 255 записей, затем 0xFF)
 ```
 
-* Each record is 16 bytes: name 8 + latitude`int32`micro-degrees
+* Each entry is 16 bytes: name 8 + latitude`int32`micro-degrees
 * longitude`int32`, micro-degrees);
 * maximum**255**points`MAX_SAVES = (4096-16)/16`);
 * number of points = scan of records from 0 to the first`0xFF`;
@@ -134,10 +134,15 @@ File--`tracksvr_points.json`(by default, or custom)`--file`:
 
 * One module`tracksvr.c`), assembly -`build_one.py tracksvr`.
 * Flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`(anything)
-  warning drops CI. No libc and no floating arithmetic.
+  CI drops the warning. No libc and no floating arithmetic.
 * Module body ≤ 8192 bytes; tracker state reads from RAM slot
   ?`struct trk_hdr`along`0x2B7EC`compatible with the tracker`TRK`).
 * Flash recording – through stock functions`STOCK_ERASE`/`STOCK_PROGRAM`(No entry in the h9mod API).
+
+## Screenshots
+
+<img src="../../scripts/render_tracksvr_screens/screen_clear.png"/> <img src="../../scripts/render_tracksvr_screens/screen_menu.png"/> <img src="../../scripts/render_tracksvr_screens/screen_name.png"/>   
+<img src="../../scripts/render_tracksvr_screens/screen_point.png"/> <img src="../../scripts/render_tracksvr_screens/screen_points.png"/> <img src="../../scripts/render_tracksvr_screens/screen_save_choice.png"/>
 
 ## Credits & Acknowledgments
 
