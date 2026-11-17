@@ -33,9 +33,10 @@
 #define KEY_STAR  0x13u
 #define KEY_HASH  0x14u
 #define KEY_0     2u
+#define KEY_5     7u
 
 /* Menu geometry (like trk_menu.c). */
-enum { ROW_Y = 16, ROW_H = 16, ROWS = 6 };
+enum { ROW_Y = 16, ROW_H = 14, ROWS = 7 };
 
 /* The tracker's shared state lives just below the mailbox; the leading
  * fields (magic + sources + key debounce) match struct trk. TRK exists in
@@ -100,6 +101,7 @@ static unsigned trk_key(void)
     unsigned k = h9_key();
     if (k != TRK->key) { TRK->key = (uint8_t)k; return 0; }
     if (k == TRK->key_seen) return 0;
+    if (k == H9_KEY_NONE) { TRK->key_seen = H9_KEY_NONE; return 0; }
     TRK->key_seen = (uint8_t)k;
     return k;
 }
@@ -217,6 +219,7 @@ static int name_edit(char name[8])
     unsigned max = 8, pos = 0;
     char buf[9] = { 0 };
     unsigned last_digit = 0xFF;
+    while (name[pos] && pos < max) { buf[pos] = name[pos]; pos++; }
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     center(4, "-- NAME --", 1);
     gfx_text(0, 100, "0-9 TAP  * / # CURSOR", 21, 1, GFX_WHITE, GFX_BLACK);
@@ -248,7 +251,6 @@ static int name_edit(char name[8])
             }
             for (unsigned c = 0; c < size; c++) {
                 char ch = set[(start + c) % size];
-                if (ch == ' ') continue;
                 buf[n] = ch; buf[n + 1] = 0;
                 pos = n + 1; last_digit = digit;
                 break;
@@ -369,9 +371,9 @@ static void menu_row(unsigned i, unsigned sel, const char *labeltext)
 
 static const char *main_label(unsigned i)
 {
-    static const char *const T[6] = {
+    static const char *const T[7] = {
         "Save Start Point", "Save Current Point", "Save NavTo Point",
-        "Save GPS Point", "Save My Own", "Saved Points" };
+        "Save GPS Point", "Save My Own", "Saved Points", "Clear All" };
     return T[i];
 }
 
@@ -379,13 +381,13 @@ static void main_menu(unsigned sel)
 {
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     center(2, "-- TRACKER SAVER --", 1);
-    for (unsigned i = 0; i < 6; i++) menu_row(i, sel, main_label(i));
+    for (unsigned i = 0; i < 7; i++) menu_row(i, sel, main_label(i));
     gfx_text(0, 116, "UP/DN MENU BACK", 16, 1, GFX_GREY, GFX_BLACK);
 }
 
 /* ---- saved points list + point view ---------------------------------------- */
 
-static void point_view(const struct h9_api *api, int n, int idx);
+static int point_view(const struct h9_api *api, int n, int idx);
 
 static void saved_row(const struct h9_api *api, unsigned top_r, unsigned r, unsigned sel)
 {
@@ -417,7 +419,12 @@ static void saved_points(const struct h9_api *api)
         }
         unsigned k = trk_key();
         if (k == H9_KEY_BACK) return;
-        if (k == H9_KEY_MENU) { point_view(api, n, (int)sel); dirty = 1; continue; }
+        if (k == H9_KEY_MENU) {
+                if (point_view(api, n, (int)sel) == 1) { n = saves_count(api); top = 0; if (sel >= (unsigned)n) sel = 0; }
+                dirty = 1;
+                if (n <= 0) return;
+                continue;
+            }
         if (k == H9_KEY_UP || k == H9_KEY_DOWN) {
             unsigned old = sel, oldtop = top;
             if (k == H9_KEY_UP) sel = sel ? sel - 1 : (unsigned)n - 1;
@@ -432,7 +439,7 @@ static void saved_points(const struct h9_api *api)
     }
 }
 
-static void point_view(const struct h9_api *api, int n, int idx)
+static int point_view(const struct h9_api *api, int n, int idx)
 {
     struct point p;
     point_get(api, (unsigned)idx, &p);
@@ -446,15 +453,20 @@ static void point_view(const struct h9_api *api, int n, int idx)
     gfx_text(4, 36, b, 24, 1, GFX_WHITE, GFX_BLACK);
     d = put(b, "LON "); coord_str(d, p.lon);
     gfx_text(4, 50, b, 24, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(0, 88, "MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 100, "*/0/# = DELETE", 15, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 112, "BACK = LIST", 14, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 84, "[5] NAVTO", 12, 1, GFX_YELLOW, GFX_BLACK);
+    gfx_text(0, 96, "MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 108, "*/0/# = DELETE  BACK = LIST", 28, 1, GFX_GREY, GFX_BLACK);
     gfx_wait_release();
     for (;;) {
         unsigned k = trk_key();
-        if (k == H9_KEY_BACK) return;
+        if (k == H9_KEY_BACK) return 0;
+        if (k == KEY_5) {                    /* [5] NAVTO */
+            if (TRK->magic != TRK_MAGIC) { msg("<NO TRACKER>"); continue; }
+            TRK->tlat = p.lat; TRK->tlon = p.lon; TRK->have_target = 1;
+            msg("<SET NAVTO>");
+            continue;
+        }
         if (k == H9_KEY_MENU) {
-            /* edit name, then lat, then lon */
             char name[8];
             for (unsigned i = 0; i < 8; i++) name[i] = p.name[i];
             gfx_wait_release();
@@ -466,12 +478,12 @@ static void point_view(const struct h9_api *api, int n, int idx)
                     msg("<SAVED>");
                 }
             }
-            return;
+            return 1;
         }
         if (k == KEY_STAR || k == KEY_0 || k == KEY_HASH) {
             point_delete(api, (unsigned)idx, n);
             msg("<DELETED>");
-            return;
+            return 1;
         }
         h9_delay(10);
     }
@@ -481,6 +493,7 @@ static void point_view(const struct h9_api *api, int n, int idx)
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
     (void)self;
+    gfx_wait_release();          /* don't let the opening key select an item */
     unsigned sel = 0, dirty = 1;
     for (;;) {
         if (dirty) {
@@ -490,10 +503,24 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         unsigned k = trk_key();
         if (k == H9_KEY_UP || k == H9_KEY_DOWN) {
             menu_row(sel, 0xFFFFFFFF, main_label(sel));   /* unhighlight old */
-            if (k == H9_KEY_UP) sel = sel ? sel - 1 : 5;
-            else sel = sel + 1 < 6 ? sel + 1 : 0;
+            if (k == H9_KEY_UP) sel = sel ? sel - 1 : 6;
+            else sel = sel + 1 < 7 ? sel + 1 : 0;
             menu_row(sel, sel, main_label(sel));          /* highlight new */
         } else if (k == H9_KEY_MENU) {
+            if (sel == 6) {                              /* Clear all */
+                gfx_wait_release();
+                gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+                center(50, "<CLEAR ALL>", 2);
+                gfx_text(0, 100, "MENU=YES BACK=NO", 16, 1, GFX_GREY, GFX_BLACK);
+                for (;;) {
+                    unsigned c = trk_key();
+                    if (c == H9_KEY_MENU) { STOCK_ERASE(SECTOR_IDX); msg("<CLEARED>"); break; }
+                    if (c == H9_KEY_BACK) { msg("<NOT CLEARED>"); break; }
+                    h9_delay(10);
+                }
+                dirty = 1;
+                continue;
+            }
             if (sel == 5) { saved_points(api); dirty = 1; continue; }
             if (sel == 4) {
                 char name[8];
