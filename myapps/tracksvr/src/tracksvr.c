@@ -411,11 +411,11 @@ static void saved_points(const struct h9_api *api)
 {
     int n = saves_count(api);
     if (n <= 0) { msg("<NO SAVED POINTS>"); return; }
-    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    center(4, "-- SAVED POINTS --", 1);
     unsigned top = 0, sel = 0, dirty = 1;
     for (;;) {
         if (dirty) {
+            gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+            center(4, "-- SAVED POINTS --", 1);
             if (sel < top) top = sel;
             if (sel >= top + (unsigned)(n < 6 ? n : 6)) top = sel - (n < 6 ? 0 : n - 6);
             for (unsigned r = 0; r < (unsigned)(n < 8 ? n : 8); r++)
