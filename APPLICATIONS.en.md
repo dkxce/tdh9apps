@@ -26,14 +26,15 @@ TIDRADIO TD-H9 with a set of tools for managing applications.
 | `td9_kpi.exe` | loading`DKXCEPIC`) + setting/resetting the radio password |
 | `td9_logo.exe` | boot-logo |
 | `td9_aprs.exe` | read/write APRS/GNSS settings |
-| `myapps/*.h9mod` | finished application modules (`passlock`, `dkxcepic`, `bootscreen`, `tracking`) |
+| `td9_tracksvr.exe` | editor/import/export of appendix points`TRACKER SAVER` |
+| `myapps/*.h9mod` | finished application modules (`passlock`, `dkxcepic`, `bootscreen`, `tracking`, `tracksvr`) |
 | `hidapi.dll` | Bluetooth communication library (should lie next to the`.exe`) |
 
 ---
 
 # Part 1. For regular users (ready-made .exe)
 
-No Python is needed. It is enough to unpack the archive and run`.exe`.
+You don't need any Python. It is enough to unpack the archive and run`.exe`.
 
 ## 1.1. Sweeve the custom firmware
 
@@ -66,7 +67,7 @@ td9_apps.exe list
 Identify the right names (names)`list`; the menu is set automatically:
 
 ```
-td9_apps.exe install dkxcepic tracking passlock
+td9_apps.exe install dkxcepic tracking tracksvr passlock
 ```
 
 See what's established:
@@ -81,7 +82,7 @@ Delete everything:
 td9_apps.exe remove
 ```
 
-Open after installation**menu**deterrence`#`- there will appear
+After installation, open**menu**deterrence`#`- there will appear
 installed modules.
 
 > Tip: in order to password the radio, it is necessary to interpret the module`passlock`.
@@ -147,7 +148,24 @@ td9_kpi.exe pass --password 1234
 td9_apps.exe install passlock
 ```
 
-## 1.6. Reset the brick (h9 ui flash.exe)
+## 1.6. TRACKER SAVER points (td9 tracksvr.exe)
+
+Editor of user points of the application`TRACKER SAVER`(see para.`myapps/tracksvr/README.md`).
+Points read/write to sector`0x7FE000`Bluetooth.
+
+```
+td9_tracksvr.exe show          # показать точки из рации в консоль
+td9_tracksvr.exe dump          # сохранить точки из рации в tracksvr_points.json
+td9_tracksvr.exe load          # записать points.json в рацию (с бэкапом сектора)
+```
+
+* File format`tracksvr_points.json`: `{"points": [{"name": "HOME", "lat": 55.7558, "lon": 37.6173}, ...]}`;
+  Custom way.`--file <путь>`.
+* `load`erases the sector and writes the entire table; before erasing, saves
+  old sector`tracksvr-sector-backup.bin`or`--backup <файл>`).
+* The radio should be on, Bluetooth is active.
+
+## 1.7. Reset the brick (h9 ui flash.exe)
 
 If the radio stops loading, you can reflash it via HID:
 
@@ -160,7 +178,7 @@ h9_ui_flash.exe --help
 # Part 2. For those who want to run Python scripts
 
 The same functionality, but the original scripts`td9_apps.py`, `td9_kpi.py`,
-`td9_logo.py`, `td9_aprs.py`instead`.exe`.
+`td9_logo.py`, `td9_aprs.py`, `td9_tracksvr.py`instead`.exe`.
 
 ## 2.1. Environment preparation
 
@@ -196,7 +214,7 @@ poetry run python h9_flash.py --fw firmware/TD-H9-V1.0.38DKXCE.fw --backup befor
 
 Flag reference:`h9_flash.py --help`.
 
-## 2.3. Appendices (td9 apps.py)
+## 2.3. Applications (td9 apps.py)
 
 ```
 poetry run python td9_apps.py list
@@ -235,11 +253,19 @@ poetry run python td9_aprs.py get callsign
 poetry run python td9_aprs.py set callsign R2AKA
 ```
 
+## 2.8. TRACKER SAVER points (td9 tracksvr.py)
+
+```
+poetry run python td9_tracksvr.py show
+poetry run python td9_tracksvr.py dump [--file tracksvr_points.json]
+poetry run python td9_tracksvr.py load [--file tracksvr_points.json]
+```
+
 ---
 
 # Part 3. For those who want to build firmware and applications themselves
 
-Everything is collected by your GitHub Actions from source.
+Everything is collected from your GitHub Actions source.
 
 ## 3.1. Structure of the project
 
@@ -299,7 +325,7 @@ For its correct assembly, you need an actual stub.
 
 ## Requirements and observations
 
-* **Bluetooth**for all`.exe`/`.py`(Apart from the HID, the radio should be
+* **Bluetooth**for everyone`.exe`/`.py`(Apart from the HID, the radio should be
   switched on, Bluetooth active, radio next to PC.
 * **hidapi**: should lie next to`.exe`(It is already in the archive.)
 * When using lock firmware, keep Bluetooth on until
@@ -313,6 +339,7 @@ For its correct assembly, you need an actual stub.
 | What? | Meaning. |
 | --- | --- |
 | Image area of DKXCEPIC | resource`0x717000` |
+| Points Tracker Saver | resource`0x7FE000`(4 KiB, magic)`DKXCETRACKSAVES`) |
 | Boot logo | resource`0xA00000`(160×128 RGB565) |
 | Lock flag`skip_check` | Ram.`0x2B8DF` |
 | Modules | resource`0xCC0000`(catalogue), data`0xCC1000` |
