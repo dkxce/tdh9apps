@@ -136,11 +136,27 @@ poetry run python td9_tracksvr.py load [--file tracksvr_points.json]
 - Один модуль (`tracksvr.c`), сборка — `build_one.py tracksvr`.
 - Флаги: `-Oz -ffreestanding -fno-builtin -Wall -Werror` (любое
   предупреждение валит CI). Без libc и без плавающей арифметики.
-- Тело модуля ≤ 8192 байт; состояние трекера читается из RAM-слота
-  (`struct trk_hdr` по `0x2B7EC`, совместим с трекером `TRK`).
+- Тело модуля ≤ 6380 байт; состояние трекера читается из RAM-слота
+  (`struct trk_hdr` по `0x2B7EC`, совместим с трекером `TRK`). Чтобы не
+  перекрыть `struct trk`, модуль должен быть не длиннее `0x2B7EC − 0x29F00`
+  = 6380 байт (иначе при загрузке затрется состояние трекера).
 - Запись flash — через стоковые функции `STOCK_ERASE`/`STOCK_PROGRAM`
   (нет записи в h9mod API).
-  
+
+## Совместимость
+
+Модуль загружается в тот же RAM-слот (`0x29F00..0x2BEFF`), что и трекер и
+другие приложения, поэтому одновременно в слоте может жить только один модуль.
+
+**TRACKER SAVER работает вместе с `TRACKER`** (пункты Save Start/Current/NavTo/GPS
+читают `struct trk` трекера по `0x2B7EC`), но **не работает вместе с модулями
+`GPS` и `APRS`**: при их запуске перекрывается `struct trk`, и координаты
+трекера становятся недоступны (`<NO FIX>` / `<LAUNCH TRACKER FIRST>`), а
+GPS-модуль может затереть таблицу точек или состояние. Используйте их по
+очереди через меню приложений (удержание `#`). Point table хранится на
+флеш-чипе ресурсов (сектор `0x7FE000`) и не теряется при переключении
+приложений.
+
 ## Скриншоты
 
 <img src="../../scripts/render_tracksvr_screens/screen_clear.png"/> <img src="../../scripts/render_tracksvr_screens/screen_menu.png"/> <img src="../../scripts/render_tracksvr_screens/screen_name.png"/>   

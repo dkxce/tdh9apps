@@ -119,6 +119,16 @@ poetry run python td9_apps.py install tracking
   `MODULE TOO BIG +N` и не запускается. Точные лимиты и приёмы
   уменьшения — в [LIMITS.md](LIMITS.md).
 
+## Совместимость
+
+Модули загружаются в один RAM-слот `0x29F00..0x2BEFF`, поэтому одновременно
+в нём может жить только один модуль. **TRACKER и TRACKER SAVER работают
+вместе** (tracksvr читает `struct trk` трекера по `0x2B7EC`), но **не работают
+вместе с модулями `GPS` и `APRS`**: запуск любого из них перекрывает
+`struct trk` (`0x2B7EC`), и точки/координаты трекера пропадают.
+Используйте их по очереди через меню приложений (удержание `#`). Подробнее о
+причинах и о рамка-адресах — в [LIMITS.md](LIMITS.md).
+
 ## Скриншоты
 
 <img src="../../scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="../../scripts/render_tracker_screens/screen_map.png"/> <img src="../../scripts/render_tracker_screens/screen_menu.png"/>       
