@@ -4,7 +4,7 @@
 Bluetooth. Pictures are stored in a free area - the "tail" of the font party
 ?`0x717000..0x7FFFFF`), which the stock firmware does not use.
 
-Watch pictures on the radio will be an app**DKXCEPIC**(Back menu)
+Watch pictures on the radio will be an application**DKXCEPIC**(Back menu)
 DKXCEPIC; Up/Down scrolls through the loop, Back is the output.
 
 ## Format of the field
@@ -21,7 +21,7 @@ Title + pictures (raw RGB565 big-endian):
 
 ## Teams.
 
-All through.`poetry run`.
+Everything.`poetry run`.
 
 ### Check that the area is free
 
@@ -82,9 +82,9 @@ poetry run python td9_kpi.py dump --addr 0x717000 --span 0x1000 --out файл.b
 
 ## Speed and protocol
 
-* Write via S2 Write Service over 32-byte blocks
+* Recording goes through S2 write service over 32-byte blocks
   (erase → program → verify)`td9_logo.py`.
-* **Reading (check/check/check/dump)**exploit**bulk-read (S1 fast)**:
+* **Reading (check/check/check/dump)**uses**bulk-read (S1 fast)**:
   The radio streams data in packs of ~240B per request instead of 32B.
   verification is several times faster (about 3-4 KB / s instead of long ones).
   32-byte cycles.

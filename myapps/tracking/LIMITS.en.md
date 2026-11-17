@@ -12,6 +12,7 @@ It is placed in the tracker and how it should be divided into modules.
 * [Division into modules](#деление-на-модули)
 * [If the module does not fit](#если-модуль-не-помещается)
 * [Environment of implementation](#среда-выполнения)
+* [Compatibility with other modules](#совместимость-с-другими-модулями)
 * [Screen and keys](#экран-и-клавиши)
 * [History of change](#история-изменений)
 
@@ -35,7 +36,7 @@ These 124 KiBs include menus and all apps together.
 
 ## One module.
 
-Before launch, the module is copied to a RAM slot.`0x29F00..0x2BEFF`That's 8KB.
+Before launch, the module is copied to a RAM slot.`0x29F00..0x2BEFF`That's 8 KB.
 
 | Parameter | Meaning. |
 | --- | --- |
@@ -63,7 +64,7 @@ The state undergoes module switching until a larger module is loaded.
 Field`struct trk`packed: counters, flags and keycodes are stored in`uint8_t`.
 course, speed and number of satellites`uint16_t`. Place the new fields like this.
 so that there are no alignment holes: each byte of state is taken away
-The body of all modules.
+The body of all the modules.
 
 The state only adjusts.`TRACKER` (`state_init` в `tracker.c`): reset,
 omissions and the latest GPS stock fix. Hidden modules are opened only
@@ -87,21 +88,21 @@ start so that the zero state does not reset the radio lock.
 
 ## Body layout and size
 
-* Component`ld.py`lay down`.text`then the whole`.rodata`file-order`build.json`.
+* Component`ld.py`put all`.text`then the whole`.rodata`file-order`build.json`.
 * Unused functions**stay out**. Everything that's in the plug-in.
   The C-file enters the module even if the module does not call it.
 * The last file of each module is`trk_end.c`constant`trk_end`.
   Her address marks the end of the body.
 * `trk_open`When starting, compares the end of the body with the address of the state. When applied
   output`MODULE TOO BIG +N`where N is the byte overrun, and the module
-  It's not starting. Without a tail check,`.rodata`(lines, tables)
+  It doesn't start. Without this check, the tail`.rodata`(lines, tables)
   It would have been wiped out and the screen would have remained empty.
-* The sizes of individual modules in the CI log are not visible, there is only the total package size.
+* The sizes of individual modules in the CI log are not visible, only the total package size.
   The overrun is only visible on the N radio.
 
 ## Division into modules
 
-Since the linker does not throw out excess, the common files are divided by consumers:
+Since the linker does not throw out excess, the shared files are divided by consumers:
 
 | File. | What's inside | Connect. |
 | --- | --- | --- |
@@ -121,14 +122,14 @@ The procedure for increasing the price:
 
 1. Remove from shared files what this module does not need (see table above).
 2. Replace tables with computation and the repetitive figure with a common function.
-3. Shorten the lines: they are in`.rodata`and count in the body.
-4. Split the screen into two modules and switch through the mailbox.
+3. Reduce the lines: they are in`.rodata`and count in the body.
+4. Divide the screen into two modules and switch through the mailbox.
    The total volume of the package (124 KB) almost never interferes with 8 KB per module.
 
 ## Environment of implementation
 
 * No module.`.data` и `.bss`: Global variables only`const`.
-  Modified data is stored in`struct trk`Or on the stack.
+  Modified data is stored in`struct trk`Or stack.
 * The task stack is small, do not start large buffers on the stack.
 * no libc;`memcpy` и `memset`general`gfx.c`.
 * Assembly flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`.
@@ -138,6 +139,21 @@ The procedure for increasing the price:
   modem-ring`0x16634` в `trk_service`So the track is written,
   Only while one of the tracker modules is open.
 * System timer`0x1D8B0`100 Hz.
+
+## Compatibility with other modules
+
+The modules are loaded into one RAM slot.`0x29F00..0x2BEFF`. Starting another module
+It overwrites the slot, so**At the same time, the slot can only be loaded
+module**. It follows:
+
+* **Tracker and Tracker Saver work together**: tracksvr reads`struct trk`tracker`0x2B7EC`As long as the tracker is alive in the slot, that’s enough.
+  Save Current / Save GPS / Save Start took coordinates.
+* **Tracker and tracksvr do not work with GPS/APRS modules**GPS module
+  loaded into the same slot and overlapped`struct trk` (`0x2B7EC`) and/or
+  The satshare zone. His body ends at an address close to`0x2B7EC`; on coincidence, it wipes the state of the tracker.
+* To ensure that the two functions work simultaneously through the application menu
+  It is necessary to combine into one module (or switch between modules through the
+  mailbox`H9_REQUEST`) rather than keeping separate`.h9mod`.
 
 ## Screen and keys
 
