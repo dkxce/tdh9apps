@@ -228,8 +228,8 @@ static int name_edit(char name[8])
     while (name[pos] && pos < max) { buf[pos] = name[pos]; pos++; }
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     center(4, "-- NAME --", 1);
-    gfx_text(0, 100, "0-9 TAP  * / # CURSOR", 21, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(0, 112, "MENU SAVE  BACK CANCEL", 21, 1, GFX_WHITE, GFX_BLACK);
+    gfx_text(4, 100, "0-9 TAP  * / # CURSOR", 21, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 112, "MENU SAVE  BACK CANCEL", 21, 1, GFX_GREY, GFX_BLACK);
     for (;;) {
         char line[10];
         edit_line(buf, pos, line);
@@ -277,8 +277,8 @@ static int coord_edit(const char *title, int32_t *v, unsigned ideg, char pos, ch
     for (unsigned i = n; i--;) { dg[i] = (uint8_t)(a % 10); a /= 10; }
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     center(4, title, 1);
-    gfx_text(0, 100, "0-9 DIGIT  UP/DN MOVE", 21, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 112, "MENU OK  BACK CANCEL", 20, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 100, "0-9 DIGIT  UP/DN MOVE", 21, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 112, "MENU OK  BACK CANCEL", 20, 1, GFX_GREY, GFX_BLACK);
     for (;;) {
         if (dirty) {
             char b[16];
@@ -389,7 +389,7 @@ static void main_menu(unsigned sel)
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     center(2, "-- TRACKER SAVER --", 1);
     for (unsigned i = 0; i < 7; i++) menu_row(i, sel, main_label(i));
-    gfx_text(0, 116, "UP/DN MENU BACK", 16, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 116, "UP/DN MENU BACK", 16, 1, GFX_GREY, GFX_BLACK);
 }
 
 /* ---- saved points list + point view ---------------------------------------- */
@@ -461,10 +461,10 @@ static int point_view(const struct h9_api *api, int n, int idx)
     gfx_text(4, 36, b, 24, 1, GFX_WHITE, GFX_BLACK);
     d = put(b, "LON "); coord_str(d, p.lon);
     gfx_text(4, 50, b, 24, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(4, 72, "5 NAVTO", 12, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 84, " MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 96, " */0/# = DELETE", 28, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 108, " BACK = LIST", 28, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 72, " 5 NAVTO", 12, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 84, "MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 96, "*/0/# = DELETE", 28, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 108, "BACK = LIST", 28, 1, GFX_GREY, GFX_BLACK);
     gfx_wait_release();
     for (;;) {
         unsigned k = trk_key();
@@ -521,7 +521,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 gfx_wait_release();
                 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
                 center(50, "<CLEAR ALL>", 2);
-                gfx_text(0, 100, "MENU=YES BACK=NO", 16, 1, GFX_GREY, GFX_BLACK);
+                gfx_text(4, 100, "MENU=YES BACK=NO", 16, 1, GFX_GREY, GFX_BLACK);
                 for (;;) {
                     unsigned c = trk_key();
                     if (c == H9_KEY_MENU) { STOCK_ERASE(SECTOR_IDX); msg("<CLEARED>", 0); break; }
