@@ -35,6 +35,8 @@
 #define KEY_0     2u
 #define KEY_5     7u
 
+#define TICK (*(const volatile uint32_t *)0x1D8B0)   /* 100 Hz */
+
 /* Menu geometry (like trk_menu.c). */
 enum { ROW_Y = 16, ROW_H = 14, ROWS = 7 };
 
@@ -214,11 +216,13 @@ static void edit_line(const char buf[9], unsigned pos, char out[10])
     out[9] = 0;
 }
 
+#define CYCLE_TICKS 50u   /* 0.5 s: same digit toggles char; after pause it adds a new one */
+
 static int name_edit(char name[8])
 {
     unsigned max = 8, pos = 0;
     char buf[9] = { 0 };
-    unsigned last_digit = 0xFF;
+    unsigned last_digit = 0xFF, last_tick = 0;
     while (name[pos] && pos < max) { buf[pos] = name[pos]; pos++; }
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     center(4, "-- NAME --", 1);
@@ -241,8 +245,9 @@ static int name_edit(char name[8])
             unsigned digit = k == 2 ? 0 : k - 2;
             const char *set = KEYS[digit];
             unsigned size = 0; while (set[size]) size++;
+            uint32_t now = TICK;
             unsigned n = pos, start = 0;
-            if (n && digit == last_digit) {
+            if (n && digit == last_digit && now - last_tick < CYCLE_TICKS) {
                 while (start < size && set[start] != buf[n - 1]) start++;
                 start = (start + 1) % size;
                 n--;
@@ -252,7 +257,7 @@ static int name_edit(char name[8])
             for (unsigned c = 0; c < size; c++) {
                 char ch = set[(start + c) % size];
                 buf[n] = ch; buf[n + 1] = 0;
-                pos = n + 1; last_digit = digit;
+                pos = n + 1; last_digit = digit; last_tick = now;
                 break;
             }
         }
@@ -343,7 +348,7 @@ static void do_save(const struct h9_api *api, const char *title, int32_t lat, in
                 else if (sel == 1) { gfx_wait_release(); coord_edit("LON", &lon, 3, 'E', 'W'); break; }
                 else {
                     gfx_wait_release();
-                    char name[8];
+                    char name[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
                     if (!name_edit(name)) return;
                     struct point p;
                     for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
@@ -523,7 +528,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             }
             if (sel == 5) { saved_points(api); dirty = 1; continue; }
             if (sel == 4) {
-                char name[8];
+                char name[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
                 int32_t lat = 0, lon = 0;
                 gfx_wait_release();
                 if (!name_edit(name)) { dirty = 1; continue; }
