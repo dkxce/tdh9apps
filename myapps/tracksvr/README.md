@@ -140,6 +140,11 @@ poetry run python td9_tracksvr.py load [--file tracksvr_points.json]
   (`struct trk_hdr` по `0x2B7EC`, совместим с трекером `TRK`).
 - Запись flash — через стоковые функции `STOCK_ERASE`/`STOCK_PROGRAM`
   (нет записи в h9mod API).
+  
+## Скриншоты
+
+<img src="../../scripts/render_tracksvr_screens/screen_clear.png"/> <img src="../../scripts/render_tracksvr_screens/screen_menu.png"/> <img src="../../scripts/render_tracksvr_screens/screen_name.png"/>   
+<img src="../../scripts/render_tracksvr_screens/screen_point.png"/> <img src="../../scripts/render_tracksvr_screens/screen_points.png"/> <img src="../../scripts/render_tracksvr_screens/screen_save_choice.png"/>     
 
 ##  Credits & Acknowledgments
 
