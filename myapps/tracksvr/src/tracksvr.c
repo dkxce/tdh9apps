@@ -108,10 +108,12 @@ static unsigned trk_key(void)
     return k;
 }
 
-static void msg(const char *s)
+static void msg(const char *line1, const char *line2)
 {
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    gfx_text(4, 50, s, 26, 2, GFX_WHITE, GFX_BLACK);
+    center(40, "STATUS", 2);
+    if (line1) center(72, line1, 1);
+	if (line2) center(86, line2, 1);
     gfx_wait_release();
     for (;;) { if (trk_key() != H9_KEY_NONE) break; h9_delay(10); }
     gfx_wait_release();
@@ -171,7 +173,7 @@ static int point_append(const struct h9_api *api, const struct point *p)
 {
     int n = saves_count(api);
     if (n < 0) { STOCK_ERASE(SECTOR_IDX); header_write(); n = 0; }
-    if (n >= (int)MAX_SAVES) { msg("<NO MEMORY>"); return 0; }
+    if (n >= (int)MAX_SAVES) { msg("<NO MEMORY>", 0); return 0; }
     unsigned char b[REC];
     pack_rec(b, p);
     STOCK_PROGRAM(b, SAVE_ADDR + HEAD + (unsigned)n * REC, REC);
@@ -275,8 +277,8 @@ static int coord_edit(const char *title, int32_t *v, unsigned ideg, char pos, ch
     for (unsigned i = n; i--;) { dg[i] = (uint8_t)(a % 10); a /= 10; }
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     center(4, title, 1);
-    gfx_text(0, 100, "0-9 DIGIT  UP/DN MOVE", 21, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(0, 112, "MENU OK  BACK CANCEL", 20, 1, GFX_WHITE, GFX_BLACK);
+    gfx_text(0, 100, "0-9 DIGIT  UP/DN MOVE", 21, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 112, "MENU OK  BACK CANCEL", 20, 1, GFX_GREY, GFX_BLACK);
     for (;;) {
         if (dirty) {
             char b[16];
@@ -353,7 +355,7 @@ static void do_save(const struct h9_api *api, const char *title, int32_t lat, in
                     struct point p;
                     for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
                     p.lat = lat; p.lon = lon;
-                    if (point_append(api, &p)) msg("<SAVED>");
+                    if (point_append(api, &p)) msg("<SAVED>", 0);
                     return;
                 }
             }
@@ -410,7 +412,7 @@ static void saved_row(const struct h9_api *api, unsigned top_r, unsigned r, unsi
 static void saved_points(const struct h9_api *api)
 {
     int n = saves_count(api);
-    if (n <= 0) { msg("<NO SAVED POINTS>"); return; }
+    if (n <= 0) { msg("<NO SAVED POINTS>", 0); return; }
     unsigned top = 0, sel = 0, dirty = 1;
     for (;;) {
         if (dirty) {
@@ -451,24 +453,26 @@ static int point_view(const struct h9_api *api, int n, int idx)
     char b[32], *d;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     d = put(b, "NUM "); put_num(d, idx + 1);
-    gfx_text(4, 8, b, 24, 1, GFX_YELLOW, GFX_BLACK);
+    // gfx_text(4, 8, b, 24, 1, GFX_YELLOW, GFX_BLACK);
+	center(4, b, 1);
     d = put(b, "NAME "); for (unsigned i = 0; i < 8 && p.name[i]; i++) *d++ = p.name[i]; *d = 0;
     gfx_text(4, 22, b, 24, 1, GFX_WHITE, GFX_BLACK);
     d = put(b, "LAT "); coord_str(d, p.lat);
     gfx_text(4, 36, b, 24, 1, GFX_WHITE, GFX_BLACK);
     d = put(b, "LON "); coord_str(d, p.lon);
     gfx_text(4, 50, b, 24, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(4, 84, "[5] NAVTO", 12, 1, GFX_YELLOW, GFX_BLACK);
-    gfx_text(0, 96, "MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 108, "*/0/# = DELETE  BACK = LIST", 28, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 72, " [5] NAVTO", 12, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 84, " MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 96, " */0/# = DELETE", 28, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 108, " BACK = LIST", 28, 1, GFX_GREY, GFX_BLACK);
     gfx_wait_release();
     for (;;) {
         unsigned k = trk_key();
         if (k == H9_KEY_BACK) return 0;
         if (k == KEY_5) {                    /* [5] NAVTO */
-            if (TRK->magic != TRK_MAGIC) { msg("<NO TRACKER>"); continue; }
+            if (TRK->magic != TRK_MAGIC) { msg("<NO TRACKER>", 0); continue; }
             TRK->tlat = p.lat; TRK->tlon = p.lon; TRK->have_target = 1;
-            msg("<SET NAVTO>");
+            msg("<SET NAVTO>, 0");
             continue;
         }
         if (k == H9_KEY_MENU) {
@@ -480,14 +484,14 @@ static int point_view(const struct h9_api *api, int n, int idx)
                 struct point np = p;
                 if (coord_edit("LAT", &np.lat, 2, 'N', 'S') && coord_edit("LON", &np.lon, 3, 'E', 'W')) {
                     point_replace(api, idx, n, &np);
-                    msg("<SAVED>");
+                    msg("<SAVED>, 0");
                 }
             }
             return 1;
         }
         if (k == KEY_STAR || k == KEY_0 || k == KEY_HASH) {
             point_delete(api, (unsigned)idx, n);
-            msg("<DELETED>");
+            msg("<DELETED>, 0");
             return 1;
         }
         h9_delay(10);
@@ -520,8 +524,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 gfx_text(0, 100, "MENU=YES BACK=NO", 16, 1, GFX_GREY, GFX_BLACK);
                 for (;;) {
                     unsigned c = trk_key();
-                    if (c == H9_KEY_MENU) { STOCK_ERASE(SECTOR_IDX); msg("<CLEARED>"); break; }
-                    if (c == H9_KEY_BACK) { msg("<NOT CLEARED>"); break; }
+                    if (c == H9_KEY_MENU) { STOCK_ERASE(SECTOR_IDX); msg("<CLEARED>, 0"); break; }
+                    if (c == H9_KEY_BACK) { msg("<NOT CLEARED>, 0"); break; }
                     h9_delay(10);
                 }
                 dirty = 1;
@@ -538,17 +542,17 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 struct point p;
                 for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
                 p.lat = lat; p.lon = lon;
-                if (point_append(api, &p)) msg("<SAVED>");
+                if (point_append(api, &p)) msg("<SAVED>, 0");
                 dirty = 1;
                 continue;
             }
-            if (TRK->magic != TRK_MAGIC) { msg("<LAUNCH TRACKER FIRST>"); dirty = 1; continue; }
+            if (TRK->magic != TRK_MAGIC) { msg("<LAUNCH>","<TRACKER FIRST>"); dirty = 1; continue; }
             int32_t lat = TRK->lat, lon = TRK->lon;
             switch (sel) {
-            case 0: lat = TRK->slat; lon = TRK->slon; if (!TRK->has_start)   { msg("<NO START>");  dirty=1; continue; } break;
-            case 1: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)    { msg("<NO FIX>");    dirty=1; continue; } break;
-            case 2: lat = TRK->tlat; lon = TRK->tlon; if (!TRK->have_target) { msg("<NO TARGET>"); dirty=1; continue; } break;
-            case 3: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)    { msg("<NO FIX>");    dirty=1; continue; } break;
+            case 0: lat = TRK->slat; lon = TRK->slon; if (!TRK->has_start)   { msg("<NO START>",0);  dirty=1; continue; } break;
+            case 1: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)    { msg("<NO FIX>",0);    dirty=1; continue; } break;
+            case 2: lat = TRK->tlat; lon = TRK->tlon; if (!TRK->have_target) { msg("<NO TARGET>",0); dirty=1; continue; } break;
+            case 3: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)    { msg("<NO FIX>",0);    dirty=1; continue; } break;
             }
             const char *t = sel == 0 ? "SAVE START" : sel == 1 ? "SAVE CURRENT"
                           : sel == 2 ? "SAVE NAVTO" : "SAVE GPS";
