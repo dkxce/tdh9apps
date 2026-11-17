@@ -9,15 +9,10 @@
  *   [16+i*16] point i:           name[8] + lat(int32 LE) + lon(int32 LE) = 16 B
  * The point count is found by scanning to the first 0xFF byte, so a new
  * point is appended by programming the next erased slot (NOR allows 1->0
- * without erase); the count byte is never touched. Max points =
- * (4096-16)/16 = 255.
+ * without erase); the count byte is never touched. Max points = 255.
  *
- * Menu:
- *   -- TRACKER SAVER --
- *   [1] Save Start Point   [2] Save Current Point   [3] Save NavTo Point
- *   [4] Save GPS Point     [5] Save My Own          [6] Saved Points
- * Operations that need struct trk (1..4) show "<LAUNCH TRACKER FIRST>" if
- * the tracker state is not present; Saved Points works standalone.
+ * Menu is drawn once and only the changed rows are redrawn on navigation
+ * (no flicker), the same way myapps/tracking avoids flicker.
  *
  * Freestanding: no globals/.bss; the delete path uses one stack buffer.
  */
@@ -39,9 +34,13 @@
 #define KEY_HASH  0x14u
 #define KEY_0     2u
 
-/* The tracker's shared state lives just below the mailbox; this app only
- * reads the leading fields (magic + point sources). Header matches the
- * first bytes of struct trk in myapps/tracking/src/trk.h. */
+/* Menu geometry (like trk_menu.c). */
+enum { ROW_Y = 16, ROW_H = 16, ROWS = 6 };
+
+/* The tracker's shared state lives just below the mailbox; the leading
+ * fields (magic + sources + key debounce) match struct trk. TRK exists in
+ * RAM always (0x2B7EC), so we use its key/key_seen for debounce even when
+ * the tracker itself is not running. */
 struct trk_hdr {
     uint32_t magic;
     uint8_t cmd, frame_len, escape, nmea_len;
@@ -58,14 +57,12 @@ struct trk_hdr {
 #define TRK         ((volatile struct trk_hdr *)0x2B7ECu)   /* H9_SHARED_TOP - STATE_BYTES */
 #define TRK_MAGIC   0x324B5254u       /* "TRK2" */
 
-/* Stock SPI2 NOR primitives (see passlock.c): 4 KiB sector erase by chip
- * sector index, and page program by chip address. */
 #define STOCK_ERASE(sec)            ((void (*)(unsigned))0x01E50000)((sec))
 #define STOCK_PROGRAM(src, adr, len) ((void (*)(const void *, unsigned, unsigned))0x01E5006E)((src), (adr), (len))
 
 struct point { char name[8]; int32_t lat, lon; };
 
-/* ---- tiny string helpers ------------------------------------------------ */
+/* ---- string helpers ------------------------------------------------------ */
 static char *put(char *o, const char *s) { while (*s) *o++ = *s++; *o = 0; return o; }
 static char *put_num(char *o, unsigned v)
 {
@@ -76,26 +73,35 @@ static char *put_num(char *o, unsigned v)
     *o = 0;
     return o;
 }
-
-/* render microdegrees as "-55.75123"; returns end pointer */
 static char *coord_str(char *o, int32_t micro)
 {
     int neg = micro < 0;
     uint32_t a = (uint32_t)(neg ? -micro : micro);
     char tmp[12]; unsigned n = 0;
     while (a) { tmp[n++] = (char)('0' + a % 10); a /= 10; }
-    while (n < 6) tmp[n++] = '0';          /* at least 6 digits */
+    while (n < 6) tmp[n++] = '0';
     if (neg) *o++ = '-';
     for (unsigned i = n; i--;) { if (i == 5) *o++ = '.'; *o++ = tmp[i]; }
     *o = 0;
     return o;
 }
 
-/* ---- simple key with debounce (two equal reads) -------------------------- */
-static unsigned key(void)
+static void center(unsigned y, const char *s, unsigned scale)
 {
-    unsigned a = h9_key(), b = h9_key();
-    return a == b ? a : H9_KEY_NONE;
+    unsigned w = 0;
+    while (s[w]) w++;
+    w *= 6 * scale;
+    gfx_text(w < H9_WIDTH ? (H9_WIDTH - w) / 2 : 0, y, s, 26, scale, GFX_YELLOW, GFX_BLACK);
+}
+
+/* ---- keys with debounce (mirrors trk_key: two equal reads, one report) --- */
+static unsigned trk_key(void)
+{
+    unsigned k = h9_key();
+    if (k != TRK->key) { TRK->key = (uint8_t)k; return 0; }
+    if (k == TRK->key_seen) return 0;
+    TRK->key_seen = (uint8_t)k;
+    return k;
 }
 
 static void msg(const char *s)
@@ -103,11 +109,11 @@ static void msg(const char *s)
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     gfx_text(4, 50, s, 26, 2, GFX_WHITE, GFX_BLACK);
     gfx_wait_release();
-    for (;;) { if (key() != H9_KEY_NONE) break; h9_delay(10); }
+    for (;;) { if (trk_key() != H9_KEY_NONE) break; h9_delay(10); }
     gfx_wait_release();
 }
 
-/* ---- persistence --------------------------------------------------------- */
+/* ---- persistence ---------------------------------------------------------- */
 
 static int magic_ok(const unsigned char h[HEAD])
 {
@@ -116,7 +122,6 @@ static int magic_ok(const unsigned char h[HEAD])
     return 1;
 }
 
-/* number of stored points, -1 if no valid magic. */
 static int saves_count(const struct h9_api *api)
 {
     unsigned char h[HEAD];
@@ -149,7 +154,6 @@ static void pack_rec(unsigned char b[REC], const struct point *p)
     b[14] = (unsigned char)(lon >> 16); b[15] = (unsigned char)(lon >> 24);
 }
 
-/* write header (magic + count=0xFF). Only used once when the sector is empty. */
 static void header_write(void)
 {
     unsigned char h[HEAD];
@@ -159,15 +163,10 @@ static void header_write(void)
     STOCK_PROGRAM(h, SAVE_ADDR, HEAD);
 }
 
-/* append one point without erasing the sector. Returns 1 on success. */
 static int point_append(const struct h9_api *api, const struct point *p)
 {
     int n = saves_count(api);
-    if (n < 0) {
-        STOCK_ERASE(SECTOR_IDX);
-        header_write();
-        n = 0;
-    }
+    if (n < 0) { STOCK_ERASE(SECTOR_IDX); header_write(); n = 0; }
     if (n >= (int)MAX_SAVES) { msg("<NO MEMORY>"); return 0; }
     unsigned char b[REC];
     pack_rec(b, p);
@@ -175,10 +174,23 @@ static int point_append(const struct h9_api *api, const struct point *p)
     return 1;
 }
 
-/* delete point `del` (shift left), erase + rewrite whole sector. */
+/* Replace point `idx` in place (name/lat/lon). Erase-free impossible: the
+ * name/coord bytes are already written, so rewrite the whole sector. */
+static void point_replace(const struct h9_api *api, int idx, int n, const struct point *p)
+{
+    struct point buf[MAX_SAVES];
+    for (unsigned i = 0; i < (unsigned)n; i++) {
+        if ((int)i == idx) buf[i] = *p; else point_get(api, i, &buf[i]);
+    }
+    STOCK_ERASE(SECTOR_IDX);
+    header_write();
+    unsigned char b[REC];
+    for (unsigned j = 0; j < (unsigned)n; j++) { pack_rec(b, &buf[j]); STOCK_PROGRAM(b, SAVE_ADDR + HEAD + j * REC, REC); }
+}
+
 static void point_delete(const struct h9_api *api, unsigned del, int n)
 {
-    struct point buf[MAX_SAVES];    /* stack buffer: up to 255*16 = 4080 B */
+    struct point buf[MAX_SAVES];
     unsigned m = 0;
     for (unsigned i = 0; i < (unsigned)n; i++) if (i != del) point_get(api, i, &buf[m++]);
     STOCK_ERASE(SECTOR_IDX);
@@ -191,20 +203,30 @@ static void point_delete(const struct h9_api *api, unsigned del, int n)
 static const char *const KEYS[10] = {
     " 0", ".,?!-/@1", "ABC2", "DEF3", "GHI4", "JKL5", "MNO6", "PQRS7", "TUV8", "WXYZ9" };
 
+/* Build the string the editor shows: current buf up to pos, then a '_' cursor. */
+static void edit_line(const char buf[9], unsigned pos, char out[10])
+{
+    for (unsigned i = 0; i < pos && i < 8; i++) out[i] = buf[i];
+    out[pos] = '_';
+    for (unsigned i = pos + 1; i < 9; i++) out[i] = ' ';
+    out[9] = 0;
+}
+
 static int name_edit(char name[8])
 {
     unsigned max = 8, pos = 0;
     char buf[9] = { 0 };
     unsigned last_digit = 0xFF;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    gfx_text(0, 4, "-- NAME --", 10, 1, GFX_YELLOW, GFX_BLACK);
+    center(4, "-- NAME --", 1);
     gfx_text(0, 100, "0-9 TAP  * / # CURSOR", 21, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(0, 112, "MENU SAVE  BACK CANCEL", 21, 1, GFX_WHITE, GFX_BLACK);
     for (;;) {
-        gfx_fill(0, 44, H9_WIDTH, 24, GFX_BLACK);
-        gfx_text(6, 46, buf[pos] ? buf : " ", 10, 2, GFX_GREEN, GFX_BLACK);
-        gfx_fill(6 + pos * 12, 68, 12, 2, GFX_WHITE);
-        unsigned k = key();
+        char line[10];
+        edit_line(buf, pos, line);
+        gfx_fill(6, 44, 140, 24, GFX_BLACK);
+        gfx_text(6, 46, line, 10, 2, GFX_GREEN, GFX_BLACK);
+        unsigned k = trk_key();
         if (k == H9_KEY_BACK) return 0;
         if (k == H9_KEY_MENU) {
             for (unsigned i = 0; i < 8; i++) name[i] = i < pos ? buf[i] : 0;
@@ -217,7 +239,7 @@ static int name_edit(char name[8])
             const char *set = KEYS[digit];
             unsigned size = 0; while (set[size]) size++;
             unsigned n = pos, start = 0;
-            if (n && digit == last_digit) {           /* same digit: cycle char */
+            if (n && digit == last_digit) {
                 while (start < size && set[start] != buf[n - 1]) start++;
                 start = (start + 1) % size;
                 n--;
@@ -226,7 +248,7 @@ static int name_edit(char name[8])
             }
             for (unsigned c = 0; c < size; c++) {
                 char ch = set[(start + c) % size];
-                if (ch == ' ') continue;              /* skip space */
+                if (ch == ' ') continue;
                 buf[n] = ch; buf[n + 1] = 0;
                 pos = n + 1; last_digit = digit;
                 break;
@@ -236,7 +258,7 @@ static int name_edit(char name[8])
     }
 }
 
-/* numeric coordinate editor (microdegrees), adapted from fixed.c */
+/* numeric coordinate editor (microdegrees), mirrors fixed.c edit */
 static int coord_edit(const char *title, int32_t *v, unsigned ideg, char pos, char neg)
 {
     uint8_t dg[8];
@@ -245,7 +267,7 @@ static int coord_edit(const char *title, int32_t *v, unsigned ideg, char pos, ch
     uint32_t a = (uint32_t)(minus ? -*v : *v) / 10;
     for (unsigned i = n; i--;) { dg[i] = (uint8_t)(a % 10); a /= 10; }
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    gfx_text(0, 4, title, 14, 1, GFX_YELLOW, GFX_BLACK);
+    center(4, title, 1);
     gfx_text(0, 100, "0-9 DIGIT  UP/DN MOVE", 21, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(0, 112, "MENU OK  BACK CANCEL", 20, 1, GFX_WHITE, GFX_BLACK);
     for (;;) {
@@ -266,7 +288,7 @@ static int coord_edit(const char *title, int32_t *v, unsigned ideg, char pos, ch
             gfx_fill(8 + col * 12, 62, 12, 2, GFX_WHITE);
             dirty = 0;
         }
-        unsigned k = key();
+        unsigned k = trk_key();
         if (k == H9_KEY_BACK) return 0;
         if (k == H9_KEY_MENU) {
             int32_t r = 0;
@@ -287,27 +309,127 @@ static int coord_edit(const char *title, int32_t *v, unsigned ideg, char pos, ch
     }
 }
 
-/* show coords of a source, then name-edit and append. */
+/* Show source coords (editable), enter name, then save. */
 static void do_save(const struct h9_api *api, const char *title, int32_t lat, int32_t lon)
 {
-    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    char b[32], *d = b;
-    d = put(d, "LAT "); d = coord_str(d, lat);
-    gfx_text(4, 20, b, 24, 1, GFX_WHITE, GFX_BLACK);
-    d = put(b, "LON "); d = coord_str(d, lon);
-    gfx_text(4, 34, b, 24, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(0, 2, title, 16, 1, GFX_YELLOW, GFX_BLACK);
-    gfx_text(0, 80, "ENTER NAME", 12, 1, GFX_GREY, GFX_BLACK);
-    gfx_wait_release();
-    char name[8];
-    if (!name_edit(name)) return;
-    struct point p;
-    for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
-    p.lat = lat; p.lon = lon;
-    if (point_append(api, &p)) msg("<SAVED>");
+    static const char *const M[3] = { "EDIT LAT", "EDIT LON", "SAVE" };
+    for (;;) {
+        gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+        char b[32], *d = b;
+        d = put(d, "LAT "); d = coord_str(d, lat);
+        gfx_text(4, 20, b, 24, 1, GFX_WHITE, GFX_BLACK);
+        d = put(b, "LON "); d = coord_str(d, lon);
+        gfx_text(4, 34, b, 24, 1, GFX_WHITE, GFX_BLACK);
+        center(2, title, 1);
+        unsigned sel = 0, dirty = 1;
+        for (;;) {                       /* 3-row choose screen */
+            if (dirty) {
+                gfx_fill(0, 60, H9_WIDTH, 48, GFX_BLACK);
+                for (unsigned i = 0; i < 3; i++) {
+                    int s = (i == sel);
+                    gfx_fill(0, 60 + i * 16, H9_WIDTH, 16, s ? C_DGREY : GFX_BLACK);
+                    gfx_text(4, 62 + i * 16, M[i], 12, 1, GFX_WHITE, s ? C_DGREY : GFX_BLACK);
+                }
+                dirty = 0;
+            }
+            unsigned k = trk_key();
+            if (k == H9_KEY_UP) { sel = sel ? sel - 1 : 2; dirty = 1; }
+            else if (k == H9_KEY_DOWN) { sel = (sel + 1) % 3; dirty = 1; }
+            else if (k == H9_KEY_BACK) return;
+            else if (k == H9_KEY_MENU) {
+                if (sel == 0) { gfx_wait_release(); coord_edit("LAT", &lat, 2, 'N', 'S'); break; }
+                else if (sel == 1) { gfx_wait_release(); coord_edit("LON", &lon, 3, 'E', 'W'); break; }
+                else {
+                    gfx_wait_release();
+                    char name[8];
+                    if (!name_edit(name)) return;
+                    struct point p;
+                    for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
+                    p.lat = lat; p.lon = lon;
+                    if (point_append(api, &p)) msg("<SAVED>");
+                    return;
+                }
+            }
+            h9_delay(10);
+        }
+    }
 }
 
-/* ---- point view: set NavTo (tracker) or delete --------------------------- */
+/* ---- menu drawing: redraw only changed rows (no flicker) ------------------ */
+static void menu_row(unsigned i, unsigned sel, const char *labeltext)
+{
+    char b[22], *d = b;
+    *d++ = '['; *d++ = (char)('1' + i); *d++ = ']'; *d++ = ' ';
+    for (unsigned j = 0; labeltext[j] && j < 17; j++) *d++ = labeltext[j];
+    *d = 0;
+    int s = (i == sel);
+    gfx_fill(0, ROW_Y + i * ROW_H, H9_WIDTH, ROW_H, s ? C_DGREY : GFX_BLACK);
+    gfx_text(4, ROW_Y + i * ROW_H + 4, b, 26, 1, GFX_WHITE, s ? C_DGREY : GFX_BLACK);
+}
+
+static const char *main_label(unsigned i)
+{
+    static const char *const T[6] = {
+        "Save Start Point", "Save Current Point", "Save NavTo Point",
+        "Save GPS Point", "Save My Own", "Saved Points" };
+    return T[i];
+}
+
+static void main_menu(unsigned sel)
+{
+    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+    center(2, "-- TRACKER SAVER --", 1);
+    for (unsigned i = 0; i < 6; i++) menu_row(i, sel, main_label(i));
+    gfx_text(0, 116, "UP/DN MENU BACK", 16, 1, GFX_GREY, GFX_BLACK);
+}
+
+/* ---- saved points list + point view ---------------------------------------- */
+
+static void saved_row(const struct h9_api *api, unsigned top_r, unsigned r, unsigned sel)
+{
+    struct point p;
+    point_get(api, top_r, &p);
+    char b[20], *d = b;
+    *d++ = '['; d = put_num(d, top_r + 1); *d++ = ']'; *d++ = ' ';
+    for (unsigned i = 0; i < 8 && p.name[i]; i++) *d++ = p.name[i];
+    *d = 0;
+    int s = (top_r == sel);
+    gfx_fill(0, 17 + r * 12, H9_WIDTH, 12, s ? C_DGREY : GFX_BLACK);
+    gfx_text(4, 18 + r * 12, b, 24, 1, GFX_WHITE, s ? C_DGREY : GFX_BLACK);
+}
+
+static void saved_points(const struct h9_api *api)
+{
+    int n = saves_count(api);
+    if (n <= 0) { msg("<NO SAVED POINTS>"); return; }
+    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+    center(4, "-- SAVED POINTS --", 1);
+    unsigned top = 0, sel = 0, dirty = 1;
+    for (;;) {
+        if (dirty) {
+            if (sel < top) top = sel;
+            if (sel >= top + (unsigned)(n < 6 ? n : 6)) top = sel - (n < 6 ? 0 : n - 6);
+            for (unsigned r = 0; r < (unsigned)(n < 8 ? n : 8); r++)
+                if (top + r < (unsigned)n) saved_row(api, top + r, r, sel);
+            dirty = 0;
+        }
+        unsigned k = trk_key();
+        if (k == H9_KEY_BACK) return;
+        if (k == H9_KEY_MENU) { point_view(api, n, (int)sel); dirty = 1; continue; }
+        if (k == H9_KEY_UP || k == H9_KEY_DOWN) {
+            unsigned old = sel, oldtop = top;
+            if (k == H9_KEY_UP) sel = sel ? sel - 1 : (unsigned)n - 1;
+            else sel = (sel + 1) % (unsigned)n;
+            if (sel < top || sel >= top + 6) { dirty = 1; continue; }   /* page scroll: full */
+            /* otherwise only the two changed rows */
+            if (oldtop == top && old < (unsigned)n && old < top + 8)
+                saved_row(api, old, old - top, sel);   /* unhighlight old */
+            saved_row(api, sel, sel - top, sel);        /* highlight new */
+        }
+        h9_delay(10);
+    }
+}
+
 static void point_view(const struct h9_api *api, int n, int idx)
 {
     struct point p;
@@ -322,17 +444,26 @@ static void point_view(const struct h9_api *api, int n, int idx)
     gfx_text(4, 36, b, 24, 1, GFX_WHITE, GFX_BLACK);
     d = put(b, "LON "); coord_str(d, p.lon);
     gfx_text(4, 50, b, 24, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(0, 90, "MENU = SET NAVTO", 18, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 103, "*/0/# = DELETE", 16, 1, GFX_GREY, GFX_BLACK);
-    gfx_text(0, 116, "BACK = LIST", 14, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 88, "MENU = EDIT", 14, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 100, "*/0/# = DELETE", 15, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(0, 112, "BACK = LIST", 14, 1, GFX_GREY, GFX_BLACK);
     gfx_wait_release();
     for (;;) {
-        unsigned k = key();
+        unsigned k = trk_key();
         if (k == H9_KEY_BACK) return;
         if (k == H9_KEY_MENU) {
-            if (TRK->magic != TRK_MAGIC) { msg("<NO TRACKER>"); return; }
-            TRK->tlat = p.lat; TRK->tlon = p.lon; TRK->have_target = 1;
-            msg("<SET NAVTO>");
+            /* edit name, then lat, then lon */
+            char name[8];
+            for (unsigned i = 0; i < 8; i++) name[i] = p.name[i];
+            gfx_wait_release();
+            if (name_edit(name)) {
+                for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
+                struct point np = p;
+                if (coord_edit("LAT", &np.lat, 2, 'N', 'S') && coord_edit("LON", &np.lon, 3, 'E', 'W')) {
+                    point_replace(api, idx, n, &np);
+                    msg("<SAVED>");
+                }
+            }
             return;
         }
         if (k == KEY_STAR || k == KEY_0 || k == KEY_HASH) {
@@ -344,94 +475,50 @@ static void point_view(const struct h9_api *api, int n, int idx)
     }
 }
 
-/* ---- saved points list ---------------------------------------------------- */
-static void saved_points(const struct h9_api *api)
-{
-    int n = saves_count(api);
-    if (n <= 0) { msg("<NO SAVED POINTS>"); return; }
-    unsigned top = 0, sel = 0;
-    for (;;) {
-        gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-        gfx_text(0, 4, "-- SAVED POINTS --", 18, 1, GFX_YELLOW, GFX_BLACK);
-        if (sel < top) top = sel;
-        if (sel >= top + 8) top = sel - 8 + 1;
-        for (unsigned r = 0; r < 8 && top + r < (unsigned)n; r++) {
-            struct point p;
-            point_get(api, top + r, &p);
-            char b[20], *d = b;
-            *d++ = '['; d = put_num(d, top + r + 1); *d++ = ']'; *d++ = ' ';
-            for (unsigned i = 0; i < 8 && p.name[i]; i++) *d++ = p.name[i];
-            *d = 0;
-            int selr = (top + r == sel);
-            gfx_fill(0, 17 + r * 12, H9_WIDTH, 12, selr ? C_DGREY : GFX_BLACK);
-            gfx_text(4, 18 + r * 12, b, 24, 1, GFX_WHITE, selr ? C_DGREY : GFX_BLACK);
-        }
-        gfx_text(0, 116, "MENU=VIEW BACK=EXIT", 20, 1, GFX_GREY, GFX_BLACK);
-        unsigned k = key();
-        if (k == H9_KEY_BACK) return;
-        if (k == H9_KEY_MENU) { point_view(api, n, (int)sel); return; }
-        if (k == H9_KEY_UP) { sel = sel ? sel - 1 : (unsigned)n - 1; }
-        else if (k == H9_KEY_DOWN) { sel = (sel + 1) % (unsigned)n; }
-        h9_delay(10);
-    }
-}
-
-/* ---- main menu ------------------------------------------------------------ */
-static void draw_main(int sel)
-{
-    static const char *const T[6] = {
-        "Save Start Point", "Save Current Point", "Save NavTo Point",
-        "Save GPS Point", "Save My Own", "Saved Points" };
-    char b[20];
-    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    gfx_text(0, 4, "-- TRACKER SAVER --", 19, 1, GFX_YELLOW, GFX_BLACK);
-    for (unsigned i = 0; i < 6; i++) {
-        char *d = b;
-        *d++ = '['; *d++ = (char)('1' + i); *d++ = ']'; *d++ = ' ';
-        for (unsigned j = 0; T[i][j]; j++) *d++ = T[i][j];
-        *d = 0;
-        int selr = (i == (unsigned)sel);
-        gfx_fill(0, 16 + i * 16, H9_WIDTH, 16, selr ? C_DGREY : GFX_BLACK);
-        gfx_text(4, 18 + i * 16, b, 26, 1, GFX_WHITE, selr ? C_DGREY : GFX_BLACK);
-    }
-    gfx_text(0, 114, "UP/DN MENU BACK", 16, 1, GFX_GREY, GFX_BLACK);
-}
-
+/* ---- main ---------------------------------------------------------------- */
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
     (void)self;
-    unsigned sel = 0;
+    unsigned sel = 0, dirty = 1;
     for (;;) {
-        draw_main(sel);
-        unsigned k = key();
-        if (k == H9_KEY_UP) { sel = sel ? sel - 1 : 5; }
-        else if (k == H9_KEY_DOWN) { sel = sel + 1 < 6 ? sel + 1 : 0; }
-        else if (k == H9_KEY_MENU) {
-            if (sel == 5) { saved_points(api); continue; }
-            if (sel == 4) {                /* Save My Own: name + lat + lon, no tracker needed */
+        if (dirty) {
+            main_menu(sel);
+            dirty = 0;
+        }
+        unsigned k = trk_key();
+        if (k == H9_KEY_UP || k == H9_KEY_DOWN) {
+            menu_row(sel, 0xFFFFFFFF, main_label(sel));   /* unhighlight old */
+            if (k == H9_KEY_UP) sel = sel ? sel - 1 : 5;
+            else sel = sel + 1 < 6 ? sel + 1 : 0;
+            menu_row(sel, sel, main_label(sel));          /* highlight new */
+        } else if (k == H9_KEY_MENU) {
+            if (sel == 5) { saved_points(api); dirty = 1; continue; }
+            if (sel == 4) {
                 char name[8];
                 int32_t lat = 0, lon = 0;
                 gfx_wait_release();
-                if (!name_edit(name)) continue;
-                if (!coord_edit("LAT", &lat, 2, 'N', 'S')) continue;
-                if (!coord_edit("LON", &lon, 3, 'E', 'W')) continue;
+                if (!name_edit(name)) { dirty = 1; continue; }
+                if (!coord_edit("LAT", &lat, 2, 'N', 'S')) { dirty = 1; continue; }
+                if (!coord_edit("LON", &lon, 3, 'E', 'W')) { dirty = 1; continue; }
                 struct point p;
                 for (unsigned i = 0; i < 8; i++) p.name[i] = name[i];
                 p.lat = lat; p.lon = lon;
                 if (point_append(api, &p)) msg("<SAVED>");
+                dirty = 1;
                 continue;
             }
-            if (TRK->magic != TRK_MAGIC) { msg("<LAUNCH TRACKER FIRST>"); continue; }
+            if (TRK->magic != TRK_MAGIC) { msg("<LAUNCH TRACKER FIRST>"); dirty = 1; continue; }
             int32_t lat = TRK->lat, lon = TRK->lon;
             switch (sel) {
-            case 0: lat = TRK->slat; lon = TRK->slon; if (!TRK->has_start) { msg("<NO START>"); continue; } break;
-            case 1: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)   { msg("<NO FIX>");  continue; } break;
-            case 2: lat = TRK->tlat; lon = TRK->tlon; if (!TRK->have_target){ msg("<NO TARGET>");continue; } break;
-            case 3: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)   { msg("<NO FIX>");  continue; } break;
+            case 0: lat = TRK->slat; lon = TRK->slon; if (!TRK->has_start)   { msg("<NO START>");  dirty=1; continue; } break;
+            case 1: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)    { msg("<NO FIX>");    dirty=1; continue; } break;
+            case 2: lat = TRK->tlat; lon = TRK->tlon; if (!TRK->have_target) { msg("<NO TARGET>"); dirty=1; continue; } break;
+            case 3: lat = TRK->lat;  lon = TRK->lon;  if (!TRK->have_fix)    { msg("<NO FIX>");    dirty=1; continue; } break;
             }
             const char *t = sel == 0 ? "SAVE START" : sel == 1 ? "SAVE CURRENT"
                           : sel == 2 ? "SAVE NAVTO" : "SAVE GPS";
             do_save(api, t, lat, lon);
+            dirty = 1;
         }
         else if (k == H9_KEY_BACK) return 0;
         h9_delay(10);
