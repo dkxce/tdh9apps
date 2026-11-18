@@ -133,7 +133,8 @@ static void aprs_send_game_pkt(const char *cmd, int x, int y)
     uint8_t frame[64], kiss[80];
     int p = 0, k = 0;
 
-    if (TX_FREQ < TX_LOW || TX_FREQ > TX_HIGH) return;   /* передача только на 2м */
+	/* передача только на 2м */
+    // if (TX_FREQ < TX_LOW || TX_FREQ > TX_HIGH) return; 
 
     /* dst: наш сервер-адресат (не command для простоты, last=1) */
     pack_ax25_addr(frame + p, "APH9BS", 0, 1); p += 7;
@@ -263,22 +264,28 @@ static int can_place(uint8_t g[N][N], int x, int y, int len, int horiz)
 static void place_fleet(uint8_t g[N][N])
 {
     static const uint8_t SHIPS[10] = { 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 };
-    for (int y = 0; y < N; y++)
-        for (int x = 0; x < N; x++) g[y][x] = C_WATER;
+    for (;;) {
+        for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++) g[y][x] = C_WATER;
 
-    for (int s = 0; s < 10; s++) {
-        int placed = 0;
-        while (!placed) {
-            int x = (int)(fast_rand() % N);
-            int y = (int)(fast_rand() % N);
-            int h = (int)(fast_rand() & 1u);
-            if (can_place(g, x, y, SHIPS[s], h)) {
-                for (int i = 0; i < SHIPS[s]; i++) {
-                    g[y + (h ? 0 : i)][x + (h ? i : 0)] = C_SHIP;
+        int ok_all = 1;
+        for (int s = 0; s < 10; s++) {
+            int placed = 0;
+            for (int tries = 0; tries < 250; tries++) {
+                int x = (int)(fast_rand() % N);
+                int y = (int)(fast_rand() % N);
+                int h = (int)(fast_rand() & 1u);
+                if (can_place(g, x, y, SHIPS[s], h)) {
+                    for (int i = 0; i < SHIPS[s]; i++) {
+                        g[y + (h ? 0 : i)][x + (h ? i : 0)] = C_SHIP;
+                    }
+                    placed = 1;
+                    break;
                 }
-                placed = 1;
             }
+            if (!placed) { ok_all = 0; break; }
         }
+        if (ok_all) return;
     }
 }
 
@@ -453,35 +460,44 @@ static int poll_aprs_rx(char *out_cmd, int *ox, int *oy)
             if (rx_len > 20 && rx_frame[0] == 0x00) {
                 /* Игнорируем собственное эхо (сообщение от себя самого) */
                 if (!is_self_rx()) {
-                    /* KISS: [0] port, [1..7] dst, [8..14] src, [15] ctrl, [16] pid,
-                     * payload с 17 (только 2 адреса, без digipeater). */
-                    unsigned at = 17;
-
-                    /* Проверяем сигнатуру >BS и совпадение 2 цифр номера комнаты */
-                    if (at + 8 <= rx_len &&
-                        rx_frame[at] == '>' && rx_frame[at + 1] == 'B' && rx_frame[at + 2] == 'S' &&
-                        rx_frame[at + 3] == (uint8_t)room_id[0] &&
-                        rx_frame[at + 4] == (uint8_t)room_id[1] &&
-                        rx_frame[at + 5] == ':') {
-                        unsigned p = at + 6;
-                        int k = 0;
-                        while (p < rx_len && rx_frame[p] != ',' && k < 7) {
-                            out_cmd[k++] = (char)rx_frame[p++];
-                        }
-                    out_cmd[k] = 0;
-                    if (p + 3 < rx_len && rx_frame[p] == ',' && rx_frame[p + 2] == ',') {
-                        *ox = rx_frame[p + 1] - '0';
-                        *oy = rx_frame[p + 3] - '0';
-                    } else {
-                        *ox = *oy = -1;
+                    /* KISS: [0] port, затем адреса AX.25 по 7 байт. Пропускаем
+                     * dst, src и все digipeater'ы — идём до конца адресного поля:
+                     * у последнего адреса в младшем бите 6-го байта стоит 1. */
+                    unsigned at = 1;   /* пропустили port */
+                    while (at + 6 < rx_len) {
+                        if (rx_frame[at + 6] & 1u) { at += 7; break; }   /* последний адрес */
+                        at += 7;
+                        if (at + 6 >= rx_len) break;
                     }
-                    /* Пропускаем повторно доставленный пакет */
-                    if (!is_dup_pkt(out_cmd[0], *ox, *oy)) {
-                        remember_pkt(out_cmd[0], *ox, *oy);
-                        got = 1;
+                    /* После адресов: ctrl, pid, затем payload */
+                    at += 2;
+                    if (at + 8 <= rx_len) {
+                        /* Проверяем сигнатуру >BS и совпадение 2 цифр номера комнаты */
+                        if (rx_frame[at] == '>' && rx_frame[at + 1] == 'B' &&
+                            rx_frame[at + 2] == 'S' &&
+                            rx_frame[at + 3] == (uint8_t)room_id[0] &&
+                            rx_frame[at + 4] == (uint8_t)room_id[1] &&
+                            rx_frame[at + 5] == ':') {
+                            unsigned p = at + 6;
+                            int k = 0;
+                            while (p < rx_len && rx_frame[p] != ',' && k < 7) {
+                                out_cmd[k++] = (char)rx_frame[p++];
+                            }
+                            out_cmd[k] = 0;
+                            if (p + 3 < rx_len && rx_frame[p] == ',' && rx_frame[p + 2] == ',') {
+                                *ox = rx_frame[p + 1] - '0';
+                                *oy = rx_frame[p + 3] - '0';
+                            } else {
+                                *ox = *oy = -1;
+                            }
+                            /* Пропускаем повторно доставленный пакет */
+                            if (!is_dup_pkt(out_cmd[0], *ox, *oy)) {
+                                remember_pkt(out_cmd[0], *ox, *oy);
+                                got = 1;
+                            }
+                        }
                     }
                 }
-            }
             }
             rx_len = 0;
             rx_esc = 0;
@@ -495,7 +511,14 @@ static int poll_aprs_rx(char *out_cmd, int *ox, int *oy)
             rx_esc = 1;
             continue;
         }
-        if (rx_len < 124) rx_frame[rx_len++] = b;
+        /* Защита от переполнения: если буфер заполнен, но 0xC0 так и не пришёл
+         * (битый/длинный кадр), сбрасываем состояние и продолжаем собирать заново. */
+        if (rx_len >= (uint8_t)sizeof(rx_frame)) {
+            rx_len = 0;
+            rx_esc = 0;
+            continue;
+        }
+        rx_frame[rx_len++] = b;
     }
     RING_READ = (uint16_t)read;
     return got;
@@ -629,7 +652,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     rng_state = TICK ^ 0x5EA12345u;
     if (!rng_state) rng_state = 101;
-    my_turn = (uint8_t)(fast_rand() & 1u);   /* рандомный первый ход */
+    my_turn = 1;
 
     place_fleet(my_grid);
     if (!aprs_mode) place_fleet(en_real);
@@ -677,6 +700,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 pending_shot = 0;
                 shot_timeout = 0;
                 last_fire_x = last_fire_y = -1;
+				my_turn = 1;
                 set_status("SHOT DROPPED. NEW TURN", 0xC618);
                 continue;
             }
@@ -690,6 +714,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 pending_shot = 0;
                 shot_timeout = 0;
                 last_fire_x = last_fire_y = -1;
+                my_turn = 1; 
                 set_status("SHOT CANCELLED. AIM AGAIN", 0xC618);
                 continue;
             }
@@ -734,44 +759,49 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                         draw_cell(MY_X, (int8_t)rx_x, (int8_t)rx_y, C_HIT, 0);
                         if (ship_sunk(rx_x, rx_y)) {
                             set_status("RX FIRE -> SHIP SUNK!", GFX_RED);
-                            aprs_send_game_pkt("HIT", rx_x, rx_y);
                             aprs_send_game_pkt("SUNK", rx_x, rx_y);
-                            my_turn = 1;
                         } else {
                             set_status("RX FIRE -> TX HIT!", GFX_RED);
                             aprs_send_game_pkt("HIT", rx_x, rx_y);
-                            my_turn = 1;
                         }
+                        my_turn = 0; /* Соперник попал — он стреляет снова! */
                     } else {
                         if (my_grid[rx_y][rx_x] == C_WATER) my_grid[rx_y][rx_x] = C_MISS;
                         draw_cell(MY_X, (int8_t)rx_x, (int8_t)rx_y, C_MISS, 0);
                         set_status("RX FIRE -> TX MISS!", 0x07E0);
                         aprs_send_game_pkt("MISS", rx_x, rx_y);
-                        my_turn = 1;
+                        my_turn = 1; /* Соперник промахнулся — теперь наш ход! */
                     }
                 } else if (cmd[0] == 'H' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
-                    en_grid[rx_y][rx_x] = C_HIT;
-                    if (en_hp > 0) en_hp--;
+                    if (en_grid[rx_y][rx_x] != C_HIT) {
+                        en_grid[rx_y][rx_x] = C_HIT;
+                        if (en_hp > 0) en_hp--;
+                    }
                     waiting_reply = 0;
                     pending_shot = 0;
                     shot_timeout = 0;
+                    my_turn = 1; /* Мы попали — стреляем еще раз! */
                     draw_cell(EN_X, (int8_t)rx_x, (int8_t)rx_y, C_HIT, (rx_x == cx && rx_y == cy));
-                    set_status("APRS RX: DIRECT HIT!", COL_CUR);
+                    set_status("APRS RX: HIT! SHOOT AGAIN", COL_CUR);
                 } else if (cmd[0] == 'S' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
-                    /* Наш выстрел потопил корабль противника: заливаем его морем. */
-                    en_grid[rx_y][rx_x] = C_HIT;
+                    if (en_grid[rx_y][rx_x] != C_HIT) {
+                        en_grid[rx_y][rx_x] = C_HIT;
+                        if (en_hp > 0) en_hp--;
+                    }
                     sink_area_en(rx_x, rx_y);
                     waiting_reply = 0;
                     pending_shot = 0;
                     shot_timeout = 0;
-                    set_status("APRS RX: ENEMY SHIP SUNK!", 0x07E0);
+                    my_turn = 1; /* Потопили — стреляем еще раз! */
+                    set_status("APRS RX: SHIP SUNK!", 0x07E0);
                 } else if (cmd[0] == 'M' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
                     en_grid[rx_y][rx_x] = C_MISS;
                     waiting_reply = 0;
                     pending_shot = 0;
                     shot_timeout = 0;
+                    my_turn = 0; /* Промахнулись — ждем ответный выстрел соперника */
                     draw_cell(EN_X, (int8_t)rx_x, (int8_t)rx_y, C_MISS, (rx_x == cx && rx_y == cy));
-                    set_status("APRS RX: MISS!", 0xC618);
+                    set_status("APRS RX: MISS - WAIT RX", 0xC618);
                 }
             }
         }
