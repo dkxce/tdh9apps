@@ -249,8 +249,8 @@ static int step_physics(void)
 
         /* Целочисленное трение сукна (умножение на 250/256 ≈ 0.977) */
         /* Трение сукна: более быстрое естественное замедление */
-		balls[i].vx = (balls[i].vx * 240) >> 8;
-		balls[i].vy = (balls[i].vy * 240) >> 8;
+		balls[i].vx = (balls[i].vx * 241) >> 8;
+		balls[i].vy = (balls[i].vy * 241) >> 8;
 
 		if (balls[i].vx > -18 && balls[i].vx < 18) balls[i].vx = 0;
 		if (balls[i].vy > -18 && balls[i].vy < 18) balls[i].vy = 0;
