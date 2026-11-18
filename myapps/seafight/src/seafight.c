@@ -832,13 +832,19 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         }
 
         if (my_hp == 0 || en_hp == 0) {
-            set_status(en_hp == 0 ? "VICTORY! FLEET SUNK!" : "DEFEAT! YOUR FLEET SUNK",
-                       en_hp == 0 ? 0x07E0 : GFX_RED);
+            /* Полноэкранное окно результата партии. Держится, пока пользователь
+             * не нажмёт любую клавишу (предпочтительно BACK). */
+            gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+            gfx_text(16, 40, en_hp == 0 ? "VICTORY!" : "DEFEAT!",
+                     40, 2, en_hp == 0 ? 0x07E0 : GFX_RED, GFX_BLACK);
+            gfx_text(24, 76, en_hp == 0 ? "YOU SUNK THE FLEET"
+                                        : "YOUR FLEET IS SUNK",
+                     13, 1, GFX_WHITE, GFX_BLACK);
+            gfx_text(34, 104, "BACK: EXIT TO MENU", 12, 1, 0x8410, GFX_BLACK);
             if (aprs_mode) SPEAKER(1);
-            /* Ждём, пока всё отпустят, затем первую новую клавишу. В отличие от
-             * gfx_wait_key не застревает, если палец ещё на клавише выстрела. */
             while (h9_key() != H9_KEY_NONE) h9_delay(3);
             while (h9_key() == H9_KEY_NONE) h9_delay(3);
+            gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
             return 0;
         }
 
