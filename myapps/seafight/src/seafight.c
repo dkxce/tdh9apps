@@ -98,10 +98,11 @@ static void aprs_quiet(void)
     SPEAKER(0);
 }
 
-/* Переключить бокс: 0=CH-A, 1=CH-B (как aprs_side). */
+/* Принудительно переинициализировать RF-бокс на нужную сторону независимо
+ * от состояния, сохранённого прошлым запуском модуля (BSS не обнуляется
+ * между вызовами). Всегда открывает приём. */
 static void aprs_side(unsigned side)
 {
-    if (side > 1 || ((SIDE_BYTE >> 7) == side && ROUTE_BYTE == side)) return;
     SIDE_BYTE = (uint8_t)((SIDE_BYTE & 0x7F) | side << 7);
     ROUTE_BYTE = (uint8_t)side;
     RF_SETUP(0);
@@ -519,13 +520,20 @@ static void cpu_turn(void)
             }
         }
     }
-    while (tx < 0) {
-        int rx = (int)(fast_rand() % N);
-        int ry = (int)(fast_rand() % N);
-        if (my_grid[ry][rx] == C_WATER || my_grid[ry][rx] == C_SHIP) {
-            tx = rx; ty = ry;
+    /* Случайный поиск свободной клетки — с гарантированным лимитом, чтобы
+     * не уйти в бесконечный цикл, если поле почти всё помечено. */
+    if (tx < 0) {
+        int guard = 400;
+        while (tx < 0 && guard-- > 0) {
+            int rx = (int)(fast_rand() % N);
+            int ry = (int)(fast_rand() % N);
+            if (my_grid[ry][rx] == C_WATER || my_grid[ry][rx] == C_SHIP) {
+                tx = rx; ty = ry;
+            }
         }
     }
+    /* Если свободных клеток нет вовсе — выходим, ничего не стреляем */
+    if (tx < 0) return;
 
     if (my_grid[ty][tx] == C_SHIP) {
         my_grid[ty][tx] = C_HIT;
@@ -603,7 +611,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     }
 
     if (aprs_mode) {
-        aprs_side(aprs_rx_side());   /* слушать на RX-боксе */
+        aprs_side(aprs_rx_side());   /* сбросить RF и слушать на RX-боксе */
         aprs_quiet();
     }
 
@@ -827,7 +835,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             set_status(en_hp == 0 ? "VICTORY! FLEET SUNK!" : "DEFEAT! YOUR FLEET SUNK",
                        en_hp == 0 ? 0x07E0 : GFX_RED);
             if (aprs_mode) SPEAKER(1);
-            gfx_wait_key();
+            /* Ждём, пока всё отпустят, затем первую новую клавишу. В отличие от
+             * gfx_wait_key не застревает, если палец ещё на клавише выстрела. */
+            while (h9_key() != H9_KEY_NONE) h9_delay(3);
+            while (h9_key() == H9_KEY_NONE) h9_delay(3);
             return 0;
         }
 
