@@ -28,6 +28,7 @@ enum {
     KEY_6    = 8,
     KEY_8    = 10,
     KEY_9    = 11,
+    KEY_MENU = 12,
     KEY_BACK = 15,
     KEY_STAR = 0x13,
     KEY_HASH = 0x14
@@ -86,7 +87,8 @@ static void aprs_quiet_rx(void)
     SPEAKER(0);
 }
 
-/* Упаковка 7-байтового адреса AX.25 (позывной сдвинут влево на 1 бит) */
+/* Упаковка 7-байтового адреса AX.25 (позывной сдвинут влево на 1 бит).
+ * flags bit 0 = last addr, bit 1<<7 = command. */
 static void pack_ax25_addr(uint8_t *dst, const char *call, uint8_t ssid, int last)
 {
     int i = 0;
@@ -96,16 +98,19 @@ static void pack_ax25_addr(uint8_t *dst, const char *call, uint8_t ssid, int las
         dst[i] = (uint8_t)(c << 1);
     }
     for (; i < 6; i++) dst[i] = (uint8_t)(' ' << 1);
+    /* 0x60 = HDLC address extension + reserved; SSID; last bit */
     dst[6] = (uint8_t)(0x60 | ((ssid & 0x0F) << 1) | (last ? 1 : 0));
 }
 
-/* Формирование и реальная отправка APRS-пакета с номером комнаты: >BS<RR>:<CMD>,<X>,<Y> */
+/* Отправка APRS-пакета: собрать AX.25 UI frame, затем обернуть в KISS
+ * (C0 00 ... C0, с escape C0/DB), как требует стоковый STOCK_KISS_TX. */
 static void aprs_send_game_pkt(const char *cmd, int x, int y)
 {
-    uint8_t kiss[64];
-    int p = 0;
+    uint8_t frame[64], kiss[80];
+    int p = 0, k = 0;
 
-    pack_ax25_addr(kiss + p, "APH9BS", 0, 0); p += 7;
+    /* dst: наш сервер-адресат (не command для простоты, last=1) */
+    pack_ax25_addr(frame + p, "APH9BS", 0, 1); p += 7;
 
     char raw_call[8];
     int n = 0;
@@ -115,30 +120,37 @@ static void aprs_send_game_pkt(const char *cmd, int x, int y)
         raw_call[0] = 'N'; raw_call[1] = '0'; raw_call[2] = 'C';
         raw_call[3] = 'A'; raw_call[4] = 'L'; raw_call[5] = 'L'; raw_call[6] = 0;
     }
+    pack_ax25_addr(frame + p, raw_call, MYCALL[6], 1); p += 7;
 
-    pack_ax25_addr(kiss + p, raw_call, MYCALL[6], 1); p += 7;
-
-    /* Control (0x03 = UI frame) и PID (0xF0 = No layer 3) */
-    kiss[p++] = 0x03;
-    kiss[p++] = 0xF0;
+    frame[p++] = 0x03;  /* UI */
+    frame[p++] = 0xF0;  /* no layer 3 */
 
     /* Полезная нагрузка: >BS<ROOM>:<CMD>,<X>,<Y> */
-    kiss[p++] = '>';
-    kiss[p++] = 'B';
-    kiss[p++] = 'S';
-    kiss[p++] = (uint8_t)room_id[0];
-    kiss[p++] = (uint8_t)room_id[1];
-    kiss[p++] = ':';
-
-    while (*cmd) kiss[p++] = (uint8_t)*cmd++;
+    frame[p++] = '>';
+    frame[p++] = 'B';
+    frame[p++] = 'S';
+    frame[p++] = (uint8_t)room_id[0];
+    frame[p++] = (uint8_t)room_id[1];
+    frame[p++] = ':';
+    while (*cmd) frame[p++] = (uint8_t)*cmd++;
     if (x >= 0 && y >= 0) {
-        kiss[p++] = ',';
-        kiss[p++] = (uint8_t)('0' + x);
-        kiss[p++] = ',';
-        kiss[p++] = (uint8_t)('0' + y);
+        frame[p++] = ',';
+        frame[p++] = (uint8_t)('0' + x);
+        frame[p++] = ',';
+        frame[p++] = (uint8_t)('0' + y);
     }
 
-    STOCK_KISS_TX(kiss, (unsigned)p);
+    /* KISS-кадр: C0 00 <frame с escape> C0 */
+    kiss[k++] = 0xC0;
+    kiss[k++] = 0x00;
+    for (int i = 0; i < p; i++) {
+        if (frame[i] == 0xC0) { kiss[k++] = 0xDB; kiss[k++] = 0xDC; }
+        else if (frame[i] == 0xDB) { kiss[k++] = 0xDB; kiss[k++] = 0xDD; }
+        else kiss[k++] = frame[i];
+    }
+    kiss[k++] = 0xC0;
+
+    STOCK_KISS_TX(kiss, (unsigned)k);
     aprs_quiet_rx();
 }
 
@@ -283,7 +295,7 @@ static int ship_sunk(int8_t x, int8_t y)
 }
 
 /* 1, если принятый AX.25-фрейм имеет наш собственный src-адрес (своё эхо).
- * src — второй адрес в фрейме (байты 7..12, сдвинутые <<1). */
+ * rx_frame = KISS-кадр: [0] port(0x00), [1..7] dst, [8..14] src, [15..16] ctrl/pid. */
 static int is_self_rx(void)
 {
     int i;
@@ -291,7 +303,7 @@ static int is_self_rx(void)
         uint8_t c = (uint8_t)my_call_str[i];
         if (c >= 'a' && c <= 'z') c -= 32;
         if (my_call_str[i] == 0 || my_call_str[i] == '-') c = ' ';
-        if (rx_frame[7 + i] != (uint8_t)(c << 1)) return 0;
+        if (rx_frame[8 + i] != (uint8_t)(c << 1)) return 0;
     }
     return 1;
 }
@@ -365,6 +377,37 @@ static void sink_area_en(int x, int y)
     }
 }
 
+/* 1, если корабль противника (в CPU-режиме, en_real), содержащий (x,y), потоплен:
+ * все его клетки уже стали C_HIT на en_grid. BFS по en_real (оригинальные корабли). */
+static int sunk_cpu(int x, int y)
+{
+    static uint8_t vis[N][N];
+    static int8_t qx[32], qy[32];
+    int head = 0, tail = 0, i, j;
+    if (x < 0 || x >= N || y < 0 || y >= N) return 0;
+    if (en_real[y][x] != C_SHIP) return 0;
+    for (j = 0; j < N; j++) for (i = 0; i < N; i++) vis[j][i] = 0;
+    qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
+    vis[y][x] = 1;
+    while (head < tail && tail < 32) {
+        int cxx = qx[head], cyy = qy[head]; head++;
+        static const int8_t DX[4] = { 0, 1, 0, -1 };
+        static const int8_t DY[4] = { -1, 0, 1, 0 };
+        for (int d = 0; d < 4; d++) {
+            int nx = cxx + DX[d], ny = cyy + DY[d];
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
+            if (en_real[ny][nx] == C_SHIP && !vis[ny][nx]) {
+                vis[ny][nx] = 1;
+                if (tail < 32) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
+            }
+        }
+    }
+    /* все клетки группы должны быть C_HIT на en_grid */
+    for (int q = 0; q < tail; q++)
+        if (en_grid[qy[q]][qx[q]] != C_HIT) return 0;
+    return 1;
+}
+
 /* Разбор принятого AX.25-фрейма с проверкой номера комнаты (>BS<RR>:) */
 static int poll_aprs_rx(char *out_cmd, int *ox, int *oy)
 {
@@ -380,9 +423,9 @@ static int poll_aprs_rx(char *out_cmd, int *ox, int *oy)
             if (rx_len > 20 && rx_frame[0] == 0x00) {
                 /* Игнорируем собственное эхо (сообщение от себя самого) */
                 if (!is_self_rx()) {
-                    unsigned at = 15;
-                    while (at < rx_len && !(rx_frame[at - 1] & 1)) at += 7;
-                    at += 2; /* Control + PID */
+                    /* KISS: [0] port, [1..7] dst, [8..14] src, [15] ctrl, [16] pid,
+                     * payload с 17 (только 2 адреса, без digipeater). */
+                    unsigned at = 17;
 
                     /* Проверяем сигнатуру >BS и совпадение 2 цифр номера комнаты */
                     if (at + 8 <= rx_len &&
@@ -481,21 +524,17 @@ static int select_room(void)
         gfx_text(64, 74, r_str, 4, 2, COL_CUR, GFX_BLACK);
         gfx_fill(64 + pos * 12, 90, 10, 2, GFX_RED);
         gfx_fill(64 + (1 - pos) * 12, 90, 10, 2, GFX_BLACK);
-        gfx_text(14, 110, "0-9:SET 5:OK BACK:EXIT", 22, 1, 0x8410, GFX_BLACK);
+        gfx_text(14, 110, "0-9:SET MENU:OK BACK:EXIT", 22, 1, 0x8410, GFX_BLACK);
 
         unsigned k = poll_key();
         if (k == KEY_BACK) return 0;
-        if (k == KEY_5) return 1;
+        if (k == KEY_MENU) return 1;
         if (k >= KEY_0 && k <= KEY_9) {
             room_id[pos] = (char)('0' + (k - KEY_0));
             if (pos == 0) {
                 pos = 1;
-            } else {
-                /* После ввода второй цифры показываем её и стартуем */
-                gfx_text(64, 74, r_str, 4, 2, 0x07E0, GFX_BLACK);
-                h9_delay(300);
-                return 1;
             }
+            /* После ввода второй цифры просто показываем её; старт — по MENU */
         }
         h9_delay(10);
     }
@@ -736,7 +775,12 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                         en_grid[cy][cx] = C_HIT;
                         if (en_hp > 0) en_hp--;
                         draw_cell(EN_X, cx, cy, C_HIT, 1);
-                        set_status("DIRECT HIT! SHOOT AGAIN", COL_CUR);
+                        if (sunk_cpu(cx, cy)) {
+                            sink_area_en(cx, cy);
+                            set_status("ENEMY SHIP SUNK!", 0x07E0);
+                        } else {
+                            set_status("DIRECT HIT! SHOOT AGAIN", COL_CUR);
+                        }
                     } else {
                         en_grid[cy][cx] = C_MISS;
                         draw_cell(EN_X, cx, cy, C_MISS, 1);
