@@ -98,15 +98,17 @@ static void aprs_quiet(void)
     SPEAKER(0);
 }
 
-/* Принудительно переинициализировать RF-бокс на нужную сторону независимо
- * от состояния, сохранённого прошлым запуском модуля (BSS не обнуляется
- * между вызовами). Всегда открывает приём. */
+/* Переключить RF-бокс: 0=CH-A, 1=CH-B (как aprs_side). RF_SETUP выполняется
+ * только когда бокс реально сменили (тяжёлый вызов; дёргать его без нужды на
+ * входе вешает рацию до отрисовки). Приём (aprs_quiet) открываем всегда. */
 static void aprs_side(unsigned side)
 {
-    SIDE_BYTE = (uint8_t)((SIDE_BYTE & 0x7F) | side << 7);
-    ROUTE_BYTE = (uint8_t)side;
-    RF_SETUP(0);
-    aprs_quiet();
+    if (!(side > 1 || ((SIDE_BYTE >> 7) == side && ROUTE_BYTE == side))) {
+        SIDE_BYTE = (uint8_t)((SIDE_BYTE & 0x7F) | side << 7);
+        ROUTE_BYTE = (uint8_t)side;
+        RF_SETUP(0);
+    }
+    aprs_quiet();   /* открыть приём в любом случае */
 }
 
 static unsigned aprs_rx_side(void) { return RX_CH == 1 ? 0 : RX_CH == 2 ? 1 : 2; }
@@ -634,8 +636,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     }
 
     if (aprs_mode) {
-        aprs_side(aprs_rx_side());   /* сбросить RF и слушать на RX-боксе */
-        aprs_quiet();
+        aprs_side(aprs_rx_side());   /* открыть приём на RX-боксе */
     }
 
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
