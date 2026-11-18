@@ -171,4 +171,5 @@ GPS-модуль может затереть таблицу точек или с
 **Автор**: [dkxce](https://github.com/dkxce)     
 **Android**: [dkxce/tdh9android](https://github.com/dkxce/tdh9android)      
 **Desktop**: [dkxce/tdh9desktop](https://github.com/dkxce/tdh9desktop)      
-**Manual**: [dkxce/Tidradio-TD-H9](https://github.com/dkxce/Tidradio-TD-H9)      
+**Widgets**: [dkxce/tdh9apps](https://github.com/dkxce/tdh9apps)      
+**Manual**: [dkxce/Tidradio-TD-H9](https://github.com/dkxce/Tidradio-TD-H9)  
