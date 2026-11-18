@@ -1,8 +1,6 @@
 #include <stdint.h>
 #include "gfx.h"
 #include "h9mod.h"
-
-/* Системный таймер 100 Гц (из trk.h) */
 #define TICK (*(const volatile uint32_t *)0x1D8B0)
 
 /* Коды кнопок TD-H9 */
@@ -12,7 +10,9 @@ enum {
     KEY_4    = 6,
     KEY_5    = 7,
     KEY_6    = 8,
+    KEY_7    = 9,
     KEY_8    = 10,
+    KEY_9    = 11,
     KEY_BACK = 15,
     KEY_STAR = 0x13,
     KEY_HASH = 0x14
@@ -199,9 +199,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     gfx_text(82, 8,  "SCORE:", 10, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(82, 46, "4:LEFT", 10, 1, 0x07FF,    GFX_BLACK);
     gfx_text(82, 58, "6:RIGHT",10, 1, 0x07FF,    GFX_BLACK);
-    gfx_text(82, 70, "2:ROT",  10, 1, 0x07FF,    GFX_BLACK);
+    gfx_text(82, 70, "5:ROTATE",  10, 1, 0x07FF,    GFX_BLACK);
     gfx_text(82, 82, "8:DOWN", 10, 1, 0x07FF,    GFX_BLACK);
-    gfx_text(82, 100,"*:EXIT", 10, 1, GFX_RED,   GFX_BLACK);
+    gfx_text(82, 92, "7/9:DROP", 10, 1, 0x07FF,  GFX_BLACK);
+    gfx_text(82, 104, "Back:EXIT", 10, 1, GFX_RED, GFX_BLACK);
 
     for (int y = 0; y < BOARD_H; y++)
         for (int x = 0; x < BOARD_W; x++) board[y][x] = 0;
@@ -222,7 +223,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         int redraw = 0;
 
         /* Выход в меню рации по кнопке * или Back */
-        if (k == KEY_STAR || k == KEY_BACK) {
+        if (k == KEY_BACK) {
+			gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
             return 0;
         }
 
@@ -230,7 +232,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             cur_x--; redraw = 1;
         } else if (k == KEY_6 && check_fit(cur_shape, cur_x + 1, cur_y)) {
             cur_x++; redraw = 1;
-        } else if (k == KEY_2) {
+        } else if (k == KEY_5) {
             uint16_t rot = rotate_mask(cur_shape);
             static const int8_t KICK[5] = { 0, -1, 1, -2, 2 };
             for (unsigned i = 0; i < 5; i++) {
@@ -241,8 +243,18 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                     break;
                 }
             }
-        } else if (k == KEY_8 || k == KEY_5) {
+        } else if (k == KEY_8) {
             if (check_fit(cur_shape, cur_x, cur_y + 1)) { cur_y++; redraw = 1; }
+        } else if (k == KEY_7 || k == KEY_9) {
+            /* Мгновенный сброс вниз: опускаем, пока можно, затем фиксируем. */
+            while (check_fit(cur_shape, cur_x, (int8_t)(cur_y + 1))) cur_y++;
+            lock_and_clear();
+            if (!spawn_piece()) {
+                gfx_text(82, 114, "GAME OVER", 12, 1, GFX_RED, GFX_BLACK);
+                gfx_wait_key();
+                return 0;
+            }
+            redraw = 1;
         }
 
         /* Автопадение раз в 50 тиков (0.5 сек) */
