@@ -1,10 +1,10 @@
-# Tracker – Navigation and Track Recording for TD-H9
+# Tracker Navigation and Track Recording for TD-H9
 
 Tracker app: shows current position, navigation to target
 (fixed coordinates or stored point), records track in memory
 radio and gives you a view on the radar and the map. Written for the TD-H9 platform
 
-One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/set up) and five hidden screens`.TRK *`which
+One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/setup) and five hidden screens`.TRK *`which
 switching.
 
 ## Opportunities
@@ -16,7 +16,7 @@ switching.
 * **MAP**North-oriented map with track, start, goal, current
   position and scale (50 m.5000 km);
 * **Points**List of saved points: distance and time from start
-  clock, distance "from here", show on the map / navigate to it;
+  hours, distance "from here", show on the map / navigate to it;
 * **SETTINGS**the number of points saved, the recording step (by distance or
   time), course filter 2 km / h, log cleaning;
 * background recording of the track directly from the receiver (see below).
@@ -27,9 +27,9 @@ switching.
 | --- | --- |
 | menu | in the menu - selection / confirmation;**on RADAR / MAP - recording / pause / continuation** |
 | Up/down | menu list; transition RADAR MAP |
-| 1..9. | Quick selection of menu items, entering numbers in editors |
+| 1..9. | Quick selection of menu item, entering numbers in editors |
 | 5 | Points |
-| 0 | RADAR/MAP: Full screen or split with value field |
+| 0 | RADAR/MAP: full screen or split with value field |
 | `*` | RADAR: Dial signatures (N E S W / 12 03 06 09 / 00 09 18 27); MAP: scale − |
 | `#` | MAP: Scale + |
 | 2 / 4 / 6 / 8 | MAP: pan the map up / left / right / down |
@@ -44,13 +44,13 @@ switching.
   on RADAR,`PAUSE` / `RESUME`, `STOP`.
 * **RADAR**North on top, red triangle-pointer N, green
   arrow to target (red without fix), gray own course (with a filter)
-  2 km/h in motion only. Field on the right in split mode.
+  2 km/h in motion only. The field on the right is split mode.
 * **MAP**track blue, start green, target red, dot`SHOW`Lilac, his position with a white cross;`N`NAV pointer and arrow
   top left, scale bottom. You can move the map with keys.
   2/4/6/8 (panning around the center), scale`*`/`#`.
 * **Points**- a list of points with distance / time from the start; at the point -
   full description`SHOW` / `NAVIGATE`.
-* **SETTINGS** — `STORE PTS`(40...153),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME)`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
+* **SETTINGS** — `STORE PTS`(40...153),`STEP DIST`(10 m..5 km),`FILTER 2KMH ON/OFF`, `STEP TIME`(15...3600c),`STEP MODE`(DIST/TIME),`CLEAR LOG`. In DIST mode, the point is written no more than once in 15 seconds, even if
   The step is quicker.
 
 ## GPS and track recording
@@ -62,10 +62,10 @@ switching.
 * Points are written in step (distance)`STEP_DIST`time`STEP_TIME`)
   stored`struct trk`in RAM`STATE_BYTES=0x6F4`): latitude, longitude
   and time from start. Maximum -`STORE PTS`points (by default 153);
-  hardware-limit`MAX_PTS`= 153.
+  hardware limit`MAX_PTS`= 153.
   It's starting.`base_dist`; when the track is overflowing (`cap`most
   old points are eliminated, and the base distance is replenished so that the distance
-  It was still there.
+  It's still there.
 
 ## Modules and common code
 
@@ -106,7 +106,7 @@ After installation - application menu (holding)`#`?**TRACKER**.
 ## Assembly and limitations
 
 * Flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`(anything)
-  warning drops CI.
+  CI drops the warning.
 * Without libc and without floating arithmetic; global`const`- tables,
   variable data - in`struct trk`.
 * Body of each module ≤ 8192 bytes; when overflowing`trk_open`show`MODULE TOO BIG +N`It doesn't start. Exact limits and techniques
@@ -117,8 +117,8 @@ After installation - application menu (holding)`#`?**TRACKER**.
 The modules are loaded into one RAM slot.`0x29F00..0x2BEFF`therefore simultaneously
 Only one module can live in it.**Tracker and Tracker Saver are working
 together**(tracksvr reading)`struct trk`tracker`0x2B7EC`but**not working
-module`GPS` и `APRS`**: the launch of any of them is blocked`struct trk` (`0x2B7EC`), and the tracker points/coordinates are lost.
-Use them in turn through the application menu (holding).`#`). Details about
+module`GPS` и `APRS`**: the launch of any of them is blocked`struct trk` (`0x2B7EC`) and the tracker points/coordinates are lost.
+Use them in turn through the app menu (hold)`#`). Details about
 reasons and about the frame addresses - in[LIMITS. md](LIMITS.md).
 
 ## Screenshots
@@ -129,4 +129,12 @@ reasons and about the frame addresses - in[LIMITS. md](LIMITS.md).
 
 ## License.
 
-(C) 2026 DKXCE. Project part`dkxce/tdh9apps`.
+Applications are based on tulbox and custom firmware[melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).
+
+---
+
+**Author**: [dkxcece](https://github.com/dkxce)   
+**Android**: [dkxce/tdh9android](https://github.com/dkxce/tdh9android)   
+**Desktop**: [dkxce/tdh9desktop](https://github.com/dkxce/tdh9desktop)   
+**Widgets**: [dkxce/tdh9apps](https://github.com/dkxce/tdh9apps)   
+**Manual**: [dkxce/Tidradio-TD-H9](https://github.com/dkxce/Tidradio-TD-H9)
