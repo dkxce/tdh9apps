@@ -75,6 +75,7 @@ static uint32_t isqrt(uint32_t n)
 struct ball {
     int32_t x, y;   /* Координаты в формате Q8 */
     int32_t vx, vy; /* Скорость в формате Q8 */
+    int32_t ox, oy; /* Предыдущие координаты в Q8 (для инкрементальной отрисовки) */
     uint8_t active;
 };
 
@@ -118,16 +119,40 @@ static void draw_table(void)
     }
 }
 
+/* Нарисовать шар целиком (для полной отрисовки) и запомнить позицию. */
 static void draw_ball(int idx)
 {
-    if (!balls[idx].active) return;
-    int ix = TO_PX(balls[idx].x + 128);
-    int iy = TO_PX(balls[idx].y + 128);
+    struct ball *b = &balls[idx];
+    if (!b->active) return;
+    int ix = TO_PX(b->x + 128);
+    int iy = TO_PX(b->y + 128);
     uint16_t c = BALL_COLORS[idx];
 
     gfx_fill(ix - 2, iy - 3, 5, 7, c);
     gfx_fill(ix - 3, iy - 2, 7, 5, c);
     gfx_fill(ix - 1, iy - 1, 2, 2, GFX_WHITE);
+    b->ox = b->x;
+    b->oy = b->y;
+}
+
+/* Инкрементальное обновление кадра во время движения. */
+static void redraw_ball(int idx)
+{
+    struct ball *b = &balls[idx];
+    int ox = TO_PX(b->ox + 128);
+    int oy = TO_PX(b->oy + 128);
+
+    if (!b->active) {
+        /* Шар забит — стереть его последнюю позицию сукном */
+        gfx_fill(ox - 4, oy - 4, 9, 9, COL_CLOTH);
+        return;
+    }
+    int ix = TO_PX(b->x + 128);
+    int iy = TO_PX(b->y + 128);
+    if (ox == ix && oy == iy) return;
+
+    gfx_fill(ox - 4, oy - 4, 9, 9, COL_CLOTH);
+    draw_ball(idx);
 }
 
 static void draw_aim_line(void)
@@ -222,12 +247,12 @@ static int step_physics(void)
         balls[i].x += balls[i].vx;
         balls[i].y += balls[i].vy;
 
-        /* Целочисленное трение сукна (умножение на 247/256 ≈ 0.965) */
-        balls[i].vx = (balls[i].vx * 247) >> 8;
-        balls[i].vy = (balls[i].vy * 247) >> 8;
+        /* Целочисленное трение сукна (умножение на 250/256 ≈ 0.977) */
+        balls[i].vx = (balls[i].vx * 250) >> 8;
+        balls[i].vy = (balls[i].vy * 250) >> 8;
 
-        if (balls[i].vx > -14 && balls[i].vx < 14) balls[i].vx = 0;
-        if (balls[i].vy > -14 && balls[i].vy < 14) balls[i].vy = 0;
+        if (balls[i].vx > -9 && balls[i].vx < 9) balls[i].vx = 0;
+        if (balls[i].vy > -9 && balls[i].vy < 9) balls[i].vy = 0;
 
         if (balls[i].vx != 0 || balls[i].vy != 0) moving = 1;
 
@@ -327,6 +352,16 @@ static void render_scene(void)
     if (game_state == 0) draw_aim_line();
 }
 
+/* Инкрементальный кадр движения: обновляем только переместившиеся шары. */
+static void update_sim(void)
+{
+    for (int i = 0; i < MAX_BALLS; i++) {
+        /* Обрабатываем и активные (перерисовать), и только что забитые
+         * (стереть по последней позиции). */
+        redraw_ball(i);
+    }
+}
+
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
     (void)api;
@@ -372,8 +407,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             else if (k == KEY_2 && shot_power < 11) { shot_power++; draw_hud(); }
             else if (k == KEY_8 && shot_power > 2)  { shot_power--; draw_hud(); }
             else if (k == KEY_5) {
-                /* Скорость удара в формате Q8 (~140 единиц на деление шкалы) */
-                int32_t spd = (int32_t)shot_power * 140;
+                /* Скорость удара в формате Q8 (~170 единиц на деление шкалы) */
+                int32_t spd = (int32_t)shot_power * 170;
                 balls[0].vx = (spd * cos_deg(aim_angle)) >> 10;
                 balls[0].vy = (spd * sin_deg(aim_angle)) >> 10;
                 shots_taken++;
@@ -389,7 +424,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (game_state == 1 && (now - last_tick) >= 2u) {
             last_tick = now;
             int still_moving = step_physics();
-            render_scene();
+            update_sim();
 
             if (!still_moving && game_state == 1) {
                 if (!balls[0].active) {
