@@ -202,7 +202,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     gfx_text(82, 70, "5:ROTATE",  10, 1, 0x07FF,    GFX_BLACK);
     gfx_text(82, 82, "8:DOWN", 10, 1, 0x07FF,    GFX_BLACK);
     gfx_text(82, 92, "7/9:DROP", 10, 1, 0x07FF,  GFX_BLACK);
-    gfx_text(82, 104, "Back:EXIT", 10, 1, GFX_RED, GFX_BLACK);
+    gfx_text(82, 104, "*:PAUSE", 10, 1, 0x07E0,  GFX_BLACK);
+    gfx_text(82, 114, "Back:EXIT", 10, 1, GFX_RED, GFX_BLACK);
 
     for (int y = 0; y < BOARD_H; y++)
         for (int x = 0; x < BOARD_W; x++) board[y][x] = 0;
@@ -222,10 +223,26 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         unsigned k = poll_key();
         int redraw = 0;
 
-        /* Выход в меню рации по кнопке * или Back */
+        /* Выход в меню рации по Back */
         if (k == KEY_BACK) {
 			gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
             return 0;
+        }
+
+        /* Пауза по * */
+        if (k == KEY_STAR) {
+            gfx_text(82, 114, "PAUSED", 10, 1, GFX_GREEN, GFX_BLACK);
+            gfx_wait_release();
+            for (;;) {
+                unsigned pk = poll_key();
+                if (pk == KEY_STAR) break;
+                if (pk == KEY_BACK) { gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK); return 0; }
+                h9_delay(10);
+            }
+            gfx_wait_release();
+            draw_frame();
+            last_drop = TICK;
+            continue;
         }
 
         if (k == KEY_4 && check_fit(cur_shape, cur_x - 1, cur_y)) {

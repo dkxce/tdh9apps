@@ -927,9 +927,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     gfx_text(126, 6,  "PTS", 5, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(126, 28, "HP",  5, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(126, 50, "ENM", 5, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(126, 74, "2468",5, 1, COL_ENEMY, GFX_BLACK);
-    gfx_text(126, 86, "5:FR",5, 1, GFX_YELLOW,GFX_BLACK);
-    gfx_text(126, 106,"*:EX",5, 1, GFX_RED,   GFX_BLACK);
+    gfx_text(126, 70, "2/4/6",5, 1, COL_ENEMY, GFX_BLACK);
+    gfx_text(126, 78, "5/8:D",5, 1, COL_ENEMY, GFX_BLACK);
+    gfx_text(126, 90, "0:FR",5, 1, GFX_YELLOW,GFX_BLACK);
+    gfx_text(126, 102,"*:PAUS",5, 1, GFX_GREEN, GFX_BLACK);
+    gfx_text(126, 114,"Back:EX",4, 1, GFX_RED, GFX_BLACK);
 
     rng_state = TICK ^ 0x5A5A5A5Au;
     if (!rng_state) rng_state = 777;
@@ -948,8 +950,29 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         uint32_t now = TICK;
         unsigned k = poll_key();
 
-        /* Выход по * или Back */
-        if (k == KEY_STAR || k == KEY_BACK) return 0;
+        /* Выход по Back */
+        if (k == KEY_BACK) return 0;
+
+        /* Пауза по * */
+        if (k == KEY_STAR) {
+            gfx_text(30, 56, "PAUSED", 12, 1, GFX_GREEN, GFX_BLACK);
+            gfx_wait_release();
+            for (;;) {
+                unsigned pk = poll_key();
+                if (pk == KEY_STAR) break;      /* повторное * — продолжить */
+                if (pk == KEY_BACK) return 0;
+                h9_delay(10);
+            }
+            gfx_wait_release();
+            /* перерисовать поле (снаряды/танки могли стоять) */
+            for (int y = 0; y < MAP_H; y++)
+                for (int x = 0; x < MAP_W; x++) draw_tile(x, y);
+            if (player.alive) draw_tank(&player, COL_TANK);
+            for (int i = 0; i < 3; i++)
+                if (enemies[i].alive) draw_tank(&enemies[i], COL_ENEMY);
+            draw_hud();
+            continue;
+        }
 
         /* Переход на следующий уровень после уничтожения всех врагов */
         if (enemies_left == 0) {
@@ -961,17 +984,17 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             continue;
         }
 
-        /* Управление танком игрока (2-вверх, 8-вниз, 4-влево, 6-вправо, 5-огонь) */
+        /* Управление танком игрока (2-вверх, 8/5-вниз, 4-влево, 6-вправо, 0-огонь) */
         if (player.alive && k != 0) {
             int8_t nx = player.x, ny = player.y;
             uint8_t ndir = player.dir;
             int moved = 0;
 
             if (k == KEY_2)      { ndir = DIR_UP;    ny--; moved = 1; }
-            else if (k == KEY_8) { ndir = DIR_DOWN;  ny++; moved = 1; }
+            else if (k == KEY_8 || k == KEY_5) { ndir = DIR_DOWN;  ny++; moved = 1; }
             else if (k == KEY_4) { ndir = DIR_LEFT;  nx--; moved = 1; }
             else if (k == KEY_6) { ndir = DIR_RIGHT; nx++; moved = 1; }
-            else if (k == KEY_5) {
+            else if (k == KEY_0) {
                 fire_bullet(0, player.x, player.y, player.dir, 1);
             }
 
@@ -993,7 +1016,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         }
 
         /* Логика ботов и респавн */
-        uint32_t ai_step = (stage < 3) ? (45u - stage * 8u) : 20u;
+        uint32_t ai_step = (stage < 25) ? (45u - stage) : 20u;
         if ((now - last_ai) >= ai_step) {
             last_ai = now;
             static const int8_t DX[4] = { 0, 1, 0, -1 };
