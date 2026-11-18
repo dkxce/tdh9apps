@@ -100,7 +100,8 @@ static void tx_test(char tag)
     kiss[k++] = 0xC0;
 
     STOCK_KISS_TX(kiss, (unsigned)k);
-    aprs_quiet();
+    /* НЕ трогаем RF-бокс сразу после передачи: мгновенный RF_SETUP/смена
+     * SIDE/PLL после STOCK_KISS_TX срывал передачу и ронял RF-тракт. */
 }
 
 /* Печать строки в позицию (x, y): максимум max символов, вернёт числo. */
@@ -183,6 +184,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 rx_frame[rx_len++] = b;
             }
         }
+        /* подтверждаем модему, что байты прочитаны — иначе кольцо никогда не
+         * опустошается (WRITE всегда опережает READ) → бесконечный цикл. */
+        RING_READ = (uint16_t)read;
 
         unsigned kk = h9_key();
         if (kk && kk != H9_KEY_NONE) {
@@ -192,8 +196,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                 if (kk >= K_1 && kk <= K_9) {
                     tx_test((char)('1' + (kk - K_1)));
                     set_status("TX SENT");
-                    gfx_wait_release();
-                    h9_delay(60);
+                    /* короткая пауза вместо gfx_wait_release, чтобы не зависло,
+                     * если клавиша держится дольше */
+                    for (unsigned w = 0; w < 5; w++) h9_delay(25);
+                    while (h9_key() != H9_KEY_NONE) h9_delay(5);
                     set_status("READY");
                 }
                 if (kk == K_BACK) break;
