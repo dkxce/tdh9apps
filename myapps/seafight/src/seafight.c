@@ -84,9 +84,10 @@ static uint8_t rx_frame[124];
 static uint8_t rx_len;
 static uint8_t rx_esc;
 
-/* История последних обработанных APRS-пакетов (cmd, x, y) для защиты от
- * повторной доставки (ретранслятор/эфир может прислать один пакет дважды). */
-static int8_t rx_hist[3][3];
+/* История последних обработанных APRS-ответов (cmd, x, y, src_hash) для защиты
+ * от повторной доставки. src_hash различает отправителя: пакет от A в клетку
+ * и от B в ту же клетку не считаются дублем (коллизия встречных направлений). */
+static int8_t rx_hist[4][4];
 static uint8_t rx_hist_idx;
 
 /* Открыть приём APRS (шумодав открыт, динамик выключен) — как aprs_quiet(). */
@@ -114,7 +115,7 @@ static void aprs_side(unsigned side)
 static unsigned aprs_rx_side(void) { return RX_CH == 1 ? 0 : RX_CH == 2 ? 1 : 2; }
 
 /* Упаковка 7-байтового адреса AX.25 (позывной сдвинут влево на 1 бит).
- * flags bit 0 = last addr, bit 1<<7 = command. */
+ * flags bit 0 = last addr; бит C (0x80) не выставляем — передаём как 0. */
 static void pack_ax25_addr(uint8_t *dst, const char *call, uint8_t ssid, int last)
 {
     int i = 0;
@@ -138,8 +139,8 @@ static void aprs_send_game_pkt(const char *cmd, int x, int y)
 	/* передача только на 2м */
     // if (TX_FREQ < TX_LOW || TX_FREQ > TX_HIGH) return; 
 
-    /* dst: наш сервер-адресат (не command для простоты, last=1) */
-    pack_ax25_addr(frame + p, "APH9BS", 0, 1); p += 7;
+    /* dst: адресат; last=0 — бит "последний адрес" ставится только у src */
+    pack_ax25_addr(frame + p, "APH9BS", 0, 0); p += 7;
 
     char raw_call[8];
     int n = 0;
@@ -347,24 +348,48 @@ static int is_self_rx(void)
     return 1;
 }
 
-/* 1, если пакет (cmd,x,y) повторял уже обработанный (защита от повтора). */
-static int is_dup_pkt(char cmd, int x, int y)
+/* src-хэш принятого кадра из rx_frame[8..13] (6 байт src) — различает
+ * отправителя для защиты от ложного "дубля" в одну и ту же клетку. */
+static int8_t src_hash_of_rx(void)
 {
-    for (int i = 0; i < 3; i++) {
-        if (rx_hist[i][0] == (int8_t)cmd &&
+    int8_t h = 0;
+    for (int i = 8; i < 14 && i < (int)sizeof(rx_frame); i++)
+        h = (int8_t)(h * 31 + (int8_t)rx_frame[i]);
+    return h;
+}
+
+/* 1, если ответ (cmd,x,y) от src_hash уже обрабатывался (защита от повтора).
+ * Различает направление по src_hash. */
+static int is_dup_pkt(char cmd, int x, int y, int8_t src_hash)
+{
+    for (int i = 0; i < 4; i++) {
+        if (rx_hist[i][0] == (int8_t)cmd && rx_hist[i][3] == src_hash &&
             (x < 0 || (rx_hist[i][1] == (int8_t)x && rx_hist[i][2] == (int8_t)y)))
             return 1;
     }
     return 0;
 }
 
-/* Запомнить обработанный пакет в историю. */
-static void remember_pkt(char cmd, int x, int y)
+/* Запомнить обработанный ответ в историю. */
+static void remember_pkt(char cmd, int x, int y, int8_t src_hash)
 {
     rx_hist[rx_hist_idx][0] = (int8_t)cmd;
     rx_hist[rx_hist_idx][1] = (int8_t)x;
     rx_hist[rx_hist_idx][2] = (int8_t)y;
-    rx_hist_idx = (rx_hist_idx + 1) % 3;
+    rx_hist[rx_hist_idx][3] = src_hash;
+    rx_hist_idx = (rx_hist_idx + 1) % 4;
+}
+
+/* Пересчитать здоровье противника из раскрытой сетки en_grid: HP = полный
+ * флот (20) − число подбитых клеток. Устойчиво к потерям пакетов — в отличие
+ * от декремента "по 1 за пакет", не расходится при утере HIT/SUNK. */
+static void recompute_en_hp(void)
+{
+    unsigned hits = 0;
+    for (int y = 0; y < N; y++)
+        for (int x = 0; x < N; x++)
+            if (en_grid[y][x] == C_HIT) hits++;
+    en_hp = (uint8_t)(20u - hits);
 }
 
 /* Заполнить морем клетки потопленного корабля на сетке противника (en_grid) и
@@ -410,6 +435,51 @@ static void sink_area_en(int x, int y)
                     draw_cell(EN_X, (int8_t)nx, (int8_t)ny,
                               (nx == cx && ny == cy) ? C_MISS : en_grid[ny][nx],
                               nx == cx && ny == cy);
+                }
+            }
+        }
+    }
+}
+
+/* Заполнить морем клетки потопленного корабля на своей сетке (my_grid) и его
+ * периметр — чтобы CPU не тратил ходы на заведомо пустые клетки. */
+static void sink_area_my(int x, int y)
+{
+    static int8_t qx[64], qy[64];
+    static uint8_t vis[N][N];
+    int head = 0, tail = 0, i, j;
+
+    for (j = 0; j < N; j++)
+        for (i = 0; i < N; i++) vis[j][i] = 0;
+
+    if (x < 0 || x >= N || y < 0 || y >= N) return;
+    if (my_grid[y][x] != C_HIT) return;
+
+    qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
+    vis[y][x] = 1;
+
+    while (head < tail && tail < 64) {
+        int cxx = qx[head], cyy = qy[head]; head++;
+        static const int8_t DX[4] = { 0, 1, 0, -1 };
+        static const int8_t DY[4] = { -1, 0, 1, 0 };
+        for (int d = 0; d < 4; d++) {
+            int nx = cxx + DX[d], ny = cyy + DY[d];
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
+            if (my_grid[ny][nx] == C_HIT && !vis[ny][nx]) {
+                vis[ny][nx] = 1;
+                if (tail < 64) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
+            }
+        }
+    }
+    for (int q = 0; q < tail; q++) {
+        int gx = qx[q], gy = qy[q];
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                int nx = gx + dx, ny = gy + dy;
+                if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
+                if (my_grid[ny][nx] == C_WATER || my_grid[ny][nx] == C_SHIP) {
+                    my_grid[ny][nx] = C_MISS;
+                    draw_cell(MY_X, (int8_t)nx, (int8_t)ny, C_MISS, 0);
                 }
             }
         }
@@ -492,10 +562,19 @@ static int poll_aprs_rx(char *out_cmd, int *ox, int *oy)
                             } else {
                                 *ox = *oy = -1;
                             }
-                            /* Пропускаем повторно доставленный пакет */
-                            if (!is_dup_pkt(out_cmd[0], *ox, *oy)) {
-                                remember_pkt(out_cmd[0], *ox, *oy);
+                            if (out_cmd[0] == 'F') {
+                                /* FIRE обрабатываем ВСЕГДА: он идемпотентен
+                                 * (ответ тот же по my_grid), что само по себе
+                                 * реализует переотправку ответа на repeat/retry. */
                                 got = 1;
+                            } else {
+                                /* H/M/S: пропускаем повтор, различая отправителя
+                                 * по src_hash (коллизия встречных направлений). */
+                                int8_t sh = src_hash_of_rx();
+                                if (!is_dup_pkt(out_cmd[0], *ox, *oy, sh)) {
+                                    remember_pkt(out_cmd[0], *ox, *oy, sh);
+                                    got = 1;
+                                }
                             }
                         }
                     }
@@ -526,7 +605,9 @@ static int poll_aprs_rx(char *out_cmd, int *ox, int *oy)
     return got;
 }
 
-static void cpu_turn(void)
+/* Один ход CPU. Возвращает 1, если CPU попал в корабль (по правилам он
+ * стреляет повторно); при потоплении корабля заливает периметр на my_grid. */
+static int cpu_turn(void)
 {
     int tx = -1, ty = -1;
     for (int y = 0; y < N && tx < 0; y++) {
@@ -558,17 +639,24 @@ static void cpu_turn(void)
         }
     }
     /* Если свободных клеток нет вовсе — выходим, ничего не стреляем */
-    if (tx < 0) return;
+    if (tx < 0) return 0;
 
     if (my_grid[ty][tx] == C_SHIP) {
         my_grid[ty][tx] = C_HIT;
         if (my_hp > 0) my_hp--;
         draw_cell(MY_X, (int8_t)tx, (int8_t)ty, C_HIT, 0);
-        set_status("ENEMY HIT YOUR SHIP!", GFX_RED);
+        if (ship_sunk(tx, ty)) {
+            sink_area_my(tx, ty);
+            set_status("ENEMY SHIP SUNK!", GFX_RED);
+        } else {
+            set_status("ENEMY HIT YOUR SHIP!", GFX_RED);
+        }
+        return 1;   /* попал — CPU ходит ещё раз */
     } else {
         my_grid[ty][tx] = C_MISS;
         draw_cell(MY_X, (int8_t)tx, (int8_t)ty, C_MISS, 0);
         set_status("ENEMY MISSED! YOUR TURN", 0x07E0);
+        return 0;   /* промах — ход переходит игроку */
     }
 }
 
@@ -613,6 +701,13 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     unsigned n = 0;
     for (; n < 6 && MYCALL[n] > ' ' && MYCALL[n] <= '~'; n++) my_call_str[n] = (char)MYCALL[n];
+    /* Пустой позывной: тот же fallback N0CALL, что и в передатчике, иначе
+     * is_self_rx() (сравнивает с пустыми байтами) не отфильтрует своё же эхо. */
+    if (n == 0) {
+        my_call_str[0] = 'N'; my_call_str[1] = '0'; my_call_str[2] = 'C';
+        my_call_str[3] = 'A'; my_call_str[4] = 'L'; my_call_str[5] = 'L'; my_call_str[6] = 0;
+        n = 6;
+    }
     my_call_str[n] = 0;
 
     gfx_text(22, 32, "MY CALL:", 8, 1, GFX_WHITE, GFX_BLACK);
@@ -649,7 +744,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(EN_X + 12, 12, "ENEMY", 8, 1, 0x07FF, GFX_BLACK);
     }
 
-    gfx_text(4, 117, "2468:AIM 5:FIRE #:NEW *:PAU", 26, 1, 0x8410, GFX_BLACK);
+    gfx_text(4, 117, "2468:AIM 5:FIRE #:NEW", 26, 1, 0x8410, GFX_BLACK);
 
     rng_state = TICK ^ 0x5EA12345u;
     if (!rng_state) rng_state = 101;
@@ -669,7 +764,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     last_fire_x = last_fire_y = -1;
     fire_tick = 0;
     rx_len = 0; rx_esc = 0;
-    for (int h = 0; h < 3; h++) { rx_hist[h][0] = -1; rx_hist[h][1] = -1; rx_hist[h][2] = -1; }
+    for (int h = 0; h < 4; h++) { rx_hist[h][0] = -1; rx_hist[h][1] = -1; rx_hist[h][2] = -1; rx_hist[h][3] = 0; }
     rx_hist_idx = 0;
 
     redraw_all();
@@ -723,21 +818,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             return 0;
         }
 
-        /* Пауза по * */
-        if (k == KEY_STAR) {
-            set_status("PAUSED *:RESUME", COL_CUR);
-            gfx_wait_release();
-            for (;;) {
-                unsigned pk = poll_key();
-                if (pk == KEY_STAR) break;
-                if (pk == KEY_BACK) { if (aprs_mode) SPEAKER(1); return 0; }
-                h9_delay(10);
-            }
-            gfx_wait_release();
-            redraw_all();
-            set_status("RESUMED", 0x07E0);
-            continue;
-        }
+        /* Пауза (*) намеренно убрана: блокировка в цикле паузы роняла приём
+         * APRS (кольцо TNC переполнялось, входящие FIRE оставались без ответа). */
 
         /* Перемешивание расстановки кораблей по # до начала боя */
         if (k == KEY_HASH && my_hp == 20 && en_hp == 20) {
@@ -766,6 +848,17 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                             aprs_send_game_pkt("HIT", rx_x, rx_y);
                         }
                         my_turn = 0; /* Соперник попал — он стреляет снова! */
+                    } else if (my_grid[rx_y][rx_x] == C_HIT) {
+                        /* Повторный выстрел в уже подбитую клетку: не портим сетку
+                         * (раньше рисовался C_MISS поверх C_HIT и слался MISS). */
+                        if (ship_sunk(rx_x, rx_y)) {
+                            set_status("RX FIRE REPEAT -> SUNK", GFX_RED);
+                            aprs_send_game_pkt("SUNK", rx_x, rx_y);
+                        } else {
+                            set_status("RX FIRE REPEAT -> HIT", GFX_RED);
+                            aprs_send_game_pkt("HIT", rx_x, rx_y);
+                        }
+                        my_turn = 0;
                     } else {
                         if (my_grid[rx_y][rx_x] == C_WATER) my_grid[rx_y][rx_x] = C_MISS;
                         draw_cell(MY_X, (int8_t)rx_x, (int8_t)rx_y, C_MISS, 0);
@@ -773,10 +866,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                         aprs_send_game_pkt("MISS", rx_x, rx_y);
                         my_turn = 1; /* Соперник промахнулся — теперь наш ход! */
                     }
-                } else if (cmd[0] == 'H' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
+                } else if (cmd[0] == 'H' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N &&
+                           (!pending_shot || (rx_x == last_fire_x && rx_y == last_fire_y))) {
                     if (en_grid[rx_y][rx_x] != C_HIT) {
                         en_grid[rx_y][rx_x] = C_HIT;
-                        if (en_hp > 0) en_hp--;
+                        recompute_en_hp();
                     }
                     waiting_reply = 0;
                     pending_shot = 0;
@@ -784,18 +878,20 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                     my_turn = 1; /* Мы попали — стреляем еще раз! */
                     draw_cell(EN_X, (int8_t)rx_x, (int8_t)rx_y, C_HIT, (rx_x == cx && rx_y == cy));
                     set_status("APRS RX: HIT! SHOOT AGAIN", COL_CUR);
-                } else if (cmd[0] == 'S' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
+                } else if (cmd[0] == 'S' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N &&
+                           (!pending_shot || (rx_x == last_fire_x && rx_y == last_fire_y))) {
                     if (en_grid[rx_y][rx_x] != C_HIT) {
                         en_grid[rx_y][rx_x] = C_HIT;
-                        if (en_hp > 0) en_hp--;
                     }
                     sink_area_en(rx_x, rx_y);
+                    recompute_en_hp();
                     waiting_reply = 0;
                     pending_shot = 0;
                     shot_timeout = 0;
                     my_turn = 1; /* Потопили — стреляем еще раз! */
                     set_status("APRS RX: SHIP SUNK!", 0x07E0);
-                } else if (cmd[0] == 'M' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
+                } else if (cmd[0] == 'M' && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N &&
+                           (!pending_shot || (rx_x == last_fire_x && rx_y == last_fire_y))) {
                     en_grid[rx_y][rx_x] = C_MISS;
                     waiting_reply = 0;
                     pending_shot = 0;
@@ -854,9 +950,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                     } else {
                         en_grid[cy][cx] = C_MISS;
                         draw_cell(EN_X, cx, cy, C_MISS, 1);
-                        set_status("MISS! ENEMY FIRING...", 0xC618);
-                        h9_delay(500);
-                        cpu_turn();
+                        /* Промахлись — ход переходит CPU; CPU стреляет повторно,
+                         * пока попадает (правила морского боя). */
+                        for (;;) {
+                            set_status("ENEMY FIRING...", 0xC618);
+                            h9_delay(500);
+                            if (my_hp == 0) break;          /* рацию потопили */
+                            if (!cpu_turn()) break;          /* CPU промахнулся */
+                        }
                     }
                 }
             }
