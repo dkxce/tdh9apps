@@ -109,7 +109,6 @@ static void aprs_side(unsigned side)
 }
 
 static unsigned aprs_rx_side(void) { return RX_CH == 1 ? 0 : RX_CH == 2 ? 1 : 2; }
-static unsigned aprs_tx_side(void) { return TX_CH < 4 ? TX_CH & 1 : 2; }
 
 /* Упаковка 7-байтового адреса AX.25 (позывной сдвинут влево на 1 бит).
  * flags bit 0 = last addr, bit 1<<7 = command. */
@@ -176,10 +175,12 @@ static void aprs_send_game_pkt(const char *cmd, int x, int y)
     }
     kiss[k++] = 0xC0;
 
-    aprs_side(aprs_tx_side());            /* передача идёт только на TX-боксе */
+    /* Отправка. НЕ переключаем бокс здесь: приём уже стоит на RX-боксе
+     * (см. инициализацию), а мгновенный RF_SETUP/смена SIDE сразу после
+     * STOCK_KISS_TX срывал передачу на полуслове (уходил только аргумент
+     * и часть поля) и ронял RF-тракт в открытый шумодав. */
     STOCK_KISS_TX(kiss, (unsigned)k);
-    aprs_side(aprs_rx_side());            /* вернуться на RX-бокс и открыть приём */
-    aprs_quiet();
+    aprs_quiet();   /* открыть приём на том же боксе */
 }
 
 /* Антидребезг клавиатуры */
