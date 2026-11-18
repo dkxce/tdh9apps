@@ -78,12 +78,6 @@ static uint32_t fire_tick;    /* время отправки FIRE (для тай
 static char room_id[2] = { '0', '1' }; /* Двухзначный номер комнаты (00..99) */
 static uint32_t rng_state;
 
-/* Отложенный входящий FIRE: пока наш выстрел ждёт ответа (pending_shot),
- * встречный FIRE не обрабатываем сразу, а запоминаем и разбираем после
- * разрешения своего выстрела — сериализует выстрелы. */
-static uint8_t def_fire_valid;
-static int8_t def_fire_x, def_fire_y;
-
 /* Буферы для AX.25 / KISS */
 static char my_call_str[8];
 static uint8_t rx_frame[124];
