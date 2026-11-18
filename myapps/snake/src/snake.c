@@ -165,7 +165,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
         /* Мгновенный отклик на поворот (с защитой от разворота на 180 градусов) */
         if (k == KEY_2 && dir != DIR_DOWN)  next_dir = DIR_UP;
-        if (k == KEY_8 && dir != DIR_UP)    next_dir = DIR_DOWN;
+        if ((k == KEY_8 || k == KEY_5) && dir != DIR_UP) next_dir = DIR_DOWN;
         if (k == KEY_4 && dir != DIR_RIGHT) next_dir = DIR_LEFT;
         if (k == KEY_6 && dir != DIR_LEFT)  next_dir = DIR_RIGHT;
 
