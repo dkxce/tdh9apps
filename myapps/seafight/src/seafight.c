@@ -18,6 +18,17 @@
 #define SPEAKER(on)   ((void (*)(unsigned))0x01E52328u)(on)
 #define STOCK_KISS_TX ((void (*)(const uint8_t *, unsigned))0x01E5DBCCu)
 
+/* Переключение бокса приёма/передачи (как в aprs_core.c aprs_side): передача
+ * идёт только на TX-боксе. */
+#define SIDE_BYTE  (*(volatile uint8_t *)0x11B50)     /* bit 7: logical side B */
+#define ROUTE_BYTE (*(volatile uint8_t *)0x11AEC)     /* Dual Watch route side */
+#define RF_SETUP(x) ((void (*)(unsigned))0x01E58E3Eu)(x)
+#define RX_CH (*(const volatile uint8_t *)0xC532)     /* 0 off, 1 CH-A, 2 CH-B */
+#define TX_CH (*(const volatile uint8_t *)0xC533)     /* 0/1 lock, 2/3 auto, 4 A+B */
+#define TX_FREQ (*(const volatile uint32_t *)0x11C9C)
+#define TX_LOW  14400000u
+#define TX_HIGH 14800000u
+
 /* Коды кнопок TD-H9 */
 enum {
     KEY_0    = 2,
@@ -78,14 +89,27 @@ static uint8_t rx_esc;
 static int8_t rx_hist[3][3];
 static uint8_t rx_hist_idx;
 
-/* Тихий режим приема APRS (шумоподавитель открыт, динамик выключен) */
-static void aprs_quiet_rx(void)
+/* Открыть приём APRS (шумодав открыт, динамик выключен) — как aprs_quiet(). */
+static void aprs_quiet(void)
 {
     if (RF_ASLEEP) RF_WAKE();
     AF_SELECT(1);
-    RF_WRITE(0x30, 0xBFF5);
+    RF_WRITE(0x30, 0xBFF5);   /* audio DAC on: squelch open */
     SPEAKER(0);
 }
+
+/* Переключить бокс: 0=CH-A, 1=CH-B (как aprs_side). */
+static void aprs_side(unsigned side)
+{
+    if (side > 1 || ((SIDE_BYTE >> 7) == side && ROUTE_BYTE == side)) return;
+    SIDE_BYTE = (uint8_t)((SIDE_BYTE & 0x7F) | side << 7);
+    ROUTE_BYTE = (uint8_t)side;
+    RF_SETUP(0);
+    aprs_quiet();
+}
+
+static unsigned aprs_rx_side(void) { return RX_CH == 1 ? 0 : RX_CH == 2 ? 1 : 2; }
+static unsigned aprs_tx_side(void) { return TX_CH < 4 ? TX_CH & 1 : 2; }
 
 /* Упаковка 7-байтового адреса AX.25 (позывной сдвинут влево на 1 бит).
  * flags bit 0 = last addr, bit 1<<7 = command. */
@@ -108,6 +132,8 @@ static void aprs_send_game_pkt(const char *cmd, int x, int y)
 {
     uint8_t frame[64], kiss[80];
     int p = 0, k = 0;
+
+    if (TX_FREQ < TX_LOW || TX_FREQ > TX_HIGH) return;   /* передача только на 2м */
 
     /* dst: наш сервер-адресат (не command для простоты, last=1) */
     pack_ax25_addr(frame + p, "APH9BS", 0, 1); p += 7;
@@ -150,8 +176,10 @@ static void aprs_send_game_pkt(const char *cmd, int x, int y)
     }
     kiss[k++] = 0xC0;
 
+    aprs_side(aprs_tx_side());            /* передача идёт только на TX-боксе */
     STOCK_KISS_TX(kiss, (unsigned)k);
-    aprs_quiet_rx();
+    aprs_side(aprs_rx_side());            /* вернуться на RX-бокс и открыть приём */
+    aprs_quiet();
 }
 
 /* Антидребезг клавиатуры */
@@ -520,10 +548,11 @@ static int select_room(void)
 
     for (;;) {
         char r_str[4] = { room_id[0], room_id[1], 0, 0 };
-        gfx_fill(60, 72, 40, 16, GFX_BLACK);
+        /* Чистим область цифр И курсора (y 70..96), чтобы не оставался мусор */
+        gfx_fill(56, 70, 48, 28, GFX_BLACK);
         gfx_text(64, 74, r_str, 4, 2, COL_CUR, GFX_BLACK);
-        gfx_fill(64 + pos * 12, 90, 10, 2, GFX_RED);
-        gfx_fill(64 + (1 - pos) * 12, 90, 10, 2, GFX_BLACK);
+        gfx_fill(64 + pos * 12, 96, 10, 2, GFX_RED);
+        gfx_fill(64 + (1 - pos) * 12, 96, 10, 2, GFX_BLACK);
         gfx_text(14, 110, "0-9:SET MENU:OK BACK:EXIT", 22, 1, 0x8410, GFX_BLACK);
 
         unsigned k = poll_key();
@@ -573,7 +602,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     }
 
     if (aprs_mode) {
-        aprs_quiet_rx();
+        aprs_side(aprs_rx_side());   /* слушать на RX-боксе */
+        aprs_quiet();
     }
 
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
