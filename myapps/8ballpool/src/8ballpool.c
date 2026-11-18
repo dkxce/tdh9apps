@@ -248,11 +248,12 @@ static int step_physics(void)
         balls[i].y += balls[i].vy;
 
         /* Целочисленное трение сукна (умножение на 250/256 ≈ 0.977) */
-        balls[i].vx = (balls[i].vx * 250) >> 8;
-        balls[i].vy = (balls[i].vy * 250) >> 8;
+        /* Трение сукна: более быстрое естественное замедление */
+		balls[i].vx = (balls[i].vx * 238) >> 8;
+		balls[i].vy = (balls[i].vy * 238) >> 8;
 
-        if (balls[i].vx > -9 && balls[i].vx < 9) balls[i].vx = 0;
-        if (balls[i].vy > -9 && balls[i].vy < 9) balls[i].vy = 0;
+		if (balls[i].vx > -18 && balls[i].vx < 18) balls[i].vx = 0;
+		if (balls[i].vy > -18 && balls[i].vy < 18) balls[i].vy = 0;
 
         if (balls[i].vx != 0 || balls[i].vy != 0) moving = 1;
 
