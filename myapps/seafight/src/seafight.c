@@ -61,8 +61,9 @@ static void pack_addr(uint8_t *dst, const char *call, int last)
     dst[6] = (uint8_t)(0x60 | (last ? 1 : 0));
 }
 
-/* Отправить тестовый UI-кадр: dst=APH9BS, src=mycall, payload ">BS<T>:TEST<x>". */
-static void tx_test(char tag)
+/* Отправить тестовый UI-кадр: dst=APH9BS, src=mycall, payload ">BS<T>:TEST<x>".
+ * Возвращает 1, если после отправки надо перерисовать экран (всегда). */
+static int tx_test(char tag)
 {
     static uint8_t frame[64], kiss[88];
     static char srccall[8];
@@ -102,6 +103,7 @@ static void tx_test(char tag)
     STOCK_KISS_TX(kiss, (unsigned)k);
     /* НЕ трогаем RF-бокс сразу после передачи: мгновенный RF_SETUP/смена
      * SIDE/PLL после STOCK_KISS_TX срывал передачу и ронял RF-тракт. */
+    return 1;
 }
 
 /* Печать строки в позицию (x, y): максимум max символов, вернёт числo. */
@@ -116,26 +118,31 @@ static void set_status(const char *s)
     gfx_text(2, 119, s, 40, 1, 0x07E0, GFX_BLACK);
 }
 
-unsigned module_main(const struct h9_api *api, unsigned self)
+/* Полная перерисовка экрана теста. */
+static void draw_screen(void)
 {
-    (void)api; (void)self;
-
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     gfx_text(20, 8, "APRS TEST", 16, 1, 0xF81F, GFX_BLACK);
 
-    /* показываем текущее состояние бокса */
-    char s[24];
+    static char s[24];
     unsigned n;
     for (n = 0; n < 6 && MYCALL[n] > ' ' && MYCALL[n] <= '~'; n++) s[n] = (char)MYCALL[n];
     s[n] = 0;
     show(4, 24, "MYCALL=", 8); show(60, 24, s, 8);
 
-    aprs_side(aprs_rx_side());
-    aprs_quiet();
-
     show(4, 40, "KEY 1-9: SEND TEST", 28);
     show(4, 50, "RX RAW:", 8);
     show(70, 50, "CNT:", 4);
+}
+
+unsigned module_main(const struct h9_api *api, unsigned self)
+{
+    (void)api; (void)self;
+
+    aprs_side(aprs_rx_side());
+    aprs_quiet();
+
+    draw_screen();
 
     for (;;) {
         unsigned write = RING_WRITE & RING_MASK;
@@ -194,12 +201,15 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             if (kk != last) {
                 last = kk;
                 if (kk >= K_1 && kk <= K_9) {
-                    tx_test((char)('1' + (kk - K_1)));
+                    int rr = tx_test((char)('1' + (kk - K_1)));
                     set_status("TX SENT");
-                    /* короткая пауза вместо gfx_wait_release, чтобы не зависло,
-                     * если клавиша держится дольше */
-                    for (unsigned w = 0; w < 5; w++) h9_delay(25);
+                    /* ждём отпускания клавиши */
                     while (h9_key() != H9_KEY_NONE) h9_delay(5);
+                    /* если надо перерисовать — пауза 90 мс и полная перерисовка */
+                    if (rr) {
+                        h9_delay(90);   /* пауза 90 мс перед перерисовкой */
+                        draw_screen();
+                    }
                     set_status("READY");
                 }
                 if (kk == K_BACK) break;
