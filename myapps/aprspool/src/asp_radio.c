@@ -306,6 +306,86 @@ static void apply_sync_hex(const uint8_t *h)
     a->state = ST_AIM;
 }
 
+/* Update/redraw the power bar in the HUD (top strip). */
+static void draw_hud_pwr(void)
+{
+    struct asp *a = ASP;
+    gfx_fill(118, 2, 42, 10, GFX_BLACK);
+    gfx_text(120, 3, "PWR:", 4, 1, GFX_WHITE, GFX_BLACK);
+    gfx_fill(150, 4, 6 * a->power / 11 + 6, 6, (a->power > 8) ? GFX_RED : 0x07E0);
+}
+
+/* Solo (local) game against physics: no radio at all. */
+static void asp_play_solo(void)
+{
+    struct asp *a = ASP;
+    uint32_t ftick = TICK;
+    for (;;) {
+        unsigned k = asp_key();
+        if (k == KEY_BACK) return;
+
+        if (a->state == ST_MOVING) {
+            if ((uint32_t)(TICK - ftick) >= 2u) {
+                ftick = TICK;
+                int moving = asp_step();
+                for (int i = 0; i < MAX_BALLS; i++) asp_redraw_ball(i);
+                if (!moving) {
+                    uint8_t outcome = a->state;
+                    a->state = ST_AIM;
+                    a->myturn = 1;
+                    if (outcome == ST_WIN || outcome == ST_LOSE) {
+                        asp_render();
+                        gfx_fill(34, 56, 92, 18, GFX_BLACK);
+                        if (outcome == ST_WIN)
+                            gfx_text(62, 60, "WIN!", 6, 2, COL_SHIP, GFX_BLACK);
+                        else
+                            gfx_text(56, 60, "LOSE", 6, 2, GFX_RED, GFX_BLACK);
+                        gfx_text(48, 80, "BACK: EXIT", 10, 1, GFX_GREY, GFX_BLACK);
+                        while (h9_key() != H9_KEY_NONE) h9_delay(3);
+                        for (;;) { if (asp_key() == KEY_BACK) return; h9_delay(10); }
+                    } else {
+                        /* Balls stopped, cue ball possibly potted: redraw. */
+                        if (!a->act[0]) {
+                            a->bx[0] = TO_FP(TBL_X + 26);
+                            a->by[0] = TO_FP(TBL_Y + TBL_H / 2);
+                            a->vx[0] = a->vy[0] = 0;
+                            a->act[0] = 1;
+                        }
+                        asp_render();
+                        asp_status("YOUR TURN! AIM 0:FIRE", COL_CUR);
+                    }
+                }
+            }
+            h9_delay(10);
+            continue;
+        }
+
+        /* Aiming: always my turn in solo. */
+        if (a->state == ST_AIM && k != 0) {
+            int need = 0;
+            if (k == KEY_4) { a->aim = (uint8_t)((a->aim + 355) % 360); need = 1; }
+            else if (k == KEY_6) { a->aim = (uint8_t)((a->aim + 5) % 360); need = 1; }
+            else if (k == KEY_2 && a->power < 11) { a->power++; draw_hud_pwr(); }
+            else if (k == KEY_8 && a->power > 2) { a->power--; draw_hud_pwr(); }
+            else if (k == KEY_0 && a->act[0]) {
+                int32_t spd = (int32_t)a->power * 170;
+                a->vx[0] = (spd * (asp_cos(a->aim))) >> 10;
+                a->vy[0] = (spd * (asp_sin(a->aim))) >> 10;
+                a->started = 1;
+                a->shots++;
+                a->state = ST_MOVING;
+                a->ftick = TICK;
+                asp_draw_hud();
+            }
+            if (need) asp_render();
+            h9_delay(40);
+            continue;
+        }
+
+        h9_delay(10);
+    }
+}
+
 /* Play the game loop: aim/shoot, run animation, send/receive SYNC. */
 static void asp_play(void)
 {
@@ -356,7 +436,7 @@ static void asp_play(void)
                         a->myturn = 0;
                         asp_status("AWAITING SYNC...", COL_MISS);
                     }
-                    draw_hud_pwr();
+                    asp_render();
                     if (outcome == ST_WIN || outcome == ST_LOSE) {
                         gfx_fill(34, 56, 92, 18, GFX_BLACK);
                         if (outcome == ST_WIN)
@@ -381,7 +461,7 @@ static void asp_play(void)
             else if (k == KEY_2 && a->power < 11) { a->power++; draw_hud_pwr(); }
             else if (k == KEY_8 && a->power > 2) { a->power--; draw_hud_pwr(); }
             else if (k == KEY_0 && a->act[0]) { asp_radio_fire(); }
-            if (need) { asp_draw_table(); for (int i = 0; i < MAX_BALLS; i++) asp_ball(i); asp_draw_aim(); }
+            if (need) asp_render();
             h9_delay(40);
             continue;
         }
@@ -390,29 +470,25 @@ static void asp_play(void)
     }
 }
 
-static void draw_hud_pwr(void)
-{
-    struct asp *a = ASP;
-    char buf[12];
-    gfx_fill(118, 2, 42, 10, GFX_BLACK);
-    gfx_text(120, 3, "PWR:", 4, 1, GFX_WHITE, GFX_BLACK);
-    gfx_fill(150, 4, 6 * a->power / 11 + 6, 6, (a->power > 8) ? GFX_RED : 0x07E0);
-    (void)buf;
-}
-
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
     struct asp *a;
     (void)api;
     (void)self;
     a = ASP;
-    memset(a, 0, sizeof *a);
+    {
+        /* Keep the mode chosen in the menu across the module hand-off. */
+        uint8_t keep_mode = a->mode;
+        memset(a, 0, sizeof *a);
+        a->mode = keep_mode;
+    }
     a->room[0] = '0';
     a->room[1] = '1';
     asp_load_call();
     a->klast = a->kseen = (uint8_t)h9_key();
+    a->ktick = 0;
     if (!asp_select_room()) return 0;
-    asp_radio_setup();
+    if (a->mode == 'R') asp_radio_setup();
     asp_reset_rack();
     a->myturn = 1;
     a->started = 0;
@@ -420,9 +496,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     a->aim = 0;
     a->power = 7;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    asp_draw_table();
-    for (int i = 0; i < MAX_BALLS; i++) asp_ball(i);
+    asp_render();
     asp_status("YOUR TURN! AIM 0:FIRE", COL_CUR);
-    asp_play();
+    if (a->mode == 'S') asp_play_solo();
+    else asp_play();
     return 0;
 }

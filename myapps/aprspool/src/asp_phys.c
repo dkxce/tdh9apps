@@ -233,6 +233,7 @@ int asp_step(void)
 
 void asp_render(void)
 {
+    asp_draw_hud();
     asp_draw_table();
     for (int i = 0; i < MAX_BALLS; i++) asp_ball(i);
     if (ASP->state == ST_AIM && ASP->myturn) asp_draw_aim();

@@ -55,8 +55,10 @@ struct asp {
     uint8_t shots;                             /* shots taken this game */
     uint8_t room[2];                           /* room digits */
     char call[7];                              /* my callsign */
+    uint8_t mode;                              /* 'S' solo (BALLPOOL), 'R' APRS radio */
     /* radio ring (reused per module) */
     uint8_t klast, kseen;
+    uint32_t ktick;
     uint32_t rng;
     uint32_t ftick;
     /* APRS receive */

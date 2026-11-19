@@ -27,10 +27,12 @@ unsigned asp_key(void)
 {
     struct asp *a = ASP;
     unsigned k = h9_key();
-    if (k != a->klast) { a->klast = (uint8_t)k; return 0; }
-    if (k == a->kseen) return 0;
+    if (k != a->klast) { a->klast = (uint8_t)k; a->ktick = TICK; return 0; }
     if (k == H9_KEY_NONE) { a->kseen = 0; return 0; }
+    /* Autorepeat: holding a key for 20 ticks (~200 ms) re-fires it. */
+    if (k == a->kseen && (uint32_t)(TICK - a->ktick) < 20u) return 0;
     a->kseen = (uint8_t)k;
+    a->ktick = TICK;
     return k;
 }
 
