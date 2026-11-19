@@ -250,8 +250,8 @@ int pl_step(void)
         if (!s->balls[i].active) continue;
         s->balls[i].x += s->balls[i].vx;
         s->balls[i].y += s->balls[i].vy;
-        s->balls[i].vx = (s->balls[i].vx * 242) >> 8;
-        s->balls[i].vy = (s->balls[i].vy * 242) >> 8;
+        s->balls[i].vx = (s->balls[i].vx * 241) >> 8;
+        s->balls[i].vy = (s->balls[i].vy * 241) >> 8;
         if (s->balls[i].vx > -18 && s->balls[i].vx < 18) s->balls[i].vx = 0;
         if (s->balls[i].vy > -18 && s->balls[i].vy < 18) s->balls[i].vy = 0;
         if (s->balls[i].vx || s->balls[i].vy) moving = 1;
