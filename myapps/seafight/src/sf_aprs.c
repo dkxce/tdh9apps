@@ -156,7 +156,7 @@ static void send_pkt(int cmd, int x, int y, int l, int h)
 int sf_select_room(void)
 {
     struct sf *s = SF;
-    int pos = 2;
+    int pos = 0;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     gfx_text(30, 30, "ROOM (0-99):", 12, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(4, 102, "0-9 DIGIT *:DEL MENU OK", 24, 1, GFX_GREY, GFX_BLACK);
@@ -168,6 +168,7 @@ int sf_select_room(void)
         r[2] = 0;
         gfx_fill(52, 56, 56, 30, GFX_BLACK);
         gfx_text(64, 62, r, 4, 2, COL_CUR, GFX_BLACK);
+        gfx_fill(64 + (pos > 1 ? 1 : pos) * 12, 78, 10, 2, GFX_RED);
         k = sf_key();
         if (k == KEY_BACK) return 0;
         if (k == KEY_MENU) return 1;
@@ -271,7 +272,7 @@ void sf_radio_fire(void)
     s->ftick = TICK;
     pgot[1] = 0;
     send_pkt('F', s->fx, s->fy, -1, -1);
-    sf_status(retry ? "RETRY SENT..." : "SENT! WAITING...", COL_CUR);
+    sf_status(retry ? "RETRY SENT..." : "SENT! WAITING RESPONSE...", COL_CUR);
 }
 
 void sf_radio_tick(void)

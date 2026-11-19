@@ -58,6 +58,7 @@ void sf_cpu_fire(void)
 {
     struct sf *s = SF;
     int x = s->cx, y = s->cy;
+    s->started = 1;
     s->ox = (int8_t)x;
     s->oy = (int8_t)y;
     if (AT(s->real, x, y) == C_SHIP) {
