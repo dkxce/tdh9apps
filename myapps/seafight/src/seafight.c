@@ -19,7 +19,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     gfx_text(8, 62, "(c) dkxce 2026", 18, 1, 0x8410, GFX_BLACK);
     gfx_text(8, 74, "https://github.com/dkxce", 25, 1, 0x8410, GFX_BLACK);
     gfx_text(8, 94, "IF APRS FAILS RE-POWER", 25, 1, 0x8410, GFX_BLACK);
-    gfx_text(90, 12, "BACK: EXIT", 12, 1, GFX_RED, GFX_BLACK);
+    gfx_text(90, 112, "BACK: EXIT", 12, 1, GFX_RED, GFX_BLACK);
     s->klast = s->kseen = (uint8_t)h9_key();
     for (;;) {
         unsigned k = sf_key();
