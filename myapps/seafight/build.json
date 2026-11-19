@@ -1,0 +1,6 @@
+{
+  "modules": [
+    { "name": "SEAFIGHT", "sources": ["sf_core.c", "sf_cpu.c", "seafight.c", "sf_end.c"] },
+    { "name": ".SF RADIO", "sources": ["sf_core.c", "sf_aprs.c", "sf_radio.c", "sf_end.c"] }
+  ]
+}
