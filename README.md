@@ -2,6 +2,7 @@
 
 [РАЗКИРПИЧИТЬ РУК-ВО](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
 [ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
+[ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
 
 Инструменты для раскирпичивания основной flash-памяти радиостанции **TIDRADIO TD-H9**
 в **HID-режиме** (без перехода чипа в UBOOT-режим). Проект состоит из двух частей:
