@@ -1,6 +1,6 @@
 # TD-H9 RADIO LOCK / Password locking
 
-Owner's radio security function (for the owner, no bypassing protection).
+Owner's radio security function (for the owner, no circumvention of protection).
 
 ## Password storage
 
@@ -20,7 +20,7 @@ The condition "is parole":`pass_locked`= all bytes {`0-9`, `0x20`} **и**There's
 
 ## fly
 
-Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not set (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`- Locked: there is a password, you need to check.
+Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not set (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`There is a password, you need to check.
 
 ```
 <RADIO LOCK FLOW>

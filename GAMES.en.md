@@ -45,7 +45,7 @@ The black ball (8th) is the last; if the 8th flies into the hole, while there ar
 
 ## 2. Battle City.
 
-<img src="scripts/render_games/screen_battlecity.png" width="240"/> <img src="scripts/render_games/screen_battlecity_pause.png" width="240"/> <img src="scripts/render_games/screen_battlecity_clear.png" width="240"/> 77<img src="scripts/render_games/screen_battlecity_over.png" width="240"/>
+<img src="scripts/render_games/screen_battlecity.png" width="240"/> <img src="scripts/render_games/screen_battlecity_pause.png" width="240"/> <img src="scripts/render_games/screen_battlecity_clear.png" width="240"/> <img src="scripts/render_games/screen_battlecity_over.png" width="240"/>
 
 The tank arcade. We defend our headquarters (eagle) at the bottom of the map from three enemy tanks.
 35 levels. Tile: brick (destructible), steel (indestructible), water (tanks not)
@@ -146,7 +146,7 @@ The algorithm opens up empty areas. Victory - open all the cells without mines.
 
 Reversi (Othello) vs. AI. Board 8×8, player – white chips, CPU – black. AI
 assesses the position by weights of cells (corners are the most valuable) and flips the captured ones
-chips. Blue dots are hints of available moves. End by chip count.
+chips. Blue dots are clues to the available moves. End by chip count.
 (WIN/LOSE/DRAW).
 
 | Button | Action. |
@@ -185,7 +185,7 @@ Guidance, hits and sinkings.
 <img src="scripts/render_games/screen_snake.png" width="240"/> <img src="scripts/render_games/screen_snake_pause.png" width="240"/> <img src="scripts/render_games/screen_snake_over.png" width="240"/>
 
 Classic snake. 26x19 field. We collect red apples (+10) and the snake grows.
-accelerates (step 180 to 60 ms). Collision with a wall or its own tail
+accelerates (step from 180 to 60 ms). Collision with a wall or its own tail
 loss.
 
 | Button | Action. |
@@ -228,7 +228,7 @@ instantaneous discharge (`7/9`), pause (`*`).
 td9_apps.exe install 8ballpool battlecity bomberman bomberman2 loadrunner mineswiper othello seafight snake tetris
 ```
 
-The app menu is placed automatically. Take a look at this.
+The app menu is automatically installed. Take a look at this.
 
 ```
 td9_apps.exe peek
