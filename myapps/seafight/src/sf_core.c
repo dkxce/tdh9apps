@@ -302,7 +302,7 @@ void sf_play(void (*do_fire)(void), void (*on_tick)(void))
         if (!s->myhp || !s->enhp) {
             gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
             if (!s->enhp) gfx_text(42, 52, "YOU WIN", 8, 2, COL_SHIP, GFX_BLACK);
-            else gfx_text(38, 52, "YOU LOOSE", 8, 2, GFX_RED, GFX_BLACK);
+            else gfx_text(28, 52, "YOU LOOSE", 10, 2, GFX_RED, GFX_BLACK);
             gfx_text(48, 92, "BACK: EXIT", 10, 1, GFX_GREY, GFX_BLACK);
             while (h9_key() != H9_KEY_NONE) h9_delay(3);
             for (;;) {
