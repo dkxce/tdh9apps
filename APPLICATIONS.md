@@ -16,6 +16,13 @@ TIDRADIO TD-H9 с набором инструментов для управле�
 <img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/>       
 <img src="scripts/render_tracker_screens/screen_radar.png"/> <img src="scripts/render_tracker_screens/screen_settings.png"/> <img src="scripts/render_tracker_screens/screen_step_dist.png"/>  
 
+<img src="scripts/render_seafight_screens/screen_enemy_hit.png"/> <img src="scripts/render_seafight_screens/screen_hit.png"/> <img src="scripts/render_seafight_screens/screen_lose.png"/>      
+<img src="scripts/render_seafight_screens/screen_menu.png"/> <img src="scripts/render_seafight_screens/screen_ready.png"/> <img src="scripts/render_seafight_screens/screen_room.png"/>      
+<img src="scripts/render_seafight_screens/screen_sent.png"/> <img src="scripts/render_seafight_screens/screen_sunk.png"/> <img src="scripts/render_seafight_screens/screen_win.png"/>      
+
+<img src="scripts/render_othello_screens/screen_after.png"/> <img src="scripts/render_othello_screens/screen_lose.png"/> <img src="scripts/render_othello_screens/screen_pass.png"/>      
+<img src="scripts/render_othello_screens/screen_skip.png"/> <img src="scripts/render_othello_screens/screen_start.png"/> <img src="scripts/render_othello_screens/screen_win.png"/>     
+
 ## Что есть в архиве
 
 | Файл | Назначение |
