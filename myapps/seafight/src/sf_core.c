@@ -1,4 +1,4 @@
-/* SEAFIGHT board, keys, placement. Linked into SEAFIGHT and .SF RADIO. */
+/* SEAFIGHT board, keys, placement. Linked into SEAFIGHT and .SF RADIO.  */
 #include "sf.h"
 
 const int8_t SF_DX[4] = { 0, 1, 0, -1 };
