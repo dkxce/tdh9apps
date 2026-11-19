@@ -2,6 +2,7 @@ rd /s /q  .\.prepare
 md .\.prepare
 md .\.prepare\gamespack
 copy /y ..\myapps\8ballpool.h9mod .\.prepare\gamespack\
+copy /y ..\myapps\aprspool.h9mod .\.prepare\gamespack\
 copy /y ..\myapps\battlecity.h9mod .\.prepare\gamespack\
 copy /y ..\myapps\bomberman.h9mod .\.prepare\gamespack\
 copy /y ..\myapps\bomberman2.h9mod .\.prepare\gamespack\
