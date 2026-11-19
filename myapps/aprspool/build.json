@@ -1,6 +1,6 @@
 {
   "modules": [
-    { "name": "APRSPOOL", "sources": ["asp_core.c", "aprspool.c"] },
-    { "name": ".PL RADIO", "sources": ["asp_core.c", "asp_phys.c", "asp_radio.c"] }
+    { "name": "APRSPOOL", "sources": ["pl_core.c", "aprspool.c", "pl_end.c"] },
+    { "name": ".PL RADIO", "sources": ["pl_core.c", "pl_aprs.c", "pl_radio.c", "pl_end.c"] }
   ]
 }
