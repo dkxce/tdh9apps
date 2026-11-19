@@ -46,7 +46,7 @@
 
 ## 2. Battle City
 
-<img src="scripts/render_games/screen_battlecity.png" width="240"/> <img src="scripts/render_games/screen_battlecity_pause.png" width="240"/> <img src="scripts/render_games/screen_battlecity_clear.png" width="240"/> 77<img src="scripts/render_games/screen_battlecity_over.png" width="240"/>
+<img src="scripts/render_games/screen_battlecity.png" width="240"/> <img src="scripts/render_games/screen_battlecity_pause.png" width="240"/> <img src="scripts/render_games/screen_battlecity_clear.png" width="240"/> <img src="scripts/render_games/screen_battlecity_over.png" width="240"/>
 
 Аркада про танки. Защищаем свой штаб (орёл) внизу карты от трёх вражеских танков.
 35 уровней. Тайлы: кирпич (разрушаемый), сталь (неразрушаемая), вода (танки не
