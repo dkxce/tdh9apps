@@ -14,8 +14,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     gfx_text(22, 14, "BATTLESHIP", 16, 1, 0x07FF, GFX_BLACK);
-    gfx_text(14, 54, "1: PLAY VS CPU", 18, 1, COL_SHIP, GFX_BLACK);
-    gfx_text(14, 78, "2: APRS RADIO LINK", 18, 1, 0xF81F, GFX_BLACK);
+    gfx_text(14, 28, "1: PLAY VS CPU", 18, 1, COL_SHIP, GFX_BLACK);
+    gfx_text(14, 42, "2: APRS RADIO LINK", 18, 1, 0xF81F, GFX_BLACK);
+    gfx_text(14, 58, "(c) dkxce 2026", 18, 1, GFX_GRAY, GFX_BLACK);
+    gfx_text(14, 76, "https://github.com/dkxce", 25, 1, GFX_GRAY, GFX_BLACK);
+    gfx_text(14, 88, "IF APRS FAILS RE-POWER", 25, 1, GFX_GRAY, GFX_BLACK);
     gfx_text(14, 102, "BACK: EXIT", 12, 1, GFX_RED, GFX_BLACK);
     s->klast = s->kseen = (uint8_t)h9_key();
     for (;;) {
