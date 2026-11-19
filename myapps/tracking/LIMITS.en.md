@@ -64,7 +64,7 @@ The state undergoes module switching until a larger module is loaded.
 Field`struct trk`packed: counters, flags and keycodes are stored in`uint8_t`.
 course, speed and number of satellites`uint16_t`. Place the new fields like this.
 so that there are no alignment holes: each byte of state is taken away
-The body of all the modules.
+The body of all modules.
 
 The state only adjusts.`TRACKER` (`state_init` в `tracker.c`): reset,
 omissions and the latest GPS stock fix. Hidden modules are opened only
@@ -121,9 +121,9 @@ The function that one module needs remains in its own file.
 The procedure for increasing the price:
 
 1. Remove from shared files what this module does not need (see table above).
-2. Replace tables with computation and a repetitive figure with a common function.
+2. Replace tables with computation and the repetitive figure with a common function.
 3. Shorten the lines: they are in`.rodata`and count in the body.
-4. Divide the screen into two modules and switch through the mailbox.
+4. Split the screen into two modules and switch through the mailbox.
    The total volume of the package (124 KB) almost never interferes with 8 KB per module.
 
 ## Environment of implementation
@@ -149,7 +149,7 @@ module**. It follows:
 * **Tracker and Tracker Saver work together**: tracksvr reads`struct trk`tracker`0x2B7EC`As long as the tracker is alive in the slot, that’s enough.
   Save Current / Save GPS / Save Start took coordinates.
 * **Tracker and tracksvr do not work with GPS/APRS modules**GPS module
-  It is loaded into the same slot and closed.`struct trk` (`0x2B7EC`) and/or
+  loaded into the same slot and overlaid`struct trk` (`0x2B7EC`) and/or
   The satshare zone. His body ends at an address close to`0x2B7EC`; on coincidence, it wipes the state of the tracker.
 * To ensure that the two functions work simultaneously through the application menu
   It is necessary to combine into one module (or switch between modules through the

@@ -147,7 +147,7 @@ The algorithm opens up empty areas. Victory - open all the cells without mines.
 
 Reversi (Othello) vs. AI. Board 8×8, player – white chips, CPU – black. AI
 assesses the position by weights of cells (corners are the most valuable) and flips the captured ones
-chips. Blue dots are hints of available moves. End by chip count.
+chips. Blue dots are clues to the available moves. End by chip count.
 (WIN/LOSE/DRAW).
 
 | Button | Action. |
@@ -188,7 +188,7 @@ Guidance, hits and sinkings.
 <img src="scripts/render_games/screen_snake.png" width="240"/> <img src="scripts/render_games/screen_snake_pause.png" width="240"/> <img src="scripts/render_games/screen_snake_over.png" width="240"/>
 
 Classic snake. 26x19 field. We collect red apples (+10) and the snake grows.
-accelerates (step 180 to 60 ms). Collision with a wall or its own tail
+accelerates (step from 180 to 60 ms). Collision with a wall or its own tail
 loss.
 
 | Button | Action. |
@@ -245,15 +245,16 @@ transmitted to the opponent (`YOU` / `WT`). Winning - to score the black 8th las
 
 ### Option A - ready-made`exe`(without Python)
 
-1. Put it on the radio.**custom**is`firmware/`through`Update App.exe`or`h9_ui_flash.exe`) — otherwise, the application menus and widgets do not work.
-2. Put it on the radio.**Bluetooth**(radio menu → Bluetooth → included), keep the radio next to you.
-3. Copy the right ones.`.h9mod`file`myapps`and set them up:
+1. Download games and customized firmware in[releases](https://github.com/dkxce/tdh9apps/releases)
+2. Put it on the radio.**custom**is`firmware/`through`Update App.exe`or`h9_ui_flash.exe`) — otherwise, the application menus and widgets do not work.
+3. Put it on the radio.**Bluetooth**(radio menu → Bluetooth → included), keep the radio next to you.
+4. Copy the right ones.`.h9mod`folder`myapps`programme`td9_apps.exe`and set them up:
 
 ```
 td9_apps.exe install 8ballpool battlecity bomberman bomberman2 loadrunner mineswiper othello seafight snake tetris
 ```
 
-The app menu is placed automatically. Take a look at this.
+The app menu is automatically installed. Take a look at this.
 
 ```
 td9_apps.exe peek
@@ -269,7 +270,7 @@ poetry run python td9_apps.py install 8ballpool battlecity bomberman bomberman2 
 ### After installation
 
 Open up.**menu** — **retention`#`**on the radio. The list will appear
-Installed games, go to the right buttons`2`/`8`and confirm.
+Installed games, go to the right buttons`🡅`/`🡇`and confirm`MENU`.
 
 > Retention`#`Opens the app menu; you don’t need to hold back.
 
