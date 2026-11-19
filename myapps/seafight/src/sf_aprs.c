@@ -225,8 +225,8 @@ static void on_fire(int x, int y, int apply)
 {
     struct sf *s = SF;
     uint8_t t = AT(s->my, x, y);
-    s->mx = (int8_t)x;
-    s->my = (int8_t)y;
+    s->lx = (int8_t)x;
+    s->ly = (int8_t)y;
     if (t == C_SHIP && apply) {
         AT(s->my, x, y) = C_HIT;
         if (s->myhp) s->myhp--;

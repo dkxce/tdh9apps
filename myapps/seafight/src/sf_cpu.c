@@ -36,8 +36,8 @@ static int cpu_turn(void)
         }
         if (tx < 0) return 0;
     }
-    s->mx = (int8_t)tx;
-    s->my = (int8_t)ty;
+    s->lx = (int8_t)tx;
+    s->ly = (int8_t)ty;
     if (AT(s->my, tx, ty) == C_SHIP) {
         AT(s->my, tx, ty) = C_HIT;
         if (s->myhp) s->myhp--;

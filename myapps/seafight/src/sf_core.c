@@ -78,7 +78,7 @@ void sf_redraw(void)
     int y, x;
     for (y = 0; y < N; y++)
         for (x = 0; x < N; x++) {
-            sf_cell(MY_X, x, y, AT(s->my, x, y), x == s->mx && y == s->my ? 2 : 0);
+            sf_cell(MY_X, x, y, AT(s->my, x, y), x == s->lx && y == s->ly ? 2 : 0);
             sf_cell(EN_X, x, y, AT(s->en, x, y), x == s->cx && y == s->cy);
         }
 }
@@ -101,7 +101,7 @@ void sf_board(void)
     unsigned x;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     x = gfx_text(7, 12, "MY", 2, 1, COL_SHIP, GFX_BLACK);
-    xy_at(x, s->mx, s->my, COL_HIT);
+    xy_at(x, s->lx, s->ly, COL_HIT);
     if (s->aprs) {
         char hdr[8] = { 'R', 'O', 'O', 'M', ' ', s->room[0], s->room[1], 0 };
         x = gfx_text(EN_X + 3, 12, hdr, 7, 1, 0xF81F, GFX_BLACK);
@@ -242,7 +242,7 @@ void sf_init(void)
     sf_count_hp();
     s->turn = 1;
     s->started = s->pending = s->timeout = 0;
-    s->fx = s->fy = s->mx = s->my = s->ox = s->oy = -1;
+    s->fx = s->fy = s->lx = s->ly = s->ox = s->oy = -1;
     s->ftick = 0;
     s->rxn = s->esc = 0;
     s->klast = s->kseen = (uint8_t)h9_key();
@@ -279,7 +279,7 @@ void sf_play(void (*do_fire)(void), void (*on_tick)(void))
             sf_place(s->my);
             if (!s->aprs) sf_place(s->real);
             sf_count_hp();
-            s->mx = s->my = -1;
+            s->lx = s->ly = -1;
             sf_board();
             sf_status("FLEET REARRANGED", 0x07FF);
         }

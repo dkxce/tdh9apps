@@ -22,7 +22,7 @@ struct sf {
     uint8_t my[100], en[100], real[100], vis[100], rx[128];
     int8_t qx[32], qy[32];
     char call[7], room[2];
-    int8_t cx, cy, fx, fy, mx, my, ox, oy;
+    int8_t cx, cy, fx, fy, lx, ly, ox, oy;
     uint8_t myhp, enhp, rxn, esc, klast, kseen;
     uint8_t aprs, turn, started, pending, timeout;
     uint32_t rng, ftick;
