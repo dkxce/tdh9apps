@@ -365,14 +365,19 @@ static void place_fleet(uint8_t g[N][N])
     }
 }
 
-/* Потоплен ли корабль противника (по исходной расстановке en_real)? */
-static int sunk_cpu(int x, int y)
+/* Потоплен ли корабль, содержащий (x,y): BFS по связной группе корабля на сетке
+ * `orig` (исходная расстановка: C_SHIP/C_HIT), затем проверка, что все клетки
+ * группы на повреждённой сетке `dmg` стали C_HIT.
+ * - enemy (CPU): orig=en_real (исходная), dmg=en_grid (куда игрок стрелял);
+ * - my ship: orig=dmg=my_grid (клетки C_SHIP → C_HIT по мере попаданий).
+ * Возвращает 1, если корабль потоплен. */
+static int sunk_group(uint8_t orig[N][N], uint8_t dmg[N][N], int x, int y)
 {
     static uint8_t vis[N][N];
     static int8_t qx[32], qy[32];
     int head = 0, tail = 0, i, j;
     if (x < 0 || x >= N || y < 0 || y >= N) return 0;
-    if (en_real[y][x] != C_SHIP) return 0;
+    if (orig[y][x] != C_SHIP && orig[y][x] != C_HIT) return 0;
     for (j = 0; j < N; j++) for (i = 0; i < N; i++) vis[j][i] = 0;
     qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
     vis[y][x] = 1;
@@ -383,57 +388,35 @@ static int sunk_cpu(int x, int y)
         for (int d = 0; d < 4; d++) {
             int nx = cxx + DX[d], ny = cyy + DY[d];
             if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-            if (en_real[ny][nx] == C_SHIP && !vis[ny][nx]) {
+            /* клетка — часть корабля, если в исходной расстановке она C_SHIP или C_HIT */
+            uint8_t t = orig[ny][nx];
+            if ((t == C_SHIP || t == C_HIT) && !vis[ny][nx]) {
                 vis[ny][nx] = 1;
                 if (tail < 32) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
             }
         }
     }
+    /* корабль потоплен, если все клетки группы на повреждённой сетке — C_HIT */
     for (int q = 0; q < tail; q++)
-        if (en_grid[qy[q]][qx[q]] != C_HIT) return 0;
+        if (dmg[qy[q]][qx[q]] != C_HIT) return 0;
     return 1;
 }
 
-/* Потоплен ли корабль игрока (все клетки связной группы C_SHIP стали C_HIT)? */
-static int sunk_my_ship(int x, int y)
+/* Обёртки: потоплен ли корабль противника/игрока. */
+static int sunk_cpu(int x, int y) { return sunk_group(en_real, en_grid, x, y); }
+static int sunk_my_ship(int x, int y) { return sunk_group(my_grid, my_grid, x, y); }
+
+/* Залить периметр потопленного корабля (BFS по C_HIT-группе на сетке `g`,
+ * база поля `bx` для draw_cell). Используется для корабля противника (en_grid)
+ * и игрока (my_grid). */
+static void sink_area(uint8_t g[N][N], int bx, int x, int y)
 {
     static uint8_t vis[N][N];
-    static int8_t qx[32], qy[32];
-    int head = 0, tail = 0, i, j;
-    if (x < 0 || x >= N || y < 0 || y >= N) return 0;
-    if (my_grid[y][x] != C_HIT) return 0;
-    for (j = 0; j < N; j++) for (i = 0; i < N; i++) vis[j][i] = 0;
-    qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
-    vis[y][x] = 1;
-    while (head < tail && tail < 32) {
-        int cxx = qx[head], cyy = qy[head]; head++;
-        static const int8_t DX[4] = { 0, 1, 0, -1 };
-        static const int8_t DY[4] = { -1, 0, 1, 0 };
-        for (int d = 0; d < 4; d++) {
-            int nx = cxx + DX[d], ny = cyy + DY[d];
-            if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-            if (my_grid[ny][nx] != C_WATER && !vis[ny][nx]) {
-                /* сосед—часть корабля, если он C_SHIP или C_HIT ещё живого корабля */
-                vis[ny][nx] = 1;
-                if (tail < 32) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
-            }
-        }
-    }
-    /* если в группе осталась хотя бы одна C_SHIP — корабль ещё не потоплен */
-    for (int q = 0; q < tail; q++)
-        if (my_grid[qy[q]][qx[q]] == C_SHIP) return 0;
-    return 1;
-}
-
-/* Заливка потопленного корабля противника морем (периметр) */
-static void sink_area_en(int x, int y)
-{
     static int8_t qx[64], qy[64];
-    static uint8_t vis[N][N];
     int head = 0, tail = 0, i, j;
     for (j = 0; j < N; j++) for (i = 0; i < N; i++) vis[j][i] = 0;
     if (x < 0 || x >= N || y < 0 || y >= N) return;
-    if (en_grid[y][x] != C_HIT) return;
+    if (g[y][x] != C_HIT) return;
     qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
     vis[y][x] = 1;
     while (head < tail && tail < 64) {
@@ -443,7 +426,7 @@ static void sink_area_en(int x, int y)
         for (int d = 0; d < 4; d++) {
             int nx = cxx + DX[d], ny = cyy + DY[d];
             if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-            if (en_grid[ny][nx] == C_HIT && !vis[ny][nx]) {
+            if (g[ny][nx] == C_HIT && !vis[ny][nx]) {
                 vis[ny][nx] = 1;
                 if (tail < 64) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
             }
@@ -455,51 +438,11 @@ static void sink_area_en(int x, int y)
             for (int dx = -1; dx <= 1; dx++) {
                 int nx = gx + dx, ny = gy + dy;
                 if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-                if (en_grid[ny][nx] == C_WATER) {
-                    en_grid[ny][nx] = C_MISS;
-                    draw_cell(EN_X, (int8_t)nx, (int8_t)ny,
-                              (nx == cx && ny == cy) ? C_MISS : en_grid[ny][nx],
-                              nx == cx && ny == cy);
-                }
-            }
-        }
-    }
-}
-
-/* Залить периметр потопленного корабля игрока (по my_grid) — чтобы CPU после
- * потопления не стрелял в смежные (диагональные/ортогональные) клетки. */
-static void sink_my_area(int x, int y)
-{
-    static uint8_t vis[N][N];
-    static int8_t qx[32], qy[32];
-    int head = 0, tail = 0, i, j;
-    for (j = 0; j < N; j++) for (i = 0; i < N; i++) vis[j][i] = 0;
-    if (x < 0 || x >= N || y < 0 || y >= N) return;
-    if (my_grid[y][x] != C_HIT) return;
-    qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
-    vis[y][x] = 1;
-    while (head < tail && tail < 32) {
-        int cxx = qx[head], cyy = qy[head]; head++;
-        static const int8_t DX[4] = { 0, 1, 0, -1 };
-        static const int8_t DY[4] = { -1, 0, 1, 0 };
-        for (int d = 0; d < 4; d++) {
-            int nx = cxx + DX[d], ny = cyy + DY[d];
-            if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-            if (my_grid[ny][nx] == C_HIT && !vis[ny][nx]) {
-                vis[ny][nx] = 1;
-                if (tail < 32) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
-            }
-        }
-    }
-    for (int q = 0; q < tail; q++) {
-        int gx = qx[q], gy = qy[q];
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                int nx = gx + dx, ny = gy + dy;
-                if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-                if (my_grid[ny][nx] == C_WATER) {
-                    my_grid[ny][nx] = C_MISS;
-                    draw_cell(MY_X, (int8_t)nx, (int8_t)ny, C_MISS, 0);
+                if (g[ny][nx] == C_WATER) {
+                    g[ny][nx] = C_MISS;
+                    draw_cell(bx, (int8_t)nx, (int8_t)ny,
+                              (bx == EN_X && nx == cx && ny == cy) ? C_MISS : g[ny][nx],
+                              bx == EN_X && nx == cx && ny == cy);
                 }
             }
         }
@@ -617,16 +560,16 @@ static int cpu_turn(void)
         /* если корабль игрока потоплен — заливаем периметр (исключить смежные
          * клетки для дальнейших выстрелов CPU) */
         if (sunk_my_ship(tx, ty)) {
-            sink_my_area(tx, ty);
-            set_status("ENEMY SANK YOUR SHIP!", GFX_RED);
+            sink_area(my_grid, MY_X, tx, ty);
+            set_status("ENEMY HIT YOU!", GFX_RED);
         } else {
-            set_status("ENEMY HIT YOUR SHIP!", GFX_RED);
+            set_status("ENEMY HIT SHIP!", GFX_RED);
         }
         return 1;
     } else {
         my_grid[ty][tx] = C_MISS;
         draw_cell(MY_X, (int8_t)tx, (int8_t)ty, C_MISS, 0);
-        set_status("ENEMY MISSED! YOUR TURN", 0x07E0);
+        set_status("ENEMY MISSED!", 0x07E0);
         return 0;
     }
 }
@@ -726,8 +669,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 
     init_game();
     draw_board();
-    set_status(aprs_mode ? (my_turn ? "YOUR TURN! FIRE TO START" : "WAIT ENEMY FIRST...")
-                         : "YOUR TURN: AIM & FIRE", COL_CUR);
+    set_status("YOUR TURN! FIRE", COL_CUR);
 
     for (;;) {
         unsigned k = poll_key();
@@ -750,7 +692,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (aprs_mode && pending_shot && !shot_timeout &&
             (uint32_t)(TICK - fire_tick) >= FIRE_TIMEOUT) {
             shot_timeout = 1;
-            set_status("NO REPLY! 5:RETRY BACK:SKIP", GFX_RED);
+            set_status("NO REPLY! 5:RETRY", GFX_RED);
         }
         if (aprs_mode && shot_timeout) {
             if (k == KEY_5) {
@@ -795,7 +737,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                         if (my_hp > 0) my_hp--;
                         draw_cell(MY_X, (int8_t)rx_x, (int8_t)rx_y, C_HIT, 0);
                         if (sunk_my_ship(rx_x, rx_y)) {
-                            sink_my_area(rx_x, rx_y);
+                            sink_area(my_grid, MY_X, rx_x, rx_y);
                             int sx, sy, len, horiz;
                             ship_span(rx_x, rx_y, &sx, &sy, &len, &horiz);
                             aprs_send_game_pkt("SUNK", sx, sy, len, horiz);
@@ -809,7 +751,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                         draw_cell(MY_X, (int8_t)rx_x, (int8_t)rx_y, C_MISS, 0);
                         aprs_send_game_pkt("MISS", rx_x, rx_y, -1, -1);
                         my_turn = 1;   /* промах — наш ход */
-                        set_status("ENEMY MISS! YOUR TURN", 0x07E0);
+                        set_status("ENEMY MISS! TURN", 0x07E0);
                     }
                 } else if (cmd[0] == 'H' && nv >= 2 && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
                     en_grid[rx_y][rx_x] = C_HIT;
@@ -881,10 +823,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
                         if (en_hp > 0) en_hp--;
                         draw_cell(EN_X, cx, cy, C_HIT, 1);
                         if (sunk_cpu(cx, cy)) {
-                            sink_area_en(cx, cy);
+                            sink_area(en_grid, EN_X, cx, cy);
                             set_status("ENEMY SHIP SUNK!", 0x07E0);
                         } else {
-                            set_status("DIRECT HIT! SHOOT AGAIN", COL_CUR);
+                            set_status("DIRECT HIT! SHOOT", COL_CUR);
                         }
                     } else {
                         en_grid[cy][cx] = C_MISS;
