@@ -1,110 +1,75 @@
+/* SEAFIGHT: battleship, vs CPU or APRS. State sits at 0x2B8E0 (no .bss).
+ * Body must end below satshare 0x2B880; sf_end is the last word. */
 #include <stdint.h>
 #include "gfx.h"
 #include "h9mod.h"
 
 #define TICK (*(const volatile uint32_t *)0x1D8B0)
-
-/* --- RF / APRS-модем (проверено на железе) --- */
-#define MYCALL        ((const volatile uint8_t *)0xC4A1)
-#define RING          ((volatile uint8_t *)0x16634)
-#define RING_WRITE    (*(volatile uint16_t *)0x16E34)
-#define RING_READ     (*(volatile uint16_t *)0x16E36)
-#define RING_MASK     2047u
-
-#define RF_ASLEEP     (*(volatile uint8_t *)0x11B01)
-#define RF_WAKE()     ((void (*)(void))0x01E5969Cu)()
-#define AF_SELECT(m)  ((void (*)(unsigned))0x01E593E4u)(m)
-#define RF_WRITE(r,v) ((void (*)(unsigned, unsigned))0x01E5070Au)((r), (v))
-#define SPEAKER(on)   ((void (*)(unsigned))0x01E52328u)(on)
+#define MYCALL ((const volatile uint8_t *)0xC4A1)
+#define RING ((volatile uint8_t *)0x16634)
+#define RING_WRITE (*(volatile uint16_t *)0x16E34)
+#define RING_READ (*(volatile uint16_t *)0x16E36)
+#define RING_MASK 2047u
+#define RF_ASLEEP (*(volatile uint8_t *)0x11B01)
+#define RF_WAKE() ((void (*)(void))0x01E5969Cu)()
+#define AF_SELECT(m) ((void (*)(unsigned))0x01E593E4u)(m)
+#define RF_WRITE(r, v) ((void (*)(unsigned, unsigned))0x01E5070Au)((r), (v))
+#define SPEAKER(on) ((void (*)(unsigned))0x01E52328u)(on)
 #define STOCK_KISS_TX ((void (*)(const uint8_t *, unsigned))0x01E5DBCCu)
-
-#define SIDE_BYTE  (*(volatile uint8_t *)0x11B50)
+#define SIDE_BYTE (*(volatile uint8_t *)0x11B50)
 #define ROUTE_BYTE (*(volatile uint8_t *)0x11AEC)
 #define RF_SETUP(x) ((void (*)(unsigned))0x01E58E3Eu)(x)
 #define RX_CH (*(const volatile uint8_t *)0xC532)
-#define TX_CH (*(const volatile uint8_t *)0xC533)
 
-/* Коды кнопок TD-H9  */
-enum {
-    KEY_1    = 3,
-    KEY_2    = 4,
-    KEY_4    = 6,
-    KEY_5    = 7,
-    KEY_6    = 8,
-    KEY_8    = 10,
-    KEY_9    = 11,
-    KEY_MENU = 12,
-    KEY_BACK = 15,
-    KEY_HASH = 0x14
+enum { KEY_0 = 2, KEY_1 = 3, KEY_2 = 4, KEY_4 = 6, KEY_5 = 7, KEY_6 = 8,
+       KEY_8 = 10, KEY_9 = 11, KEY_MENU = 12, KEY_BACK = 15, KEY_HASH = 0x14 };
+enum { N = 10, CELL = 7, MY_X = 6, EN_X = 84, GRID_Y = 24 };
+enum { C_WATER, C_SHIP, C_MISS, C_HIT };
+enum { COL_SEA = 0x0015, COL_SHIP = 0x07E0, COL_MISS = 0xC618, COL_HIT = 0xF800, COL_CUR = 0xFFE0 };
+enum { BODY_TOP = 0x2B880, FIRE_TIMEOUT = 12000u };
+
+#define AT(g, x, y) ((g)[(y) * N + (x)])
+
+struct sf {
+    uint8_t my[100], en[100], real[100], vis[100], rx[128];
+    int8_t qx[32], qy[32];
+    char call[7], room[2];
+    int8_t cx, cy, fx, fy;
+    uint8_t myhp, enhp, rxn, esc, klast, kseen;
+    uint8_t aprs, turn, started, pending, timeout;
+    uint32_t rng, ftick;
 };
 
-/* Сетка 10x10 клеток по 7x7 пикселей. Два поля: моё слева, врага справа. */
-#define N       10
-#define CELL    7
-#define MY_X    6
-#define EN_X    84
-#define GRID_Y  24
+#define SF ((struct sf *)0x2B8E0)
 
-enum { C_WATER = 0, C_SHIP = 1, C_MISS = 2, C_HIT = 3 };
+_Static_assert(sizeof(struct sf) <= 0x600, "state must fit in the APRS slot");
+_Static_assert(0x2B8E0u + sizeof(struct sf) <= 0x2BEE0u, "state below the mailbox");
 
-#define COL_SEA    0x0015
-#define COL_SHIP   0x07E0
-#define COL_MISS   0xC618
-#define COL_HIT    0xF800
-#define COL_CUR    0xFFE0
+extern void *memset(void *dst, int value, unsigned n);
+extern const uint32_t sf_end;
 
-static uint8_t my_grid[N][N];
-static uint8_t en_grid[N][N];
-static uint8_t en_real[N][N];
+static const int8_t DX[4] = { 0, 1, 0, -1 }, DY[4] = { -1, 0, 1, 0 };
 
-static int8_t cx, cy;
-static uint8_t my_hp;
-static uint8_t en_hp;
-static uint32_t rng_state;
-
-/* --- APRS-состояние игры --- */
-static uint8_t aprs_mode;       /* 1 = игра по радио, 0 = VS CPU */
-static uint8_t my_turn;         /* 1 = наш ход, 0 = ждём входящий FIRE */
-static uint8_t game_started;    /* первый FIRE получен/отправлен — порядок ходов */
-static uint8_t waiting_reply;   /* ждём HIT/MISS/SUNK после своего FIRE */
-static uint8_t pending_shot;    /* свой FIRE отправлен и ответ ещё не получен */
-static uint8_t shot_timeout;    /* 1: исТёк таймаут ожидания ответа */
-static int8_t last_fire_x, last_fire_y;
-static uint32_t fire_tick;      /* TICK в момент отправки FIRE */
-#define FIRE_TIMEOUT 12000u     /* тиков (100 Гц) = 120 с ~ 2 мин */
-static char room_id[2] = { '0', '1' };
-
-/* Буферы для AX.25 / KISS */
-static char my_call_str[8];
-static uint8_t rx_frame[128];
-static uint8_t rx_len;
-static uint8_t rx_esc;
-
-/* История принятых пакетов (cmd,x,y) для защиты от повтора/эха */
-static int8_t rx_hist[3][3];
-static uint8_t rx_hist_idx;
-
-static uint32_t fast_rand(void)
+static uint32_t rnd(void)
 {
-    rng_state ^= rng_state << 13;
-    rng_state ^= rng_state >> 17;
-    rng_state ^= rng_state << 5;
-    return rng_state;
+    struct sf *s = SF;
+    s->rng ^= s->rng << 13;
+    s->rng ^= s->rng >> 17;
+    s->rng ^= s->rng << 5;
+    return s->rng;
 }
 
-/* Опрос клавиш с подавлением дребезга (сброс при отпускании) */
-static unsigned key_last = 0, key_seen = 0;
 static unsigned poll_key(void)
 {
+    struct sf *s = SF;
     unsigned k = h9_key();
-    if (k != key_last) { key_last = k; return 0; }
-    if (k == key_seen) return 0;
-    if (k == H9_KEY_NONE) { key_seen = H9_KEY_NONE; return 0; }
-    key_seen = k;
+    if (k != s->klast) { s->klast = (uint8_t)k; return 0; }
+    if (k == s->kseen) return 0;
+    if (k == H9_KEY_NONE) { s->kseen = 0; return 0; }
+    s->kseen = (uint8_t)k;
     return k;
 }
 
-/* --- APRS: RF-тракт --- */
 static void aprs_quiet(void)
 {
     if (RF_ASLEEP) RF_WAKE();
@@ -113,52 +78,47 @@ static void aprs_quiet(void)
     SPEAKER(0);
 }
 
-static void aprs_side(unsigned side)
-{
-    SIDE_BYTE = (uint8_t)((SIDE_BYTE & 0x7F) | side << 7);
-    ROUTE_BYTE = (uint8_t)side;
-    RF_SETUP(0);
-    aprs_quiet();
-}
-
-static unsigned aprs_rx_side(void) { return RX_CH == 1 ? 0 : RX_CH == 2 ? 1 : 2; }
-
-/* Упаковка одного 7-байтового адреса AX.25. */
-static void pack_addr(uint8_t *dst, const char *call, int last)
+static void pack_addr(uint8_t *d, const char *call, int last)
 {
     int i = 0;
     for (; i < 6 && call[i] && call[i] != '-'; i++) {
         uint8_t c = (uint8_t)call[i];
         if (c >= 'a' && c <= 'z') c -= 32;
-        dst[i] = (uint8_t)(c << 1);
+        d[i] = (uint8_t)(c << 1);
     }
-    for (; i < 6; i++) dst[i] = (uint8_t)(' ' << 1);
-    dst[6] = (uint8_t)(0x60 | (last ? 1 : 0));
+    for (; i < 6; i++) d[i] = (uint8_t)(' ' << 1);
+    d[6] = (uint8_t)(0x60 | (last ? 1 : 0));
 }
 
-/* Отправить игровой пакет: dst=APH9BS, src=mycall, payload ">BS<ROOM>:<CMD>,x,y[,len,h]".
- * НЕ трогаем RF-бокс сразу после передачи (проверено: срывает передачу). */
-static void aprs_send_game_pkt(const char *cmd, int x, int y, int l, int h)
+static void load_call(void)
 {
-    static uint8_t frame[64], kiss[88];
-    static char srccall[8];
-    int p = 0, k = 0, n = 0;
+    struct sf *s = SF;
+    int n = 0;
+    for (; n < 6 && MYCALL[n] > ' ' && MYCALL[n] <= '~'; n++) s->call[n] = (char)MYCALL[n];
+    if (!n) {
+        s->call[0] = 'N'; s->call[1] = '0'; s->call[2] = 'C';
+        s->call[3] = 'A'; s->call[4] = 'L'; s->call[5] = 'L';
+        n = 6;
+    }
+    s->call[n] = 0;
+}
 
+/* dst=APH9BS, src=call, ">BS<room>:<cmd>,x,y[,len,h]". Do not touch the RF box after TX. */
+static void send_pkt(const char *cmd, int x, int y, int l, int h)
+{
+    struct sf *s = SF;
+    uint8_t kiss[88];
+    uint8_t frame[64];
+    int p = 0, k = 0;
     pack_addr(frame + p, "APH9BS", 0); p += 7;
-
-    for (; n < 6 && MYCALL[n] > ' ' && MYCALL[n] <= '~'; n++) srccall[n] = (char)MYCALL[n];
-    srccall[n] = 0;
-    if (n == 0) { srccall[0] = 'N'; srccall[1] = '0'; srccall[2] = 'C';
-                  srccall[3] = 'A'; srccall[4] = 'L'; srccall[5] = 'L'; srccall[6] = 0; }
-    pack_addr(frame + p, srccall, 1); p += 7;
-
-    frame[p++] = 0x03;   /* UI */
-    frame[p++] = 0xF0;   /* no L3 */
+    pack_addr(frame + p, s->call, 1); p += 7;
+    frame[p++] = 0x03;
+    frame[p++] = 0xF0;
     frame[p++] = '>';
     frame[p++] = 'B';
     frame[p++] = 'S';
-    frame[p++] = (uint8_t)room_id[0];
-    frame[p++] = (uint8_t)room_id[1];
+    frame[p++] = (uint8_t)s->room[0];
+    frame[p++] = (uint8_t)s->room[1];
     frame[p++] = ':';
     while (*cmd) frame[p++] = (uint8_t)*cmd++;
     if (x >= 0 && y >= 0) {
@@ -173,684 +133,580 @@ static void aprs_send_game_pkt(const char *cmd, int x, int y, int l, int h)
             frame[p++] = (uint8_t)('0' + h);
         }
     }
-
-    /* KISS: C0 00 <escaped frame> C0 */
-    kiss[k++] = 0xC0; kiss[k++] = 0x00;
+    kiss[k++] = 0xC0;
+    kiss[k++] = 0x00;
     for (int i = 0; i < p; i++) {
         if (frame[i] == 0xC0) { kiss[k++] = 0xDB; kiss[k++] = 0xDC; }
         else if (frame[i] == 0xDB) { kiss[k++] = 0xDB; kiss[k++] = 0xDD; }
         else kiss[k++] = frame[i];
     }
     kiss[k++] = 0xC0;
-
     STOCK_KISS_TX(kiss, (unsigned)k);
 }
 
-/* 1, если принятый KISS-кадр — наше собственное эхо (src == наш позывной). */
-static int is_self_rx(void)
+static int self_rx(void)
 {
+    struct sf *s = SF;
     for (int i = 0; i < 6; i++) {
-        uint8_t c = (uint8_t)my_call_str[i];
+        uint8_t c = (uint8_t)s->call[i];
         if (c >= 'a' && c <= 'z') c -= 32;
-        if (my_call_str[i] == 0 || my_call_str[i] == '-') c = ' ';
-        if (rx_frame[8 + i] != (uint8_t)(c << 1)) return 0;
+        if (!s->call[i] || s->call[i] == '-') c = ' ';
+        if (s->rx[8 + i] != (uint8_t)(c << 1)) return 0;
     }
     return 1;
 }
 
-/* 1, если пакет (cmd,x,y) уже обрабатывался (защита от повтора). */
-static int is_dup_pkt(char cmd, int x, int y)
+/* 1: a game packet from someone else is in cmd / v[0..3]. */
+static int poll_rx(char *cmd, int *v, int *nv)
 {
-    for (int i = 0; i < 3; i++) {
-        if (rx_hist[i][0] == (int8_t)cmd &&
-            (x < 0 || (rx_hist[i][1] == (int8_t)x && rx_hist[i][2] == (int8_t)y)))
-            return 1;
-    }
-    return 0;
-}
-
-static void remember_pkt(char cmd, int x, int y)
-{
-    rx_hist[rx_hist_idx][0] = (int8_t)cmd;
-    rx_hist[rx_hist_idx][1] = (int8_t)x;
-    rx_hist[rx_hist_idx][2] = (int8_t)y;
-    rx_hist_idx = (rx_hist_idx + 1) % 3;
-}
-
-/* Разбор принятого AX.25-фрейма с проверкой комнаты (>BS<RR>:).
- * out_cmd — команда; v[0..3] — до 4 чисел; *nv — их число. Возвращает 1, если
- * принят валидный не-свой и не-повторный пакет. */
-static int poll_aprs_rx(char *out_cmd, int *v, int *nv)
-{
-    unsigned write = RING_WRITE & RING_MASK;
-    unsigned read  = RING_READ & RING_MASK;
+    struct sf *s = SF;
+    unsigned write = RING_WRITE & RING_MASK, read = RING_READ & RING_MASK;
     int got = 0;
-
     while (read != write) {
         uint8_t b = RING[read];
         read = (read + 1u) & RING_MASK;
-
         if (b == 0xC0) {
-            if (rx_len > 20 && rx_frame[0] == 0x00) {
-                if (!is_self_rx()) {
-                    /* KISS: [0] port, [1..7] dst, [8..14] src, [15] ctrl, [16] pid, payload с 17 */
-                    unsigned at = 17;
-                    if (at + 8 <= rx_len &&
-                        rx_frame[at] == '>' && rx_frame[at + 1] == 'B' && rx_frame[at + 2] == 'S' &&
-                        rx_frame[at + 3] == (uint8_t)room_id[0] &&
-                        rx_frame[at + 4] == (uint8_t)room_id[1] &&
-                        rx_frame[at + 5] == ':') {
-                        unsigned p = at + 6;
-                        int k = 0;
-                        while (p < rx_len && rx_frame[p] != ',' && k < 7) {
-                            out_cmd[k++] = (char)rx_frame[p++];
-                        }
-                        out_cmd[k] = 0;
-                        v[0] = v[1] = v[2] = v[3] = -1;
-                        *nv = 0;
-                        while (p < rx_len && *nv < 4) {
-                            if (rx_frame[p] != ',') break;
-                            p++;
-                            if (p < rx_len && rx_frame[p] >= '0' && rx_frame[p] <= '9') {
-                                v[(*nv)++] = rx_frame[p] - '0';
-                            } else {
-                                v[(*nv)++] = -1;
-                            }
-                            p++;
-                        }
-                        if (k > 0 && !is_dup_pkt(out_cmd[0], v[0], v[1])) {
-                            remember_pkt(out_cmd[0], v[0], v[1]);
-                            got = 1;
-                        }
+            if (s->rxn > 20 && s->rx[0] == 0 && !self_rx()) {
+                unsigned at = 17, p;
+                int n = 0;
+                if (at + 8 <= s->rxn && s->rx[at] == '>' && s->rx[at + 1] == 'B' && s->rx[at + 2] == 'S' &&
+                    s->rx[at + 3] == (uint8_t)s->room[0] && s->rx[at + 4] == (uint8_t)s->room[1] &&
+                    s->rx[at + 5] == ':') {
+                    p = at + 6;
+                    while (p < s->rxn && s->rx[p] != ',' && n < 7) cmd[n++] = (char)s->rx[p++];
+                    cmd[n] = 0;
+                    v[0] = v[1] = v[2] = v[3] = -1;
+                    *nv = 0;
+                    while (p < s->rxn && *nv < 4 && s->rx[p] == ',') {
+                        p++;
+                        v[(*nv)++] = (p < s->rxn && s->rx[p] >= '0' && s->rx[p] <= '9') ? s->rx[p] - '0' : -1;
+                        p++;
                     }
+                    if (n) got = 1;
                 }
             }
-            rx_len = 0;
-            rx_esc = 0;
+            s->rxn = s->esc = 0;
             if (got) break;
             continue;
         }
-        if (rx_esc) {
-            b = (b == 0xDC) ? 0xC0 : (b == 0xDD) ? 0xDB : b;
-            rx_esc = 0;
-        } else if (b == 0xDB) {
-            rx_esc = 1;
-            continue;
-        }
-        if (rx_len < sizeof rx_frame) rx_frame[rx_len++] = b;
+        if (s->esc) { b = b == 0xDC ? 0xC0 : b == 0xDD ? 0xDB : b; s->esc = 0; }
+        else if (b == 0xDB) { s->esc = 1; continue; }
+        if (s->rxn < sizeof s->rx) s->rx[s->rxn++] = b;
     }
     RING_READ = (uint16_t)read;
     return got;
 }
 
-/* Отрисовка одной клетки поля (базовое поле + маркеры HIT/MISS + курсор) */
-static void draw_cell(int base_x, int8_t x, int8_t y, uint8_t state, int cursor)
+static void draw_cell(int bx, int x, int y, uint8_t st, int cur)
 {
-    int sx = base_x + x * CELL;
-    int sy = GRID_Y + y * CELL;
-
-    gfx_fill(sx, sy, CELL - 1, CELL - 1, (state == C_SHIP) ? COL_SHIP : COL_SEA);
-
-    if (state == C_MISS) {
-        gfx_fill(sx + 2, sy + 2, 2, 2, COL_MISS);
-    } else if (state == C_HIT) {
-        gfx_fill(sx + 1, sy + 1, CELL - 3, CELL - 3, COL_HIT);
-        gfx_fill(sx + 2, sy + 2, 2, 2, GFX_YELLOW);
+    int sx = bx + x * CELL, sy = GRID_Y + y * CELL;
+    gfx_fill((unsigned)sx, (unsigned)sy, CELL - 1, CELL - 1, st == C_SHIP ? COL_SHIP : COL_SEA);
+    if (st == C_MISS) gfx_fill((unsigned)(sx + 2), (unsigned)(sy + 2), 2, 2, COL_MISS);
+    else if (st == C_HIT) {
+        gfx_fill((unsigned)(sx + 1), (unsigned)(sy + 1), CELL - 3, CELL - 3, COL_HIT);
+        gfx_fill((unsigned)(sx + 2), (unsigned)(sy + 2), 2, 2, GFX_YELLOW);
     }
-
-    if (cursor) {
-        gfx_fill(sx, sy, CELL - 1, 1, COL_CUR);
-        gfx_fill(sx, sy + CELL - 2, CELL - 1, 1, COL_CUR);
-        gfx_fill(sx, sy, 1, CELL - 1, COL_CUR);
-        gfx_fill(sx + CELL - 2, sy, 1, CELL - 1, COL_CUR);
+    if (cur) {
+        gfx_fill((unsigned)sx, (unsigned)sy, CELL - 1, 1, COL_CUR);
+        gfx_fill((unsigned)sx, (unsigned)(sy + CELL - 2), CELL - 1, 1, COL_CUR);
+        gfx_fill((unsigned)sx, (unsigned)sy, 1, CELL - 1, COL_CUR);
+        gfx_fill((unsigned)(sx + CELL - 2), (unsigned)sy, 1, CELL - 1, COL_CUR);
     }
 }
 
-/* Полная перерисовка обоих полей */
-static void redraw_all(void)
+static void redraw(void)
 {
-    for (int y = 0; y < N; y++) {
+    struct sf *s = SF;
+    for (int y = 0; y < N; y++)
         for (int x = 0; x < N; x++) {
-            draw_cell(MY_X, (int8_t)x, (int8_t)y, my_grid[y][x], 0);
-            draw_cell(EN_X, (int8_t)x, (int8_t)y, en_grid[y][x], (x == cx && y == cy));
+            draw_cell(MY_X, x, y, AT(s->my, x, y), 0);
+            draw_cell(EN_X, x, y, AT(s->en, x, y), x == s->cx && y == s->cy);
         }
-    }
 }
 
-static void set_status(const char *msg, uint16_t col)
+static void status(const char *m, uint16_t c)
 {
     gfx_fill(0, 100, H9_WIDTH, 13, GFX_BLACK);
-    gfx_text(4, 102, msg, 25, 1, col, GFX_BLACK);
+    gfx_text(4, 102, m, 25, 1, c, GFX_BLACK);
 }
 
-/* Проверка: можно ли поставить корабль длиной len с левым-верхним углом (x,y) */
-static int can_place(uint8_t g[N][N], int x, int y, int len, int horiz)
+static int can_place(uint8_t *g, int x, int y, int len, int h)
 {
     for (int i = 0; i < len; i++) {
-        int nx = x + (horiz ? i : 0);
-        int ny = y + (horiz ? 0 : i);
+        int nx = x + (h ? i : 0), ny = y + (h ? 0 : i);
         if (nx >= N || ny >= N) return 0;
-        for (int dy = -1; dy <= 1; dy++) {
+        for (int dy = -1; dy <= 1; dy++)
             for (int dx = -1; dx <= 1; dx++) {
-                int cx2 = nx + dx, cy2 = ny + dy;
-                if (cx2 >= 0 && cx2 < N && cy2 >= 0 && cy2 < N) {
-                    if (g[cy2][cx2] != C_WATER) return 0;
-                }
+                int cx = nx + dx, cy = ny + dy;
+                if (cx >= 0 && cx < N && cy >= 0 && cy < N && AT(g, cx, cy) != C_WATER) return 0;
             }
-        }
     }
     return 1;
 }
 
-/* Случайная расстановка стандартного флота */
-static void place_fleet(uint8_t g[N][N])
+static void put_ship(uint8_t *g, int x, int y, int len, int h)
+{
+    for (int i = 0; i < len; i++) AT(g, x + (h ? i : 0), y + (h ? 0 : i)) = C_SHIP;
+}
+
+static void place_fleet(uint8_t *g)
 {
     static const uint8_t SHIPS[10] = { 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 };
-    for (int y = 0; y < N; y++)
-        for (int x = 0; x < N; x++) g[y][x] = C_WATER;
-
-    for (int s = 0; s < 10; s++) {
-        int placed = 0;
-        while (!placed) {
-            int x = (int)(fast_rand() % N);
-            int y = (int)(fast_rand() % N);
-            int h = (int)(fast_rand() & 1u);
-            if (can_place(g, x, y, SHIPS[s], h)) {
-                for (int i = 0; i < SHIPS[s]; i++) {
-                    g[y + (h ? 0 : i)][x + (h ? i : 0)] = C_SHIP;
-                }
-                placed = 1;
+    for (int round = 0; round < 40; round++) {
+        int s, ok = 1;
+        for (int i = 0; i < 100; i++) g[i] = C_WATER;
+        for (s = 0; s < 10; s++) {
+            int n, placed = 0;
+            for (n = 0; n < 200 && !placed; n++) {
+                int x = (int)(rnd() % N), y = (int)(rnd() % N), h = (int)(rnd() & 1u);
+                if (can_place(g, x, y, SHIPS[s], h)) { put_ship(g, x, y, SHIPS[s], h); placed = 1; }
             }
+            if (!placed) { ok = 0; break; }
         }
+        if (ok) return;
     }
+    for (int i = 0; i < 100; i++) g[i] = C_WATER;
+    put_ship(g, 0, 0, 4, 1);
 }
 
-/* Потоплен ли корабль, содержащий (x,y): BFS по связной группе корабля на сетке
- * `orig` (исходная расстановка: C_SHIP/C_HIT), затем проверка, что все клетки
- * группы на повреждённой сетке `dmg` стали C_HIT.
- * - enemy (CPU): orig=en_real (исходная), dmg=en_grid (куда игрок стрелял);
- * - my ship: orig=dmg=my_grid (клетки C_SHIP → C_HIT по мере попаданий).
- * Возвращает 1, если корабль потоплен. */
-static int sunk_group(uint8_t orig[N][N], uint8_t dmg[N][N], int x, int y)
+/* Cells of type a or b, 4-connected, into SF->qx/qy. Returns count. */
+static int walk(uint8_t *g, int x, int y, uint8_t a, uint8_t b)
 {
-    static uint8_t vis[N][N];
-    static int8_t qx[32], qy[32];
-    int head = 0, tail = 0, i, j;
+    struct sf *s = SF;
+    int head = 0, tail = 0, i;
+    uint8_t t;
+    for (i = 0; i < 100; i++) s->vis[i] = 0;
     if (x < 0 || x >= N || y < 0 || y >= N) return 0;
-    if (orig[y][x] != C_SHIP && orig[y][x] != C_HIT) return 0;
-    for (j = 0; j < N; j++) for (i = 0; i < N; i++) vis[j][i] = 0;
-    qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
-    vis[y][x] = 1;
-    while (head < tail && tail < 32) {
-        int cxx = qx[head], cyy = qy[head]; head++;
-        static const int8_t DX[4] = { 0, 1, 0, -1 };
-        static const int8_t DY[4] = { -1, 0, 1, 0 };
-        for (int d = 0; d < 4; d++) {
-            int nx = cxx + DX[d], ny = cyy + DY[d];
-            if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-            /* клетка — часть корабля, если в исходной расстановке она C_SHIP или C_HIT */
-            uint8_t t = orig[ny][nx];
-            if ((t == C_SHIP || t == C_HIT) && !vis[ny][nx]) {
-                vis[ny][nx] = 1;
-                if (tail < 32) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
-            }
+    t = AT(g, x, y);
+    if (t != a && t != b) return 0;
+    s->qx[0] = (int8_t)x;
+    s->qy[0] = (int8_t)y;
+    tail = 1;
+    s->vis[y * N + x] = 1;
+    while (head < tail) {
+        int cx = s->qx[head], cy = s->qy[head];
+        head++;
+        for (i = 0; i < 4; i++) {
+            int nx = cx + DX[i], ny = cy + DY[i];
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N || s->vis[ny * N + nx]) continue;
+            t = AT(g, nx, ny);
+            if (t != a && t != b) continue;
+            s->vis[ny * N + nx] = 1;
+            if (tail < 32) { s->qx[tail] = (int8_t)nx; s->qy[tail] = (int8_t)ny; tail++; }
         }
     }
-    /* корабль потоплен, если все клетки группы на повреждённой сетке — C_HIT */
-    for (int q = 0; q < tail; q++)
-        if (dmg[qy[q]][qx[q]] != C_HIT) return 0;
+    return tail;
+}
+
+static int sunk(uint8_t *orig, uint8_t *dmg, int x, int y)
+{
+    struct sf *s = SF;
+    int n = walk(orig, x, y, C_SHIP, C_HIT), i;
+    if (!n) return 0;
+    for (i = 0; i < n; i++)
+        if (AT(dmg, s->qx[i], s->qy[i]) != C_HIT) return 0;
     return 1;
 }
 
-/* Обёртки: потоплен ли корабль противника/игрока. */
-static int sunk_cpu(int x, int y) { return sunk_group(en_real, en_grid, x, y); }
-static int sunk_my_ship(int x, int y) { return sunk_group(my_grid, my_grid, x, y); }
-
-/* Залить периметр потопленного корабля (BFS по C_HIT-группе на сетке `g`,
- * база поля `bx` для draw_cell). Используется для корабля противника (en_grid)
- * и игрока (my_grid). */
-static void sink_area(uint8_t g[N][N], int bx, int x, int y)
+static void sink_area(uint8_t *g, int bx, int x, int y)
 {
-    static uint8_t vis[N][N];
-    static int8_t qx[64], qy[64];
-    int head = 0, tail = 0, i, j;
-    for (j = 0; j < N; j++) for (i = 0; i < N; i++) vis[j][i] = 0;
-    if (x < 0 || x >= N || y < 0 || y >= N) return;
-    if (g[y][x] != C_HIT) return;
-    qx[tail] = (int8_t)x; qy[tail] = (int8_t)y; tail++;
-    vis[y][x] = 1;
-    while (head < tail && tail < 64) {
-        int cxx = qx[head], cyy = qy[head]; head++;
-        static const int8_t DX[4] = { 0, 1, 0, -1 };
-        static const int8_t DY[4] = { -1, 0, 1, 0 };
-        for (int d = 0; d < 4; d++) {
-            int nx = cxx + DX[d], ny = cyy + DY[d];
-            if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-            if (g[ny][nx] == C_HIT && !vis[ny][nx]) {
-                vis[ny][nx] = 1;
-                if (tail < 64) { qx[tail] = (int8_t)nx; qy[tail] = (int8_t)ny; tail++; }
-            }
-        }
-    }
-    for (int q = 0; q < tail; q++) {
-        int gx = qx[q], gy = qy[q];
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
+    struct sf *s = SF;
+    int n = walk(g, x, y, C_HIT, C_HIT), q;
+    for (q = 0; q < n; q++) {
+        int gx = s->qx[q], gy = s->qy[q], dx, dy;
+        for (dy = -1; dy <= 1; dy++)
+            for (dx = -1; dx <= 1; dx++) {
                 int nx = gx + dx, ny = gy + dy;
                 if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-                if (g[ny][nx] == C_WATER) {
-                    g[ny][nx] = C_MISS;
-                    draw_cell(bx, (int8_t)nx, (int8_t)ny,
-                              (bx == EN_X && nx == cx && ny == cy) ? C_MISS : g[ny][nx],
-                              bx == EN_X && nx == cx && ny == cy);
+                if (AT(g, nx, ny) == C_WATER) {
+                    AT(g, nx, ny) = C_MISS;
+                    draw_cell(bx, nx, ny, C_MISS, bx == EN_X && nx == s->cx && ny == s->cy);
                 }
             }
-        }
     }
 }
 
-/* Описать корабль на my_grid, содержащий (x,y): первая клетка, длина,
- * ориентация. Вызывается для потопленного (все клетки C_HIT) корабля. */
 static void ship_span(int x, int y, int *sx, int *sy, int *len, int *horiz)
 {
+    struct sf *s = SF;
     int x0 = x, y0 = y, l = 1;
-    int h = (x > 0 && my_grid[y][x - 1] == C_HIT) ||
-            (x < N - 1 && my_grid[y][x + 1] == C_HIT);
+    int h = (x > 0 && AT(s->my, x - 1, y) == C_HIT) || (x < N - 1 && AT(s->my, x + 1, y) == C_HIT);
     if (h) {
-        while (x0 > 0 && my_grid[y][x0 - 1] == C_HIT) x0--;
-        while (x0 + l < N && my_grid[y][x0 + l] == C_HIT) l++;
-        *sx = x0; *sy = y;
+        while (x0 > 0 && AT(s->my, x0 - 1, y) == C_HIT) x0--;
+        while (x0 + l < N && AT(s->my, x0 + l, y) == C_HIT) l++;
+        *sx = x0;
+        *sy = y;
     } else {
-        while (y0 > 0 && my_grid[y0 - 1][x] == C_HIT) y0--;
-        while (y0 + l < N && my_grid[y0 + l][x] == C_HIT) l++;
-        *sx = x; *sy = y0;
+        while (y0 > 0 && AT(s->my, x, y0 - 1) == C_HIT) y0--;
+        while (y0 + l < N && AT(s->my, x, y0 + l) == C_HIT) l++;
+        *sx = x;
+        *sy = y0;
     }
-    *len = l; *horiz = h;
+    *len = l;
+    *horiz = h;
 }
 
-/* Приём SUNK: корабль задан первой клеткой (sx,sy), длиной len и ориентацией
- * horiz. Помечаем все клетки корабля C_HIT (идемпотентно) и заливаем периметр. */
-static void sink_span_en(int sx, int sy, int len, int horiz)
+static void sink_span_en(int sx, int sy, int len, int h)
 {
+    struct sf *s = SF;
     for (int i = 0; i < len; i++) {
-        int gx = sx + (horiz ? i : 0);
-        int gy = sy + (horiz ? 0 : i);
-        if (en_grid[gy][gx] != C_HIT) {
-            en_grid[gy][gx] = C_HIT;
-            draw_cell(EN_X, (int8_t)gx, (int8_t)gy, C_HIT, gx == cx && gy == cy);
+        int gx = sx + (h ? i : 0), gy = sy + (h ? 0 : i), dx, dy;
+        if (AT(s->en, gx, gy) != C_HIT) {
+            AT(s->en, gx, gy) = C_HIT;
+            draw_cell(EN_X, gx, gy, C_HIT, gx == s->cx && gy == s->cy);
         }
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
+        for (dy = -1; dy <= 1; dy++)
+            for (dx = -1; dx <= 1; dx++) {
                 int nx = gx + dx, ny = gy + dy;
                 if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
-                if (en_grid[ny][nx] == C_WATER) {
-                    en_grid[ny][nx] = C_MISS;
-                    draw_cell(EN_X, (int8_t)nx, (int8_t)ny, C_MISS, nx == cx && ny == cy);
+                if (AT(s->en, nx, ny) == C_WATER) {
+                    AT(s->en, nx, ny) = C_MISS;
+                    draw_cell(EN_X, nx, ny, C_MISS, nx == s->cx && ny == s->cy);
                 }
             }
-        }
     }
 }
 
-/* Ход CPU: стреляет по нашей сетке, возвращает 1 если попал.
- * Логика:
- *  - если уже есть подбитая клетка (C_HIT), добиваем корабль по прямой вдоль
- *    найденной линии (горизонтальной или вертикальной), стреляя в следующий
- *    свободный C_WATER/C_SHIP по той же оси — исключаем побочные (смежные)
- *    клетки;
- *  - потопленный корабль заливается периметром (C_MISS), поэтому в него и его
- *    смежные CPU больше не целится;
- *  - в случайном режиме не стреляем в C_MISS (уже исключённые). */
+static int free_cell(uint8_t t) { return t == C_WATER || t == C_SHIP; }
+
 static int cpu_turn(void)
 {
-    int tx = -1, ty = -1;
-
-    /* 1) Найдём первую HIT-клетку и определим направление добивания. */
-    static const int8_t DX[4] = { 0, 1, 0, -1 };
-    static const int8_t DY[4] = { -1, 0, 1, 0 };
-    int hx = -1, hy = -1;
-    for (int y = 0; y < N && ty < 0; y++) {
-        for (int x = 0; x < N; x++) {
-            if (my_grid[y][x] != C_HIT) continue;
+    struct sf *s = SF;
+    int tx = -1, ty = -1, hx = -1, hy = -1, x, y, d, guard;
+    for (y = 0; y < N && ty < 0; y++)
+        for (x = 0; x < N; x++) {
+            if (AT(s->my, x, y) != C_HIT) continue;
             if (hx < 0) { hx = x; hy = y; }
-            /* Добивание: есть ли HIT правее/левее (горизонтальный корабль)? */
-            if ((x > 0 && my_grid[y][x - 1] == C_HIT) ||
-                (x < N - 1 && my_grid[y][x + 1] == C_HIT)) {
-                if (x < N - 1 && my_grid[y][x + 1] == C_WATER) { tx = x + 1; ty = y; break; }
-                if (x > 0 && my_grid[y][x - 1] == C_WATER)     { tx = x - 1; ty = y; break; }
+            if ((x > 0 && AT(s->my, x - 1, y) == C_HIT) || (x < N - 1 && AT(s->my, x + 1, y) == C_HIT)) {
+                if (x < N - 1 && free_cell(AT(s->my, x + 1, y))) { tx = x + 1; ty = y; break; }
+                if (x > 0 && free_cell(AT(s->my, x - 1, y))) { tx = x - 1; ty = y; break; }
             }
-            /* есть HIT выше/ниже (вертикальный корабль)? */
-            if ((y > 0 && my_grid[y - 1][x] == C_HIT) ||
-                (y < N - 1 && my_grid[y + 1][x] == C_HIT)) {
-                if (y < N - 1 && my_grid[y + 1][x] == C_WATER) { tx = x; ty = y + 1; break; }
-                if (y > 0 && my_grid[y - 1][x] == C_WATER)     { tx = x; ty = y - 1; break; }
+            if ((y > 0 && AT(s->my, x, y - 1) == C_HIT) || (y < N - 1 && AT(s->my, x, y + 1) == C_HIT)) {
+                if (y < N - 1 && free_cell(AT(s->my, x, y + 1))) { tx = x; ty = y + 1; break; }
+                if (y > 0 && free_cell(AT(s->my, x, y - 1))) { tx = x; ty = y - 1; break; }
             }
         }
-    }
-
-    /* 2) Если корабль одинокий (одна HIT без линии), добиваем, стреляя в 4 соседа
-     *    но НЕ в смежные отреки (уже C_MISS проверяем). */
-    if (tx < 0 && hx >= 0) {
-        for (int d = 0; d < 4 && tx < 0; d++) {
+    if (tx < 0 && hx >= 0)
+        for (d = 0; d < 4 && tx < 0; d++) {
             int nx = hx + DX[d], ny = hy + DY[d];
-            if (nx >= 0 && nx < N && ny >= 0 && ny < N &&
-                (my_grid[ny][nx] == C_WATER || my_grid[ny][nx] == C_SHIP)) {
-                tx = nx; ty = ny;
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N && free_cell(AT(s->my, nx, ny))) {
+                tx = nx;
+                ty = ny;
             }
         }
-    }
-
-    /* 3) Случайный выстрел по свободной клетке (не C_MISS, не C_HIT). */
     if (tx < 0) {
-        int guard = 400;
-        while (tx < 0 && guard-- > 0) {
-            int rx = (int)(fast_rand() % N);
-            int ry = (int)(fast_rand() % N);
-            if (my_grid[ry][rx] == C_WATER || my_grid[ry][rx] == C_SHIP) {
-                tx = rx; ty = ry;
-            }
+        for (guard = 400; tx < 0 && guard--; ) {
+            int rx = (int)(rnd() % N), ry = (int)(rnd() % N);
+            if (free_cell(AT(s->my, rx, ry))) { tx = rx; ty = ry; }
         }
-        if (tx < 0) return 0;   /* нет свободных клеток */
+        if (tx < 0) return 0;
     }
-
-    if (my_grid[ty][tx] == C_SHIP) {
-        my_grid[ty][tx] = C_HIT;
-        if (my_hp > 0) my_hp--;
-        draw_cell(MY_X, (int8_t)tx, (int8_t)ty, C_HIT, 0);
-        /* если корабль игрока потоплен — заливаем периметр (исключить смежные
-         * клетки для дальнейших выстрелов CPU) */
-        if (sunk_my_ship(tx, ty)) {
-            sink_area(my_grid, MY_X, tx, ty);
-            set_status("ENEMY HIT YOU!", GFX_RED);
-        } else {
-            set_status("ENEMY HIT SHIP!", GFX_RED);
-        }
+    if (AT(s->my, tx, ty) == C_SHIP) {
+        AT(s->my, tx, ty) = C_HIT;
+        if (s->myhp) s->myhp--;
+        draw_cell(MY_X, tx, ty, C_HIT, 0);
+        if (sunk(s->my, s->my, tx, ty)) {
+            sink_area(s->my, MY_X, tx, ty);
+            status("ENEMY HIT YOU!", GFX_RED);
+        } else status("ENEMY HIT SHIP!", GFX_RED);
         return 1;
-    } else {
-        my_grid[ty][tx] = C_MISS;
-        draw_cell(MY_X, (int8_t)tx, (int8_t)ty, C_MISS, 0);
-        set_status("ENEMY MISSED!", 0x07E0);
-        return 0;
     }
+    AT(s->my, tx, ty) = C_MISS;
+    draw_cell(MY_X, tx, ty, C_MISS, 0);
+    status("ENEMY MISSED!", COL_SHIP);
+    return 0;
 }
 
-/* Экран выбора комнаты (0..99). Возвращает 1, если готово начать игру. */
+/* MENU confirms; 0-9 type digits (5 is a digit, not OK). */
 static int select_room(void)
 {
+    struct sf *s = SF;
     int pos = 0;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     gfx_text(30, 30, "ROOM (0-99):", 12, 1, GFX_WHITE, GFX_BLACK);
-
-    char r_str[4];
+    gfx_text(8, 102, "0-9 DIGIT  MENU OK", 20, 1, GFX_GREY, GFX_BLACK);
     for (;;) {
-        r_str[0] = room_id[0]; r_str[1] = room_id[1]; r_str[2] = 0;
+        char r[3];
+        r[0] = s->room[0];
+        r[1] = s->room[1];
+        r[2] = 0;
         gfx_fill(52, 56, 56, 30, GFX_BLACK);
-        gfx_text(64, 62, r_str, 4, 2, COL_CUR, GFX_BLACK);
-        gfx_text(20, 102, "0-9:SET 5:OK BACK:EXIT", 22, 1, 0x8410, GFX_BLACK);
-
+        gfx_text(64, 62, r, 4, 2, COL_CUR, GFX_BLACK);
         unsigned k = poll_key();
         if (k == KEY_BACK) return 0;
-        if (k == KEY_5) return 1;
-        if (k >= KEY_1 && k <= KEY_9) {
-            room_id[pos] = (char)('0' + (k - KEY_1 + 1));
-            if (pos == 0) pos = 1;
+        if (k == KEY_MENU) return 1;
+        if (k == KEY_0 || (k >= KEY_1 && k <= KEY_9)) {
+            char d = (char)('0' + (k - 2));
+            if (!pos) { s->room[0] = d; pos = 1; }
+            else s->room[1] = d;
         }
-        if (k == KEY_BACK) return 0;
         h9_delay(10);
     }
 }
 
+static void count_hp(void)
+{
+    struct sf *s = SF;
+    s->myhp = s->enhp = 0;
+    for (int i = 0; i < 100; i++) {
+        if (s->my[i] == C_SHIP) s->myhp++;
+        if (!s->aprs && s->real[i] == C_SHIP) s->enhp++;
+    }
+    if (s->aprs) s->enhp = 20;
+}
+
 static void init_game(void)
 {
-    rng_state = TICK ^ 0x5EA12345u;
-    if (!rng_state) rng_state = 101;
-    place_fleet(my_grid);
-    if (!aprs_mode) place_fleet(en_real);
-    for (int y = 0; y < N; y++)
-        for (int x = 0; x < N; x++) en_grid[y][x] = C_WATER;
-    cx = 4; cy = 4;
-    my_hp = 20;
-    en_hp = 20;
-    my_turn = 1;
-    game_started = 0;
-    waiting_reply = 0;
-    pending_shot = 0;
-    shot_timeout = 0;
-    last_fire_x = last_fire_y = -1;
-    fire_tick = 0;
-    rx_len = 0; rx_esc = 0;
-    for (int h = 0; h < 3; h++) { rx_hist[h][0] = -1; rx_hist[h][1] = -1; rx_hist[h][2] = -1; }
-    rx_hist_idx = 0;
+    struct sf *s = SF;
+    s->rng = TICK ^ 0x5EA12345u;
+    if (!s->rng) s->rng = 101;
+    place_fleet(s->my);
+    if (!s->aprs) place_fleet(s->real);
+    for (int i = 0; i < 100; i++) s->en[i] = C_WATER;
+    s->cx = s->cy = 4;
+    count_hp();
+    s->turn = 1;
+    s->started = s->pending = s->timeout = 0;
+    s->fx = s->fy = -1;
+    s->ftick = 0;
+    s->rxn = s->esc = 0;
 }
 
 static void draw_board(void)
 {
+    struct sf *s = SF;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    gfx_text(10, 12, "MY", 8, 1, 0x07E0, GFX_BLACK);
-    if (aprs_mode) {
-        char hdr[8] = { 'R', 'O', 'O', 'M', ' ', room_id[0], room_id[1], 0 };
+    gfx_text(10, 12, "MY", 8, 1, COL_SHIP, GFX_BLACK);
+    if (s->aprs) {
+        char hdr[8] = { 'R', 'O', 'O', 'M', ' ', s->room[0], s->room[1], 0 };
         gfx_text(EN_X + 6, 12, hdr, 8, 1, 0xF81F, GFX_BLACK);
-    } else {
-        gfx_text(EN_X + 6, 12, "EN", 8, 1, 0x07FF, GFX_BLACK);
+    } else gfx_text(EN_X + 6, 12, "EN", 8, 1, 0x07FF, GFX_BLACK);
+    gfx_text(4, 117, "2468:AIM 5:FIRE #:NEW", 26, 1, GFX_GREY, GFX_BLACK);
+    redraw();
+}
+
+static void clear_shot(void)
+{
+    struct sf *s = SF;
+    s->pending = s->timeout = 0;
+    s->fx = s->fy = -1;
+}
+
+/* Incoming FIRE: apply=1 first time, 0 retry. HIT/SUNK keep their turn; MISS gives us the turn. */
+static void on_fire(int x, int y, int apply)
+{
+    struct sf *s = SF;
+    uint8_t t = AT(s->my, x, y);
+    if (t == C_SHIP && apply) {
+        AT(s->my, x, y) = C_HIT;
+        if (s->myhp) s->myhp--;
+        draw_cell(MY_X, x, y, C_HIT, 0);
+        if (sunk(s->my, s->my, x, y)) {
+            int sx, sy, len, h;
+            sink_area(s->my, MY_X, x, y);
+            ship_span(x, y, &sx, &sy, &len, &h);
+            send_pkt("SUNK", sx, sy, len, h);
+            status("YOUR SHIP SUNK!", GFX_RED);
+        } else {
+            send_pkt("HIT", x, y, -1, -1);
+            status("HIT! ENEMY SHOTS", GFX_RED);
+        }
+        s->turn = 0;
+        return;
     }
-    gfx_text(4, 117, "2468:AIM 5:FIRE #:NEW", 26, 1, 0x8410, GFX_BLACK);
-    redraw_all();
+    if (t == C_HIT) {
+        if (sunk(s->my, s->my, x, y)) {
+            int sx, sy, len, h;
+            ship_span(x, y, &sx, &sy, &len, &h);
+            send_pkt("SUNK", sx, sy, len, h);
+        } else send_pkt("HIT", x, y, -1, -1);
+        return;
+    }
+    if (t == C_WATER && apply) {
+        AT(s->my, x, y) = C_MISS;
+        s->turn = 1;
+    }
+    draw_cell(MY_X, x, y, C_MISS, 0);
+    send_pkt("MISS", x, y, -1, -1);
+    if (apply && t == C_WATER) status("ENEMY MISS! TURN", COL_SHIP);
+}
+
+static void drop_shot(const char *msg)
+{
+    struct sf *s = SF;
+    clear_shot();
+    s->turn = 1;
+    status(msg, COL_MISS);
 }
 
 unsigned module_main(const struct h9_api *api, unsigned self)
 {
+    struct sf *s = SF;
     (void)api;
     (void)self;
+    if ((uint32_t)&sf_end + sizeof sf_end > BODY_TOP) {
+        gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+        gfx_text(4, 50, "MODULE TOO BIG", 16, 1, GFX_RED, GFX_BLACK);
+        gfx_wait_key();
+        return 0;
+    }
+    memset(s, 0, sizeof *s);
+    s->room[0] = '0';
+    s->room[1] = '1';
+    load_call();
 
-    /* MENU */
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     gfx_text(22, 14, "BATTLESHIP", 16, 1, 0x07FF, GFX_BLACK);
-    gfx_text(14, 54, "1: PLAY VS CPU", 18, 1, 0x07E0, GFX_BLACK);
+    gfx_text(14, 54, "1: PLAY VS CPU", 18, 1, COL_SHIP, GFX_BLACK);
     gfx_text(14, 78, "2: APRS RADIO LINK", 18, 1, 0xF81F, GFX_BLACK);
     gfx_text(14, 102, "BACK: EXIT", 12, 1, GFX_RED, GFX_BLACK);
-
-    key_last = key_seen = h9_key();
+    s->klast = s->kseen = (uint8_t)h9_key();
     for (;;) {
         unsigned k = poll_key();
         if (k == KEY_BACK) return 0;
-        if (k == KEY_1) { aprs_mode = 0; break; }
+        if (k == KEY_1) { s->aprs = 0; break; }
         if (k == KEY_2) {
-            aprs_mode = 1;
+            s->aprs = 1;
             if (!select_room()) return 0;
             break;
         }
         h9_delay(10);
     }
 
-    if (aprs_mode) {
-        aprs_side(aprs_rx_side());
+    if (s->aprs) {
+        unsigned side = RX_CH == 1 ? 0 : RX_CH == 2 ? 1 : 2;
+        SIDE_BYTE = (uint8_t)((SIDE_BYTE & 0x7F) | side << 7);
+        ROUTE_BYTE = (uint8_t)side;
+        RF_SETUP(0);
         aprs_quiet();
     }
 
     init_game();
     draw_board();
-    set_status("YOUR TURN! FIRE", COL_CUR);
+    status("YOUR TURN! FIRE", COL_CUR);
 
     for (;;) {
         unsigned k = poll_key();
 
         if (k == KEY_BACK) {
-            /* в APRS: если ждём ответ, Back отменяет выстрел (не выход) */
-            if (aprs_mode && pending_shot) {
-                waiting_reply = 0;
-                pending_shot = 0;
-                shot_timeout = 0;
-                last_fire_x = last_fire_y = -1;
-                my_turn = 1;
-                set_status("SHOT CANCELLED", 0xC618);
-                continue;
-            }
+            if (s->aprs && s->pending) { drop_shot("SHOT CANCELLED"); continue; }
             return 0;
         }
 
-        /* Таймаут ответа (APRS): 2 мин или Back — отмена хода */
-        if (aprs_mode && pending_shot && !shot_timeout &&
-            (uint32_t)(TICK - fire_tick) >= FIRE_TIMEOUT) {
-            shot_timeout = 1;
-            set_status("NO REPLY! 5:RETRY", GFX_RED);
+        if (s->aprs && s->pending && !s->timeout && (uint32_t)(TICK - s->ftick) >= FIRE_TIMEOUT) {
+            s->timeout = 1;
+            status("NO REPLY! 5:RETRY", GFX_RED);
         }
-        if (aprs_mode && shot_timeout) {
+        if (s->aprs && s->timeout) {
             if (k == KEY_5) {
-                aprs_send_game_pkt("FIRE", last_fire_x, last_fire_y, -1, -1);
-                fire_tick = TICK;
-                shot_timeout = 0;
-                set_status("RETRY SENT...", COL_CUR);
-                continue;
-            } else if (k == KEY_BACK) {
-                waiting_reply = 0;
-                pending_shot = 0;
-                shot_timeout = 0;
-                last_fire_x = last_fire_y = -1;
-                my_turn = 1;
-                set_status("SHOT DROPPED", 0xC618);
+                send_pkt("FIRE", s->fx, s->fy, -1, -1);
+                s->ftick = TICK;
+                s->timeout = 0;
+                status("RETRY SENT...", COL_CUR);
                 continue;
             }
+            if (k == KEY_BACK) { drop_shot("SHOT DROPPED"); continue; }
         }
 
-        /* Перемешивание расстановки по # до начала боя */
-        if (k == KEY_HASH && my_hp == 20 && en_hp == 20) {
-            place_fleet(my_grid);
-            if (!aprs_mode) place_fleet(en_real);
-            redraw_all();
-            set_status("FLEET REARRANGED", 0x07FF);
+        if (k == KEY_HASH && !s->started) {
+            place_fleet(s->my);
+            if (!s->aprs) place_fleet(s->real);
+            count_hp();
+            redraw();
+            status("FLEET REARRANGED", 0x07FF);
             continue;
         }
 
-        /* --- Обработка входящих APRS-пакетов (п.3,4,9) --- */
-        if (aprs_mode) {
+        if (s->aprs) {
             char cmd[8];
-            int v[4];
-            int nv = 0;
-            if (poll_aprs_rx(cmd, v, &nv)) {
-                int rx_x = v[0], rx_y = v[1];
-                if (cmd[0] == 'F' && nv >= 2 && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
-                    /* Первый FIRE фиксирует порядок ходов */
-                    game_started = 1;
-                    my_turn = 0;      /* соперник начал — он ходит */
-                    if (my_grid[rx_y][rx_x] == C_SHIP) {
-                        my_grid[rx_y][rx_x] = C_HIT;
-                        if (my_hp > 0) my_hp--;
-                        draw_cell(MY_X, (int8_t)rx_x, (int8_t)rx_y, C_HIT, 0);
-                        if (sunk_my_ship(rx_x, rx_y)) {
-                            sink_area(my_grid, MY_X, rx_x, rx_y);
-                            int sx, sy, len, horiz;
-                            ship_span(rx_x, rx_y, &sx, &sy, &len, &horiz);
-                            aprs_send_game_pkt("SUNK", sx, sy, len, horiz);
-                            set_status("YOUR SHIP SUNK!", GFX_RED);
-                        } else {
-                            aprs_send_game_pkt("HIT", rx_x, rx_y, -1, -1);
-                            set_status("HIT! ENEMY SHOTS", GFX_RED);
-                        }
+            int v[4], nv = 0;
+            if (poll_rx(cmd, v, &nv)) {
+                int x = v[0], y = v[1];
+                if (cmd[0] == 'F' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
+                    int first = AT(s->my, x, y) == C_SHIP || AT(s->my, x, y) == C_WATER;
+                    if (s->started && s->turn && !s->pending && first) {
+                        /* our turn: ignore a stray first shot */
                     } else {
-                        if (my_grid[rx_y][rx_x] == C_WATER) my_grid[rx_y][rx_x] = C_MISS;
-                        draw_cell(MY_X, (int8_t)rx_x, (int8_t)rx_y, C_MISS, 0);
-                        aprs_send_game_pkt("MISS", rx_x, rx_y, -1, -1);
-                        my_turn = 1;   /* промах — наш ход */
-                        set_status("ENEMY MISS! TURN", 0x07E0);
+                        s->started = 1;
+                        on_fire(x, y, first);
                     }
-                } else if (cmd[0] == 'H' && nv >= 2 && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
-                    en_grid[rx_y][rx_x] = C_HIT;
-                    if (en_hp > 0) en_hp--;
-                    draw_cell(EN_X, (int8_t)rx_x, (int8_t)rx_y, C_HIT, (rx_x == cx && rx_y == cy));
-                    waiting_reply = 0;
-                    pending_shot = 0;
-                    shot_timeout = 0;
-                    my_turn = 1;   /* попали — стреляем ещё */
-                    set_status("DIRECT HIT! AGAIN", COL_CUR);
+                } else if (cmd[0] == 'H' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
+                    if (AT(s->en, x, y) != C_HIT) {
+                        AT(s->en, x, y) = C_HIT;
+                        if (s->enhp) s->enhp--;
+                        draw_cell(EN_X, x, y, C_HIT, x == s->cx && y == s->cy);
+                    }
+                    clear_shot();
+                    s->turn = 1;
+                    status("DIRECT HIT! AGAIN", COL_CUR);
                 } else if (cmd[0] == 'S' && nv >= 4) {
-                    int sx = v[0], sy = v[1], len = v[2], horiz = v[3];
-                    if (len >= 1 && len <= 4 && horiz >= 0 && horiz <= 1 &&
-                        sx >= 0 && sx < N && sy >= 0 && sy < N &&
-                        (sx + (horiz ? len - 1 : 0)) < N && (sy + (horiz ? 0 : len - 1)) < N) {
-                        int ex = sx + (horiz ? len - 1 : 0);
-                        int ey = sy + (horiz ? 0 : len - 1);
-                        if ((last_fire_x >= sx && last_fire_x <= ex &&
-                             last_fire_y >= sy && last_fire_y <= ey)) {
-                            sink_span_en(sx, sy, len, horiz);
-                            waiting_reply = 0;
-                            pending_shot = 0;
-                            shot_timeout = 0;
-                            my_turn = 1;
-                            set_status("ENEMY SHIP SUNK!", 0x07E0);
-                        }
+                    int sx = v[0], sy = v[1], len = v[2], h = v[3];
+                    if (len >= 1 && len <= 4 && h >= 0 && h <= 1 && sx >= 0 && sx < N && sy >= 0 && sy < N &&
+                        sx + (h ? len - 1 : 0) < N && sy + (h ? 0 : len - 1) < N &&
+                        s->fx >= sx && s->fx <= sx + (h ? len - 1 : 0) &&
+                        s->fy >= sy && s->fy <= sy + (h ? 0 : len - 1)) {
+                        if (s->enhp) s->enhp--;   /* sinking shot never came as HIT */
+                        sink_span_en(sx, sy, len, h);
+                        clear_shot();
+                        s->turn = 1;
+                        status("ENEMY SHIP SUNK!", COL_SHIP);
                     }
-                } else if (cmd[0] == 'M' && nv >= 2 && rx_x >= 0 && rx_x < N && rx_y >= 0 && rx_y < N) {
-                    en_grid[rx_y][rx_x] = C_MISS;
-                    draw_cell(EN_X, (int8_t)rx_x, (int8_t)rx_y, C_MISS, (rx_x == cx && rx_y == cy));
-                    waiting_reply = 0;
-                    pending_shot = 0;
-                    shot_timeout = 0;
-                    my_turn = 0;   /* промах — ждём выстрел соперника */
-                    set_status("MISS! WAIT ENEMY", 0xC618);
+                } else if (cmd[0] == 'M' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
+                    AT(s->en, x, y) = C_MISS;
+                    draw_cell(EN_X, x, y, C_MISS, x == s->cx && y == s->cy);
+                    clear_shot();
+                    s->turn = 0;
+                    status("MISS! WAIT ENEMY", COL_MISS);
                 }
             }
         }
 
-        /* --- Прицеливание и выстрел --- */
-        if (my_hp > 0 && en_hp > 0 && k != 0 &&
-            !(aprs_mode && pending_shot) &&
-            !(aprs_mode && !my_turn)) {
-            int8_t ox = cx, oy = cy;
-            if (k == KEY_2 && cy > 0)          cy--;
-            else if (k == KEY_8 && cy < N - 1) cy++;
-            else if (k == KEY_4 && cx > 0)     cx--;
-            else if (k == KEY_6 && cx < N - 1) cx++;
-
-            if (cx != ox || cy != oy) {
-                draw_cell(EN_X, ox, oy, en_grid[oy][ox], 0);
-                draw_cell(EN_X, cx, cy, en_grid[cy][cx], 1);
+        if (s->myhp && s->enhp && k && !(s->aprs && s->pending) && !(s->aprs && !s->turn)) {
+            int8_t ox = s->cx, oy = s->cy;
+            if (k == KEY_2 && s->cy) s->cy--;
+            else if (k == KEY_8 && s->cy < N - 1) s->cy++;
+            else if (k == KEY_4 && s->cx) s->cx--;
+            else if (k == KEY_6 && s->cx < N - 1) s->cx++;
+            if (s->cx != ox || s->cy != oy) {
+                draw_cell(EN_X, ox, oy, AT(s->en, ox, oy), 0);
+                draw_cell(EN_X, s->cx, s->cy, AT(s->en, s->cx, s->cy), 1);
             }
-
-            if (k == KEY_5 && en_grid[cy][cx] == C_WATER) {
-                if (aprs_mode) {
-                    aprs_send_game_pkt("FIRE", cx, cy, -1, -1);
-                    game_started = 1;
-                    waiting_reply = 1;
-                    pending_shot = 1;
-                    shot_timeout = 0;
-                    last_fire_x = cx; last_fire_y = cy;
-                    fire_tick = TICK;
-                    my_turn = 0;
-                    set_status("SENT! WAITING REPLY...", COL_CUR);
+            if (k == KEY_5 && AT(s->en, s->cx, s->cy) == C_WATER) {
+                if (s->aprs) {
+                    send_pkt("FIRE", s->cx, s->cy, -1, -1);
+                    s->started = s->pending = 1;
+                    s->timeout = 0;
+                    s->fx = s->cx;
+                    s->fy = s->cy;
+                    s->ftick = TICK;
+                    s->turn = 0;
+                    status("SENT! WAITING...", COL_CUR);
+                } else if (AT(s->real, s->cx, s->cy) == C_SHIP) {
+                    AT(s->en, s->cx, s->cy) = C_HIT;
+                    if (s->enhp) s->enhp--;
+                    draw_cell(EN_X, s->cx, s->cy, C_HIT, 1);
+                    if (sunk(s->real, s->en, s->cx, s->cy)) {
+                        sink_area(s->en, EN_X, s->cx, s->cy);
+                        status("ENEMY SHIP SUNK!", COL_SHIP);
+                    } else status("DIRECT HIT! SHOOT", COL_CUR);
                 } else {
-                    if (en_real[cy][cx] == C_SHIP) {
-                        en_grid[cy][cx] = C_HIT;
-                        if (en_hp > 0) en_hp--;
-                        draw_cell(EN_X, cx, cy, C_HIT, 1);
-                        if (sunk_cpu(cx, cy)) {
-                            sink_area(en_grid, EN_X, cx, cy);
-                            set_status("ENEMY SHIP SUNK!", 0x07E0);
-                        } else {
-                            set_status("DIRECT HIT! SHOOT", COL_CUR);
-                        }
-                    } else {
-                        en_grid[cy][cx] = C_MISS;
-                        draw_cell(EN_X, cx, cy, C_MISS, 1);
-                        set_status("MISS! ENEMY FIRING...", 0xC618);
+                    AT(s->en, s->cx, s->cy) = C_MISS;
+                    draw_cell(EN_X, s->cx, s->cy, C_MISS, 1);
+                    status("MISS! ENEMY FIRING...", COL_MISS);
+                    h9_delay(400);
+                    while (cpu_turn()) {
                         h9_delay(400);
-                        while (cpu_turn()) {
-                            h9_delay(400);
-                            if (my_hp == 0) break;
-                        }
+                        if (!s->myhp) break;
                     }
                 }
             }
         }
 
-        if (my_hp == 0 || en_hp == 0) {
-            /* Отдельный экран конца игры: YOU WIN / YOU LOOSE. BACK — выход. */
+        if (!s->myhp || !s->enhp) {
             gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-            if (en_hp == 0) {
-                gfx_text(42, 52, "YOU WIN", 8, 2, 0x07E0, GFX_BLACK);
-            } else {
-                gfx_text(38, 52, "YOU LOOSE", 8, 2, GFX_RED, GFX_BLACK);
-            }
-            gfx_text(48, 92, "BACK: EXIT", 10, 1, 0x8410, GFX_BLACK);
+            if (!s->enhp) gfx_text(42, 52, "YOU WIN", 8, 2, COL_SHIP, GFX_BLACK);
+            else gfx_text(38, 52, "YOU LOOSE", 8, 2, GFX_RED, GFX_BLACK);
+            gfx_text(48, 92, "BACK: EXIT", 10, 1, GFX_GREY, GFX_BLACK);
             while (h9_key() != H9_KEY_NONE) h9_delay(3);
             for (;;) {
                 if (poll_key() == KEY_BACK) break;
@@ -858,7 +714,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             }
             return 0;
         }
-
         h9_delay(10);
     }
 }
+
+const uint32_t sf_end = 0x444E4653;   /* last .rodata; body must stay below 0x2B880 */
