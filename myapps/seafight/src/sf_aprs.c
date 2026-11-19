@@ -50,20 +50,90 @@ void sf_load_call(void)
     s->call[n] = 0;
 }
 
-/* Same TX path as seafight.aprs.c tx_test: buffers in the module image (RAM .rodata),
- * not in the APRS slot at 0x2B8E0 which stock reuses during STOCK_KISS_TX.
- * Payload: ">BS01:F 4 4". SUNK: ">BS01:S x y l h". Space, not comma. */
-/* Same as tx_test: static buffers next to the module, not in 0x2B8E0. */
+/* Same as tx_test: static buffers in the module, not 0x2B8E0. Payload ">BS01:F 4 4". */
 static uint8_t sf_kiss[88];
 static uint8_t sf_frame[64];
 static uint8_t sf_rx[128];
 static uint8_t sf_rxn;
+static char fire_cmd[8], reply_cmd[8];
+static int fire_v[4], reply_v[4], fire_nv, reply_nv;
+static uint8_t got_fire, got_reply;
+
+static void take_frame(void)
+{
+    struct sf *s = SF;
+    unsigned at, p;
+    int n = 0, nv = 0, v[4];
+    char cmd[8];
+    if (sf_rxn <= 2) return;
+    for (at = 0; at + 8 <= sf_rxn; at++) {
+        if (sf_rx[at] == '>' && sf_rx[at + 1] == 'B' && sf_rx[at + 2] == 'S' &&
+            sf_rx[at + 3] == (uint8_t)s->room[0] && sf_rx[at + 4] == (uint8_t)s->room[1] &&
+            sf_rx[at + 5] == ':')
+            break;
+    }
+    if (at + 8 > sf_rxn) return;
+    p = at + 6;
+    while (p < sf_rxn && sf_rx[p] >= 'A' && sf_rx[p] <= 'Z' && n < 7)
+        cmd[n++] = (char)sf_rx[p++];
+    cmd[n] = 0;
+    v[0] = v[1] = v[2] = v[3] = -1;
+    while (p < sf_rxn && nv < 4 && (sf_rx[p] == ' ' || sf_rx[p] == ',')) {
+        p++;
+        v[nv++] = (p < sf_rxn && sf_rx[p] >= '0' && sf_rx[p] <= '9') ? sf_rx[p] - '0' : -1;
+        p++;
+    }
+    if (!n) return;
+    if (cmd[0] == 'F') {
+        if (s->pending && nv >= 2 && v[0] == s->fx && v[1] == s->fy) return;
+        for (p = 0; p < 8; p++) fire_cmd[p] = cmd[p];
+        fire_v[0] = v[0]; fire_v[1] = v[1]; fire_v[2] = v[2]; fire_v[3] = v[3];
+        fire_nv = nv;
+        got_fire = 1;
+        return;
+    }
+    if (cmd[0] != 'H' && cmd[0] != 'M' && cmd[0] != 'S') return;
+    for (p = 0; p < 8; p++) reply_cmd[p] = cmd[p];
+    reply_v[0] = v[0]; reply_v[1] = v[1]; reply_v[2] = v[2]; reply_v[3] = v[3];
+    reply_nv = nv;
+    got_reply = 1;
+}
+
+/* Always empty the modem ring (seafight.aprs.c). Never leave READ behind WRITE. */
+static void drain_ring(void)
+{
+    unsigned write = RING_WRITE & RING_MASK, read = RING_READ & RING_MASK;
+    while (read != write) {
+        uint8_t b = RING[read];
+        read = (read + 1u) & RING_MASK;
+        if (b == 0xC0) {
+            take_frame();
+            sf_rxn = 0;
+        } else if (sf_rxn < sizeof sf_rx)
+            sf_rx[sf_rxn++] = b;
+    }
+    RING_READ = (uint16_t)read;
+}
+
+static void wait_ms(unsigned ms)
+{
+    while (ms) {
+        unsigned d = ms > 20 ? 20 : ms;
+        drain_ring();
+        h9_delay(d);
+        ms -= d;
+    }
+}
 
 static void send_pkt(const char *cmd, int x, int y, int l, int h)
 {
     struct sf *s = SF;
     uint8_t *kiss = sf_kiss, *frame = sf_frame;
     int p = 0, k = 0, i;
+    if (cmd[0] != 'F') {
+        sf_status("WAIT REPLY TX...", COL_CUR);
+        wait_ms(2000);
+    }
     pack_addr(frame + p, "DKXCE", 0); p += 7;
     pack_addr(frame + p, s->call, 1); p += 7;
     frame[p++] = 0x03;
@@ -96,55 +166,19 @@ static void send_pkt(const char *cmd, int x, int y, int l, int h)
     }
     kiss[k++] = 0xC0;
     STOCK_KISS_TX(kiss, (unsigned)k);
-    /* Do not touch the RF box after TX (seafight.aprs.c). */
-    while (h9_key() != H9_KEY_NONE) h9_delay(5);
-    h9_delay(200);
+    wait_ms(200);
     sf_board();
 }
 
-/* Drain like seafight.aprs.c: raw KISS into module-static sf_rx (not 0x2B8E0).
- * Find ">BS<room>:" anywhere in the frame — stock shows that text, address walk can miss it. */
-static int poll_rx(char *cmd, int *v, int *nv)
+static int take_slot(uint8_t *got, char *src, int *sv, int sn, char *cmd, int *v, int *nv)
 {
-    struct sf *s = SF;
-    unsigned write = RING_WRITE & RING_MASK, read = RING_READ & RING_MASK;
-    int got = 0;
-    while (read != write) {
-        uint8_t b = RING[read];
-        read = (read + 1u) & RING_MASK;
-        if (b == 0xC0) {
-            if (sf_rxn > 2) {
-                unsigned at, p;
-                int n = 0;
-                for (at = 0; at + 8 <= sf_rxn; at++) {
-                    if (sf_rx[at] == '>' && sf_rx[at + 1] == 'B' && sf_rx[at + 2] == 'S' &&
-                        sf_rx[at + 3] == (uint8_t)s->room[0] && sf_rx[at + 4] == (uint8_t)s->room[1] &&
-                        sf_rx[at + 5] == ':')
-                        break;
-                }
-                if (at + 8 <= sf_rxn) {
-                    p = at + 6;
-                    while (p < sf_rxn && sf_rx[p] >= 'A' && sf_rx[p] <= 'Z' && n < 7)
-                        cmd[n++] = (char)sf_rx[p++];
-                    cmd[n] = 0;
-                    v[0] = v[1] = v[2] = v[3] = -1;
-                    *nv = 0;
-                    while (p < sf_rxn && *nv < 4 && (sf_rx[p] == ' ' || sf_rx[p] == ',')) {
-                        p++;
-                        v[(*nv)++] = (p < sf_rxn && sf_rx[p] >= '0' && sf_rx[p] <= '9') ? sf_rx[p] - '0' : -1;
-                        p++;
-                    }
-                    if (n) got = 1;
-                }
-            }
-            sf_rxn = 0;
-            if (got) break;
-            continue;
-        }
-        if (sf_rxn < sizeof sf_rx) sf_rx[sf_rxn++] = b;
-    }
-    RING_READ = (uint16_t)read;
-    return got;
+    int i;
+    if (!*got) return 0;
+    for (i = 0; i < 8; i++) cmd[i] = src[i];
+    v[0] = sv[0]; v[1] = sv[1]; v[2] = sv[2]; v[3] = sv[3];
+    *nv = sn;
+    *got = 0;
+    return 1;
 }
 
 /* MENU confirms; 0-9 type digits (5 is a digit, not OK). */
@@ -231,6 +265,7 @@ static void sink_span_en(int sx, int sy, int len, int h)
 static void clear_shot(void)
 {
     struct sf *s = SF;
+    if (got_fire && fire_v[0] == s->fx && fire_v[1] == s->fy) got_fire = 0;
     s->pending = s->timeout = 0;
     s->fx = s->fy = -1;
 }
@@ -278,19 +313,22 @@ void sf_radio_fire(void)
 {
     struct sf *s = SF;
     if (s->timeout) {
-        send_pkt("FIRE", s->fx, s->fy, -1, -1);
-        s->ftick = TICK;
         s->timeout = 0;
+        s->pending = 1;
+        s->ftick = TICK;
+        got_reply = 0;
+        send_pkt("FIRE", s->fx, s->fy, -1, -1);
         sf_status("RETRY SENT...", COL_CUR);
         return;
     }
-    send_pkt("FIRE", s->cx, s->cy, -1, -1);
-    s->started = s->pending = 1;
-    s->timeout = 0;
     s->fx = s->cx;
     s->fy = s->cy;
+    s->started = s->pending = 1;
+    s->timeout = 0;
     s->ftick = TICK;
     s->turn = 0;
+    got_reply = 0;
+    send_pkt("FIRE", s->cx, s->cy, -1, -1);
     sf_status("SENT! WAITING...", COL_CUR);
 }
 
@@ -299,20 +337,24 @@ void sf_radio_tick(void)
     struct sf *s = SF;
     char cmd[8];
     int v[4], nv = 0, x, y;
-    if (!poll_rx(cmd, v, &nv)) return;
-    x = v[0];
-    y = v[1];
-    if (cmd[0] == 'F' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
-        int first = AT(s->my, x, y) == C_SHIP || AT(s->my, x, y) == C_WATER;
-        if (s->pending && x == s->fx && y == s->fy) {
-            /* own echo */
-        } else if (s->started && s->turn && !s->pending && first) {
-            /* our turn: ignore a stray first shot */
-        } else {
+    drain_ring();
+    if (s->pending) {
+        if (!take_slot(&got_reply, reply_cmd, reply_v, reply_nv, cmd, v, &nv)) return;
+    } else {
+        if (!take_slot(&got_fire, fire_cmd, fire_v, fire_nv, cmd, v, &nv)) return;
+        x = v[0];
+        y = v[1];
+        if (cmd[0] == 'F' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
+            int first = AT(s->my, x, y) == C_SHIP || AT(s->my, x, y) == C_WATER;
+            if (s->started && s->turn && first) return;
             s->started = 1;
             on_fire(x, y, first);
         }
-    } else if (cmd[0] == 'H' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
+        return;
+    }
+    x = v[0];
+    y = v[1];
+    if (cmd[0] == 'H' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
         if (AT(s->en, x, y) != C_HIT) {
             AT(s->en, x, y) = C_HIT;
             if (s->enhp) s->enhp--;
