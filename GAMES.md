@@ -26,9 +26,7 @@
 
 ## 1. 8 Ball Pool
 
-<img src="scripts/render_games/screen_8ballpool.png" width="240"/>
-<img src="scripts/render_games/screen_8ballpool_pause.png" width="240"/>
-<img src="scripts/render_games/screen_8ballpool_win.png" width="240"/>
+<img src="scripts/render_games/screen_8ballpool.png" width="240"/> <img src="scripts/render_games/screen_8ballpool_pause.png" width="240"/> <img src="scripts/render_games/screen_8ballpool_win.png" width="240"/>
 
 Классический пул. Десять шаров (белый биток + 8 цветных + чёрная восьмёрка) на
 зелёном сукне. Вращаем прицел, задаём силу удара и бьём по битку. Победа — забить
@@ -48,10 +46,7 @@
 
 ## 2. Battle City
 
-<img src="scripts/render_games/screen_battlecity.png" width="240"/>
-<img src="scripts/render_games/screen_battlecity_pause.png" width="240"/>
-<img src="scripts/render_games/screen_battlecity_clear.png" width="240"/>
-<img src="scripts/render_games/screen_battlecity_over.png" width="240"/>
+<img src="scripts/render_games/screen_battlecity.png" width="240"/> <img src="scripts/render_games/screen_battlecity_pause.png" width="240"/> <img src="scripts/render_games/screen_battlecity_clear.png" width="240"/> 77<img src="scripts/render_games/screen_battlecity_over.png" width="240"/>
 
 Аркада про танки. Защищаем свой штаб (орёл) внизу карты от трёх вражеских танков.
 35 уровней. Тайлы: кирпич (разрушаемый), сталь (неразрушаемая), вода (танки не
@@ -70,10 +65,7 @@
 
 ## 3. Bomberman
 
-<img src="scripts/render_games/screen_bomberman.png" width="240"/>
-<img src="scripts/render_games/screen_bomberman_explode.png" width="240"/>
-<img src="scripts/render_games/screen_bomberman_clear.png" width="240"/>
-<img src="scripts/render_games/screen_bomberman_over.png" width="240"/>
+<img src="scripts/render_games/screen_bomberman.png" width="240"/> <img src="scripts/render_games/screen_bomberman_explode.png" width="240"/> <img src="scripts/render_games/screen_bomberman_clear.png" width="240"/> <img src="scripts/render_games/screen_bomberman_over.png" width="240"/>
 
 Классический бомбермен. Ставим бомбы (взрывают крестом), разрушаем кирпичи,
 находим спрятанные дверь и бонус `+1 к радиусу взрыва`. Уничтожаем всех 4 врагов,
@@ -92,10 +84,7 @@
 
 ## 4. Bomberman 2
 
-<img src="scripts/render_games/screen_bomberman2.png" width="240"/>
-<img src="scripts/render_games/screen_bomberman2_explode.png" width="240"/>
-<img src="scripts/render_games/screen_bomberman2_clear.png" width="240"/>
-<img src="scripts/render_games/screen_bomberman2_over.png" width="240"/>
+<img src="scripts/render_games/screen_bomberman2.png" width="240"/> <img src="scripts/render_games/screen_bomberman2_explode.png" width="240"/> <img src="scripts/render_games/screen_bomberman2_clear.png" width="240"/> <img src="scripts/render_games/screen_bomberman2_over.png" width="240"/>
 
 Расширенная версия бомбермена. До 3 одновременных бомб, ручной детонатор (клавиша
 `#`), проход сквозь кирпичи. Три вида врагов: розовый шарик (обычный), синий
@@ -115,10 +104,7 @@
 
 ## 5. Load Runner
 
-<img src="scripts/render_games/screen_loadrunner.png" width="240"/>
-<img src="scripts/render_games/screen_loadrunner_exit.png" width="240"/>
-<img src="scripts/render_games/screen_loadrunner_clear.png" width="240"/>
-<img src="scripts/render_games/screen_loadrunner_over.png" width="240"/>
+<img src="scripts/render_games/screen_loadrunner.png" width="240"/> <img src="scripts/render_games/screen_loadrunner_exit.png" width="240"/> <img src="scripts/render_games/screen_loadrunner_clear.png" width="240"/> <img src="scripts/render_games/screen_loadrunner_over.png" width="240"/>
 
 Ледяной бегун по лестницам и перекладинам. Собираем всё золото — открывается
 скрытый выход (жёлтая лестница наверх), добираемся до него. Охранники гоняются за
@@ -138,10 +124,7 @@
 
 ## 6. Mineswiper
 
-<img src="scripts/render_games/screen_mineswiper.png" width="240"/>
-<img src="scripts/render_games/screen_mineswiper_flag.png" width="240"/>
-<img src="scripts/render_games/screen_mineswiper_boom.png" width="240"/>
-<img src="scripts/render_games/screen_mineswiper_win.png" width="240"/>
+<img src="scripts/render_games/screen_mineswiper.png" width="240"/> <img src="scripts/render_games/screen_mineswiper_flag.png" width="240"/> <img src="scripts/render_games/screen_mineswiper_boom.png" width="240"/> <img src="scripts/render_games/screen_mineswiper_win.png" width="240"/>
 
 Сапёр. Поле 15×11, 22 мины. Первый ход всегда безопасен (мины не ставятся в зоне
 3×3 вокруг курсора). Открытые клетки показывают количество мин вокруг, волновой
@@ -160,12 +143,8 @@
 
 ## 7. Othello
 
-<img src="scripts/render_othello_screens/screen_start.png" width="240"/>
-<img src="scripts/render_othello_screens/screen_after.png" width="240"/>
-<img src="scripts/render_othello_screens/screen_pass.png" width="240"/>
-<img src="scripts/render_othello_screens/screen_skip.png" width="240"/>
-<img src="scripts/render_othello_screens/screen_win.png" width="240"/>
-<img src="scripts/render_othello_screens/screen_lose.png" width="240"/>
+<img src="scripts/render_othello_screens/screen_start.png" width="240"/> <img src="scripts/render_othello_screens/screen_after.png" width="240"/> <img src="scripts/render_othello_screens/screen_pass.png" width="240"/>     
+<img src="scripts/render_othello_screens/screen_skip.png" width="240"/> <img src="scripts/render_othello_screens/screen_win.png" width="240"/> <img src="scripts/render_othello_screens/screen_lose.png" width="240"/>     
 
 Реверси (Отелло) против ИИ. Доска 8×8, игрок — белые фишки, CPU — чёрные. ИИ
 оценивает позицию по весам клеток (углы самые ценные) и переворачивает захваченные
@@ -184,15 +163,9 @@
 
 ## 8. Sea Fight
 
-<img src="scripts/render_seafight_screens/screen_menu.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_room.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_ready.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_sent.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_hit.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_sunk.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_enemy_hit.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_win.png" width="240"/>
-<img src="scripts/render_seafight_screens/screen_lose.png" width="240"/>
+<img src="scripts/render_seafight_screens/screen_menu.png" width="240"/> <img src="scripts/render_seafight_screens/screen_room.png" width="240"/> <img src="scripts/render_seafight_screens/screen_ready.png" width="240"/>    
+<img src="scripts/render_seafight_screens/screen_sent.png" width="240"/> <img src="scripts/render_seafight_screens/screen_hit.png" width="240"/> <img src="scripts/render_seafight_screens/screen_sunk.png" width="240"/>     
+<img src="scripts/render_seafight_screens/screen_enemy_hit.png" width="240"/> <img src="scripts/render_seafight_screens/screen_win.png" width="240"/> <img src="scripts/render_seafight_screens/screen_lose.png" width="240"/>    
 
 «Морской бой». Два режима: **1 — PLAY VS CPU** (игра против рации) и **2 — APRS
 RADIO LINK** (игра по рации через APRS, комнаты 0–99). Два поля 10×10. Система
@@ -211,9 +184,7 @@ RADIO LINK** (игра по рации через APRS, комнаты 0–99). 
 
 ## 9. Snake
 
-<img src="scripts/render_games/screen_snake.png" width="240"/>
-<img src="scripts/render_games/screen_snake_pause.png" width="240"/>
-<img src="scripts/render_games/screen_snake_over.png" width="240"/>
+<img src="scripts/render_games/screen_snake.png" width="240"/> <img src="scripts/render_games/screen_snake_pause.png" width="240"/> <img src="scripts/render_games/screen_snake_over.png" width="240"/>
 
 Классическая змейка. Поле 26×19. Собираем красные яблоки (+10), змейка растёт и
 ускоряется (шаг от 180 до 60 мс). Столкновение со стеной или собственным хвостом —
@@ -230,10 +201,7 @@ RADIO LINK** (игра по рации через APRS, комнаты 0–99). 
 
 ## 10. Tetris
 
-<img src="scripts/render_games/screen_tetris.png" width="240"/>
-<img src="scripts/render_games/screen_tetris_cleared.png" width="240"/>
-<img src="scripts/render_games/screen_tetris_pause.png" width="240"/>
-<img src="scripts/render_games/screen_tetris_over.png" width="240"/>
+<img src="scripts/render_games/screen_tetris.png" width="240"/> <img src="scripts/render_games/screen_tetris_cleared.png" width="240"/> <img src="scripts/render_games/screen_tetris_pause.png" width="240"/> <img src="scripts/render_games/screen_tetris_over.png" width="240"/>
 
 Тетрис. Стакан 10×20, 7 классических фигур (I, O, T, S, Z, J, L) с поворотом и
 «кик-стью». Заполненный ряд убирается (+100 очков). Автопадение раз в 0.5 с,
