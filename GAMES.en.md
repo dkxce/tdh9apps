@@ -147,7 +147,7 @@ The algorithm opens up empty areas. Victory - open all the cells without mines.
 
 Reversi (Othello) vs. AI. Board 8×8, player – white chips, CPU – black. AI
 assesses the position by weights of cells (corners are the most valuable) and flips the captured ones
-chips. Blue dots are clues to the available moves. End by chip count.
+chips. Blue dots are hints of available moves. End by chip count.
 (WIN/LOSE/DRAW).
 
 | Button | Action. |
@@ -179,6 +179,8 @@ Guidance, hits and sinkings.
 | `#` | play |
 | `Back` | exit |
 
+<img src="dkxcepics/IMG_20261119_162906.jpg" width="300"/>
+
 ---
 
 ## 9. Snake.
@@ -186,7 +188,7 @@ Guidance, hits and sinkings.
 <img src="scripts/render_games/screen_snake.png" width="240"/> <img src="scripts/render_games/screen_snake_pause.png" width="240"/> <img src="scripts/render_games/screen_snake_over.png" width="240"/>
 
 Classic snake. 26x19 field. We collect red apples (+10) and the snake grows.
-accelerates (step from 180 to 60 ms). Collision with a wall or its own tail
+accelerates (step 180 to 60 ms). Collision with a wall or its own tail
 loss.
 
 | Button | Action. |
@@ -251,7 +253,7 @@ transmitted to the opponent (`YOU` / `WT`). Winning - to score the black 8th las
 td9_apps.exe install 8ballpool battlecity bomberman bomberman2 loadrunner mineswiper othello seafight snake tetris
 ```
 
-The app menu is automatically installed. Take a look at this.
+The app menu is placed automatically. Take a look at this.
 
 ```
 td9_apps.exe peek
