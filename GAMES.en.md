@@ -1,4 +1,4 @@
-# Game Collection (10 games) - TIDRADIO TD-H9
+# Game Collection (11 games) - TIDRADIO TD-H9
 
 [Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
 [Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
@@ -18,9 +18,10 @@ Application manager. All modules are flooded as`.h9mod`by Bluetooth (see para.[i
 | 5 | Load Runner | `loadrunner.h9mod` |
 | 6 | Mineswiper | `mineswiper.h9mod` |
 | 7 | Othello | `othello.h9mod` |
-| 8 | Sea Fight | `seafight.h9mod` |
+| 8 | Sea Fight (CPU + APRS Dual Mode) | `seafight.h9mod` |
 | 9 | Snake. | `snake.h9mod` |
 | 10 | Tetris | `tetris.h9mod` |
+| 11 | Aprs Pool (Local + APRS Dual Mode) | `aprspool.h9mod` |
 
 ---
 
@@ -159,7 +160,7 @@ chips. Blue dots are clues to the available moves. End by chip count.
 
 ---
 
-## 8. Sea Fight
+## 8. Sea Fight (CPU + APRS Dual Mode)
 
 <img src="scripts/render_seafight_screens/screen_menu.png" width="240"/> <img src="scripts/render_seafight_screens/screen_room.png" width="240"/> <img src="scripts/render_seafight_screens/screen_ready.png" width="240"/>   
 <img src="scripts/render_seafight_screens/screen_sent.png" width="240"/> <img src="scripts/render_seafight_screens/screen_hit.png" width="240"/> <img src="scripts/render_seafight_screens/screen_sunk.png" width="240"/>   
@@ -212,6 +213,28 @@ instantaneous discharge (`7/9`), pause (`*`).
 | `8` | downhill |
 | `7` / `9` | drop-down |
 | `*` | pause |
+| `Back` | exit |
+
+---
+
+## 11. Aprs Pool (Local + APRS Dual Mode)
+
+<img src="scripts/render_games/screen_aprspool_menu.png" width="240"/> <img src="scripts/render_games/screen_aprspool_room.png" width="240"/> <img src="scripts/render_games/screen_aprspool_aprs_aim.png" width="240"/>   
+<img src="scripts/render_games/screen_aprspool_roll.png" width="240"/> <img src="scripts/render_games/screen_aprspool_win.png" width="240"/> <img src="scripts/render_games/screen_aprspool_lose.png" width="240"/>
+
+Pool 8 with two modes.**1 - Play Local**- local play
+(one player, foul balls).**2 - APRS RADIO LINK**- radio game through
+APRS in room 0-99: after impact, the state of the balls is synchronized (SYNC),
+transmitted to the opponent (`YOU` / `WT`). Winning - to score the black 8th last; if
+8 goes into the hole early.`8-BALL FOUL`and losing.
+
+| Button | Action. |
+| --- | --- |
+| `4` / `6` | left-right |
+| `1` / `3` | angle adjustment |
+| `2` / `8` | stronger/weaker |
+| `0`or`5`locally | punch |
+| `*` | pause (only in local mode) |
 | `Back` | exit |
 
 ---
