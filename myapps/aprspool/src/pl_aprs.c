@@ -266,6 +266,9 @@ void pl_radio_shot(void)
     s->we_shot = 1;
     s->turn = 0;
     send_shot_pkt(a, pwr);
+    gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
+    pl_hud();
+    pl_render();
     wait_ms(500);
     pl_strike(a, pwr);
 }
