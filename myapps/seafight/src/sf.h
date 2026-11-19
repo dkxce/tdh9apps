@@ -45,7 +45,6 @@ int sf_sunk(uint8_t *orig, uint8_t *dmg, int x, int y);
 void sf_sink(uint8_t *g, int bx, int x, int y);
 void sf_count_hp(void);
 void sf_init(void);
-void sf_run(const char *name);
 void sf_play(void (*do_fire)(void), void (*on_tick)(void));
 
 void sf_cpu_fire(void);

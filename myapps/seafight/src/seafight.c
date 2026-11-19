@@ -23,7 +23,12 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         if (k == KEY_BACK) return 0;
         if (k == KEY_1) { s->aprs = 0; break; }
         if (k == KEY_2) {
-            sf_run(".SF RADIO");
+            volatile struct h9_request *rq = H9_REQUEST;
+            unsigned i = 0;
+            const char *name = ".SF RADIO";
+            for (; i < H9_NAME_BYTES && name[i]; i++) rq->name[i] = name[i];
+            for (; i < H9_NAME_BYTES; i++) rq->name[i] = ' ';
+            rq->magic = H9_REQUEST_MAGIC;
             return 0;
         }
         h9_delay(10);

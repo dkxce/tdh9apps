@@ -232,15 +232,6 @@ void sf_init(void)
     s->klast = s->kseen = (uint8_t)h9_key();
 }
 
-void sf_run(const char *name)
-{
-    volatile struct h9_request *rq = H9_REQUEST;
-    unsigned i = 0;
-    for (; i < H9_NAME_BYTES && name[i]; i++) rq->name[i] = name[i];
-    for (; i < H9_NAME_BYTES; i++) rq->name[i] = ' ';
-    rq->magic = H9_REQUEST_MAGIC;
-}
-
 void sf_play(void (*do_fire)(void), void (*on_tick)(void))
 {
     struct sf *s = SF;
@@ -280,8 +271,7 @@ void sf_play(void (*do_fire)(void), void (*on_tick)(void))
             ox = s->cx;
             oy = s->cy;
             if (k == KEY_2 && s->cy) s->cy--;
-            else if (k == KEY_8 && s->cy < N - 1) s->cy++;
-            else if (k == KEY_5 && s->cy < N - 1) s->cy++;
+            else if ((k == KEY_8 || k == KEY_5) && s->cy < N - 1) s->cy++;
             else if (k == KEY_4 && s->cx) s->cx--;
             else if (k == KEY_6 && s->cx < N - 1) s->cx++;
             if (s->cx != ox || s->cy != oy) {
