@@ -50,14 +50,15 @@ void sf_load_call(void)
     s->call[n] = 0;
 }
 
-/* dst=APH9BS, src=call, ">BS<room>:<cmd>,x,y[,len,h]". Do not touch the RF box after TX. */
+/* dst=DKXCE, src=call, ">BS<room>:<cmd>,x,y[,len,h]". KISS buffer lives in struct sf:
+ * STOCK_KISS_TX keeps the pointer. Do not touch the RF box after TX. */
 static void send_pkt(const char *cmd, int x, int y, int l, int h)
 {
     struct sf *s = SF;
-    uint8_t kiss[88];
+    uint8_t *kiss = s->kiss;
     uint8_t frame[64];
     int p = 0, k = 0, i;
-    pack_addr(frame + p, "APH9BS", 0); p += 7;
+    pack_addr(frame + p, "DKXCE", 0); p += 7;
     pack_addr(frame + p, s->call, 1); p += 7;
     frame[p++] = 0x03;
     frame[p++] = 0xF0;
@@ -89,10 +90,7 @@ static void send_pkt(const char *cmd, int x, int y, int l, int h)
     }
     kiss[k++] = 0xC0;
     STOCK_KISS_TX(kiss, (unsigned)k);
-    /* LCD or RF_SETUP right after TX cuts the frame mid-payload
-     * (on air: ">BS01:FIRE" without ,x,y). Let the modem finish, reopen RX, then restore the board. */
-    h9_delay(95);
-    aprs_quiet();
+    h9_delay(200);
     sf_board();
 }
 
@@ -131,14 +129,20 @@ static int poll_rx(char *cmd, int *v, int *nv)
                     s->rx[at + 3] == (uint8_t)s->room[0] && s->rx[at + 4] == (uint8_t)s->room[1] &&
                     s->rx[at + 5] == ':') {
                     p = at + 6;
-                    while (p < s->rxn && s->rx[p] != ',' && n < 7) cmd[n++] = (char)s->rx[p++];
+                    while (p < s->rxn && s->rx[p] >= 'A' && s->rx[p] <= 'Z' && n < 7)
+                        cmd[n++] = (char)s->rx[p++];
                     cmd[n] = 0;
                     v[0] = v[1] = v[2] = v[3] = -1;
                     *nv = 0;
-                    while (p < s->rxn && *nv < 4 && s->rx[p] == ',') {
-                        p++;
-                        v[(*nv)++] = (p < s->rxn && s->rx[p] >= '0' && s->rx[p] <= '9') ? s->rx[p] - '0' : -1;
-                        p++;
+                    if (p < s->rxn && s->rx[p] == ',') {
+                        while (p < s->rxn && *nv < 4 && s->rx[p] == ',') {
+                            p++;
+                            v[(*nv)++] = (p < s->rxn && s->rx[p] >= '0' && s->rx[p] <= '9') ? s->rx[p] - '0' : -1;
+                            p++;
+                        }
+                    } else {
+                        while (p < s->rxn && *nv < 4 && s->rx[p] >= '0' && s->rx[p] <= '9')
+                            v[(*nv)++] = s->rx[p++] - '0';
                     }
                     if (n) got = 1;
                 }
