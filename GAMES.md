@@ -181,7 +181,7 @@ RADIO LINK** (игра по рации через APRS, комнаты 0–99). 
 | `#` | новая игра |
 | `Back` | выход |
 
-<img src="dkxcepics/IMG_20261119_162906.jpg"/> 
+<img src="dkxcepics/IMG_20261119_162906.jpg" width="300"/> 
 
 ---
 
