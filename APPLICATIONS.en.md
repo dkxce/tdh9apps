@@ -1,7 +1,8 @@
 # Tidradio TD-H9 Widget Installation Guide
 
 [Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
-[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
+[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
+[Hand-to-hand games](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
 
 Copy from[releases](https://github.com/dkxce/tdh9apps/releases) **custom**for
 TIDRADIO TD-H9 with a set of tools for managing applications.
@@ -14,6 +15,13 @@ TIDRADIO TD-H9 with a set of tools for managing applications.
 <img src="scripts/render_tracker_screens/screen_fixed_lat.png"/> <img src="scripts/render_tracker_screens/screen_map.png"/> <img src="scripts/render_tracker_screens/screen_menu.png"/>   
 <img src="scripts/render_tracker_screens/screen_navto.png"/> <img src="scripts/render_tracker_screens/screen_point.png"/> <img src="scripts/render_tracker_screens/screen_points.png"/>   
 <img src="scripts/render_tracker_screens/screen_radar.png"/> <img src="scripts/render_tracker_screens/screen_settings.png"/> <img src="scripts/render_tracker_screens/screen_step_dist.png"/>
+
+<img src="scripts/render_seafight_screens/screen_enemy_hit.png"/> <img src="scripts/render_seafight_screens/screen_hit.png"/> <img src="scripts/render_seafight_screens/screen_lose.png"/>   
+<img src="scripts/render_seafight_screens/screen_menu.png"/> <img src="scripts/render_seafight_screens/screen_ready.png"/> <img src="scripts/render_seafight_screens/screen_room.png"/>   
+<img src="scripts/render_seafight_screens/screen_sent.png"/> <img src="scripts/render_seafight_screens/screen_sunk.png"/> <img src="scripts/render_seafight_screens/screen_win.png"/>
+
+<img src="scripts/render_othello_screens/screen_after.png"/> <img src="scripts/render_othello_screens/screen_lose.png"/> <img src="scripts/render_othello_screens/screen_pass.png"/>   
+<img src="scripts/render_othello_screens/screen_skip.png"/> <img src="scripts/render_othello_screens/screen_start.png"/> <img src="scripts/render_othello_screens/screen_win.png"/>
 
 ## What's in the archive?
 
@@ -34,7 +42,7 @@ TIDRADIO TD-H9 with a set of tools for managing applications.
 
 # Part 1. For regular users (ready-made .exe)
 
-No Python is needed. It is enough to unpack the archive and run`.exe`.
+You don't need any Python. It is enough to unpack the archive and run`.exe`.
 
 ## 1.1. Sweeve the custom firmware
 
@@ -82,7 +90,7 @@ Delete everything:
 td9_apps.exe remove
 ```
 
-Open after installation**menu**deterrence`#`- there will appear
+After installation, open**menu**deterrence`#`- there will appear
 installed modules.
 
 > Tip: in order to password the radio, it is necessary to interpret the module`passlock`.
@@ -214,7 +222,7 @@ poetry run python h9_flash.py --fw firmware/TD-H9-V1.0.38DKXCE.fw --backup befor
 
 Flag reference:`h9_flash.py --help`.
 
-## 2.3. Appendices (td9 apps.py)
+## 2.3. Applications (td9 apps.py)
 
 ```
 poetry run python td9_apps.py list
@@ -265,7 +273,7 @@ poetry run python td9_tracksvr.py load [--file tracksvr_points.json]
 
 # Part 3. For those who want to build firmware and applications themselves
 
-Everything is collected by your GitHub Actions from source.
+Everything is collected from your GitHub Actions source.
 
 ## 3.1. Structure of the project
 
@@ -325,7 +333,7 @@ For its correct assembly, you need an actual stub.
 
 ## Requirements and observations
 
-* **Bluetooth**for all`.exe`/`.py`(Apart from the HID, the radio should be
+* **Bluetooth**for everyone`.exe`/`.py`(Apart from the HID, the radio should be
   switched on, Bluetooth active, radio next to PC.
 * **hidapi**: should lie next to`.exe`(It is already in the archive.)
 * When using lock firmware, keep Bluetooth on until

@@ -1,7 +1,8 @@
 Tidradio TD-H9 HID Unbricker + Custom Apps
 
 [Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
-[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
+[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
+[Hand-to-hand games](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
 
 Tools for debugging the main flash memory of the radio station**TIDRADIO TD-H9**
 в **HID mode**(without switching the chip to UBOOT mode). The project consists of two parts:
@@ -34,7 +35,7 @@ Scripts work exactly on the HID channel.
 | **TIDRADIO TD-H9** | walkie-talkie | you |
 | **USB-C cable with data transfer** | Physical connection (not "charging"!) | you |
 | **Python 3. 11. +** | performance | python.org |
-| **Poetry** | Dependency management and environment n | Python-poetry.org |
+| **Poetry** | Dependency management and environment n | python-poetry.org |
 | **Package`hid`**(pyhidapi) | access | `poetry add hid` |
 | **`hidapi.dll`(x64)** | native library`hid` | github.com/libusb/hidapi/releases |
 | **PySide6** | GUI only | `poetry add pyside6` |
@@ -246,7 +247,7 @@ Chat-20/
 | Travel points | [myapps/tracksvr/README. md](myapps/tracksvr/README.md) | [myapps/tracksvr/README.en. md](myapps/tracksvr/README.en.md) |
 | Tracker restrictions | [myapps/tracking/LIMITS. md](myapps/tracking/LIMITS.md) | [myapps/tracking/LIMITS.en. md](myapps/tracking/LIMITS.en.md) |
 | License. | [LICENSE. md](LICENSE.md) | — |
-| Third-party components | [Third party notices. md](THIRD_PARTY_NOTICES.md) | — |
+| Third-party components | [THIRD PARTY NOTICES. md](THIRD_PARTY_NOTICES.md) | — |
 | Version. | [version. md](version.md) | — |
 
 ---
