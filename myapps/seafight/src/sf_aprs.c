@@ -56,6 +56,8 @@ void sf_load_call(void)
 /* Same as tx_test: static buffers next to the module, not in 0x2B8E0. */
 static uint8_t sf_kiss[88];
 static uint8_t sf_frame[64];
+static uint8_t sf_rx[128];
+static uint8_t sf_rxn;
 
 static void send_pkt(const char *cmd, int x, int y, int l, int h)
 {
@@ -100,20 +102,8 @@ static void send_pkt(const char *cmd, int x, int y, int l, int h)
     sf_board();
 }
 
-static int self_rx(void)
-{
-    struct sf *s = SF;
-    int i;
-    for (i = 0; i < 6; i++) {
-        uint8_t c = (uint8_t)s->call[i];
-        if (c >= 'a' && c <= 'z') c -= 32;
-        if (!s->call[i] || s->call[i] == '-') c = ' ';
-        if (s->rx[8 + i] != (uint8_t)(c << 1)) return 0;
-    }
-    return 1;
-}
-
-/* Drain like seafight.aprs.c: raw KISS bytes, no unescape. Payload after AX.25 last-bit. */
+/* Drain like seafight.aprs.c: raw KISS into module-static sf_rx (not 0x2B8E0).
+ * Find ">BS<room>:" anywhere in the frame — stock shows that text, address walk can miss it. */
 static int poll_rx(char *cmd, int *v, int *nv)
 {
     struct sf *s = SF;
@@ -123,41 +113,35 @@ static int poll_rx(char *cmd, int *v, int *nv)
         uint8_t b = RING[read];
         read = (read + 1u) & RING_MASK;
         if (b == 0xC0) {
-            if (s->rxn > 2 && s->rx[0] == 0 && !self_rx()) {
-                unsigned at = 1, p;
+            if (sf_rxn > 2) {
+                unsigned at, p;
                 int n = 0;
-                while (at + 6 < s->rxn) {
-                    if (s->rx[at + 6] & 1u) { at += 7; break; }
-                    at += 7;
+                for (at = 0; at + 8 <= sf_rxn; at++) {
+                    if (sf_rx[at] == '>' && sf_rx[at + 1] == 'B' && sf_rx[at + 2] == 'S' &&
+                        sf_rx[at + 3] == (uint8_t)s->room[0] && sf_rx[at + 4] == (uint8_t)s->room[1] &&
+                        sf_rx[at + 5] == ':')
+                        break;
                 }
-                at += 2;
-                if (at + 8 <= s->rxn && s->rx[at] == '>' && s->rx[at + 1] == 'B' && s->rx[at + 2] == 'S' &&
-                    s->rx[at + 3] == (uint8_t)s->room[0] && s->rx[at + 4] == (uint8_t)s->room[1] &&
-                    s->rx[at + 5] == ':') {
+                if (at + 8 <= sf_rxn) {
                     p = at + 6;
-                    while (p < s->rxn && s->rx[p] >= 'A' && s->rx[p] <= 'Z' && n < 7)
-                        cmd[n++] = (char)s->rx[p++];
+                    while (p < sf_rxn && sf_rx[p] >= 'A' && sf_rx[p] <= 'Z' && n < 7)
+                        cmd[n++] = (char)sf_rx[p++];
                     cmd[n] = 0;
                     v[0] = v[1] = v[2] = v[3] = -1;
                     *nv = 0;
-                    if (p < s->rxn && (s->rx[p] == ' ' || s->rx[p] == ',')) {
-                        while (p < s->rxn && *nv < 4 && (s->rx[p] == ' ' || s->rx[p] == ',')) {
-                            p++;
-                            v[(*nv)++] = (p < s->rxn && s->rx[p] >= '0' && s->rx[p] <= '9') ? s->rx[p] - '0' : -1;
-                            p++;
-                        }
-                    } else {
-                        while (p < s->rxn && *nv < 4 && s->rx[p] >= '0' && s->rx[p] <= '9')
-                            v[(*nv)++] = s->rx[p++] - '0';
+                    while (p < sf_rxn && *nv < 4 && (sf_rx[p] == ' ' || sf_rx[p] == ',')) {
+                        p++;
+                        v[(*nv)++] = (p < sf_rxn && sf_rx[p] >= '0' && sf_rx[p] <= '9') ? sf_rx[p] - '0' : -1;
+                        p++;
                     }
                     if (n) got = 1;
                 }
             }
-            s->rxn = 0;
+            sf_rxn = 0;
             if (got) break;
             continue;
         }
-        if (s->rxn < sizeof s->rx) s->rx[s->rxn++] = b;
+        if (sf_rxn < sizeof sf_rx) sf_rx[sf_rxn++] = b;
     }
     RING_READ = (uint16_t)read;
     return got;
@@ -320,7 +304,9 @@ void sf_radio_tick(void)
     y = v[1];
     if (cmd[0] == 'F' && nv >= 2 && x >= 0 && x < N && y >= 0 && y < N) {
         int first = AT(s->my, x, y) == C_SHIP || AT(s->my, x, y) == C_WATER;
-        if (s->started && s->turn && !s->pending && first) {
+        if (s->pending && x == s->fx && y == s->fy) {
+            /* own echo */
+        } else if (s->started && s->turn && !s->pending && first) {
             /* our turn: ignore a stray first shot */
         } else {
             s->started = 1;
