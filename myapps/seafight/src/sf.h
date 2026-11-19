@@ -9,7 +9,8 @@
 #define TICK (*(const volatile uint32_t *)0x1D8B0)
 
 enum { KEY_0 = 2, KEY_1 = 3, KEY_2 = 4, KEY_4 = 6, KEY_5 = 7, KEY_6 = 8,
-       KEY_8 = 10, KEY_9 = 11, KEY_MENU = 12, KEY_BACK = 15, KEY_HASH = 0x14 };
+       KEY_8 = 10, KEY_9 = 11, KEY_MENU = 12, KEY_BACK = 15,
+       KEY_STAR = 0x13, KEY_HASH = 0x14 };
 enum { N = 10, CELL = 7, MY_X = 6, EN_X = 84, GRID_Y = 24 };
 enum { C_WATER, C_SHIP, C_MISS, C_HIT };
 enum { COL_SEA = 0x0015, COL_SHIP = 0x07E0, COL_MISS = 0xC618, COL_HIT = 0xF800, COL_CUR = 0xFFE0 };
@@ -21,7 +22,7 @@ struct sf {
     uint8_t my[100], en[100], real[100], vis[100], rx[128];
     int8_t qx[32], qy[32];
     char call[7], room[2];
-    int8_t cx, cy, fx, fy;
+    int8_t cx, cy, fx, fy, mx, my, ox, oy;
     uint8_t myhp, enhp, rxn, esc, klast, kseen;
     uint8_t aprs, turn, started, pending, timeout;
     uint32_t rng, ftick;

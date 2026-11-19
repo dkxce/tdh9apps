@@ -51,7 +51,7 @@ uint32_t sf_rnd(void)
 void sf_status(const char *m, uint16_t c)
 {
     gfx_fill(0, 100, H9_WIDTH, 13, GFX_BLACK);
-    gfx_text(4, 102, m, 25, 1, c, GFX_BLACK);
+    gfx_text(2, 102, m, 26, 1, c, GFX_BLACK);
 }
 
 void sf_cell(int bx, int x, int y, uint8_t st, int cur)
@@ -64,10 +64,11 @@ void sf_cell(int bx, int x, int y, uint8_t st, int cur)
         gfx_fill((unsigned)(sx + 2), (unsigned)(sy + 2), 2, 2, GFX_YELLOW);
     }
     if (cur) {
-        gfx_fill((unsigned)sx, (unsigned)sy, CELL - 1, 1, COL_CUR);
-        gfx_fill((unsigned)sx, (unsigned)(sy + CELL - 2), CELL - 1, 1, COL_CUR);
-        gfx_fill((unsigned)sx, (unsigned)sy, 1, CELL - 1, COL_CUR);
-        gfx_fill((unsigned)(sx + CELL - 2), (unsigned)sy, 1, CELL - 1, COL_CUR);
+        uint16_t oc = cur == 2 ? COL_HIT : COL_CUR;
+        gfx_fill((unsigned)sx, (unsigned)sy, CELL - 1, 1, oc);
+        gfx_fill((unsigned)sx, (unsigned)(sy + CELL - 2), CELL - 1, 1, oc);
+        gfx_fill((unsigned)sx, (unsigned)sy, 1, CELL - 1, oc);
+        gfx_fill((unsigned)(sx + CELL - 2), (unsigned)sy, 1, CELL - 1, oc);
     }
 }
 
@@ -77,20 +78,35 @@ void sf_redraw(void)
     int y, x;
     for (y = 0; y < N; y++)
         for (x = 0; x < N; x++) {
-            sf_cell(MY_X, x, y, AT(s->my, x, y), 0);
+            sf_cell(MY_X, x, y, AT(s->my, x, y), x == s->mx && y == s->my ? 2 : 0);
             sf_cell(EN_X, x, y, AT(s->en, x, y), x == s->cx && y == s->cy);
         }
+}
+
+static unsigned xy_at(unsigned x, int8_t a, int8_t b, uint16_t c)
+{
+    char t[5];
+    if (a < 0) return x;
+    t[0] = ' ';
+    t[1] = (char)('0' + a);
+    t[2] = ':';
+    t[3] = (char)('0' + b);
+    t[4] = 0;
+    return gfx_text(x, 12, t, 5, 1, c, GFX_BLACK);
 }
 
 void sf_board(void)
 {
     struct sf *s = SF;
+    unsigned x;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
-    gfx_text(10, 12, "MY", 8, 1, COL_SHIP, GFX_BLACK);
+    x = gfx_text(7, 12, "MY", 2, 1, COL_SHIP, GFX_BLACK);
+    xy_at(x, s->mx, s->my, COL_HIT);
     if (s->aprs) {
         char hdr[8] = { 'R', 'O', 'O', 'M', ' ', s->room[0], s->room[1], 0 };
-        gfx_text(EN_X + 6, 12, hdr, 8, 1, 0xF81F, GFX_BLACK);
-    } else gfx_text(EN_X + 6, 12, "EN", 8, 1, 0x07FF, GFX_BLACK);
+        x = gfx_text(EN_X + 3, 12, hdr, 7, 1, 0xF81F, GFX_BLACK);
+    } else x = gfx_text(EN_X + 3, 12, "EN", 2, 1, 0x07FF, GFX_BLACK);
+    xy_at(x, s->ox, s->oy, COL_CUR);
     gfx_text(4, 117, "24568:AIM 0:FIRE #:NEW", 26, 1, GFX_GREY, GFX_BLACK);
     sf_redraw();
 }
@@ -226,7 +242,7 @@ void sf_init(void)
     sf_count_hp();
     s->turn = 1;
     s->started = s->pending = s->timeout = 0;
-    s->fx = s->fy = -1;
+    s->fx = s->fy = s->mx = s->my = s->ox = s->oy = -1;
     s->ftick = 0;
     s->rxn = s->esc = 0;
     s->klast = s->kseen = (uint8_t)h9_key();
@@ -263,7 +279,8 @@ void sf_play(void (*do_fire)(void), void (*on_tick)(void))
             sf_place(s->my);
             if (!s->aprs) sf_place(s->real);
             sf_count_hp();
-            sf_redraw();
+            s->mx = s->my = -1;
+            sf_board();
             sf_status("FLEET REARRANGED", 0x07FF);
         }
 

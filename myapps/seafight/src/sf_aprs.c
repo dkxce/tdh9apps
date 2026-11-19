@@ -156,10 +156,10 @@ static void send_pkt(int cmd, int x, int y, int l, int h)
 int sf_select_room(void)
 {
     struct sf *s = SF;
-    int pos = 0;
+    int pos = 2;
     gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);
     gfx_text(30, 30, "ROOM (0-99):", 12, 1, GFX_WHITE, GFX_BLACK);
-    gfx_text(8, 102, "0-9 DIGIT  MENU OK", 20, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 102, "0-9 DIGIT *:DEL MENU OK", 24, 1, GFX_GREY, GFX_BLACK);
     for (;;) {
         char r[3];
         unsigned k;
@@ -171,10 +171,14 @@ int sf_select_room(void)
         k = sf_key();
         if (k == KEY_BACK) return 0;
         if (k == KEY_MENU) return 1;
-        if (k >= KEY_0 && k <= KEY_9) {
+        if (k == KEY_STAR && pos) {
+            pos--;
+            s->room[pos] = '0';
+        } else if (k >= KEY_0 && k <= KEY_9) {
             char d = (char)('0' + (k - 2));
-            if (!pos) { s->room[0] = d; pos = 1; }
-            else s->room[1] = d;
+            if (pos > 1) pos = 1;
+            s->room[pos] = d;
+            pos++;
         }
         h9_delay(10);
     }
@@ -221,10 +225,12 @@ static void on_fire(int x, int y, int apply)
 {
     struct sf *s = SF;
     uint8_t t = AT(s->my, x, y);
+    s->mx = (int8_t)x;
+    s->my = (int8_t)y;
     if (t == C_SHIP && apply) {
         AT(s->my, x, y) = C_HIT;
         if (s->myhp) s->myhp--;
-        sf_cell(MY_X, x, y, C_HIT, 0);
+        sf_cell(MY_X, x, y, C_HIT, 2);
         t = C_HIT;
     }
     if (t == C_HIT) {
@@ -233,7 +239,7 @@ static void on_fire(int x, int y, int apply)
             if (apply) sf_sink(s->my, MY_X, x, y);
             ship_span(x, y, &sx, &sy, &len, &h);
             send_pkt('S', sx, sy, len, h);
-            if (apply) sf_status("YOUR SHIP SUNK!", GFX_RED);
+            if (apply) sf_status("YOUR SHIP SUNK! ENEMY TURN", GFX_RED);
         } else {
             send_pkt('H', x, y, -1, -1);
             if (apply) sf_status("HIT! ENEMY SHOTS", GFX_RED);
@@ -245,9 +251,9 @@ static void on_fire(int x, int y, int apply)
         AT(s->my, x, y) = C_MISS;
         s->turn = 1;
     }
-    sf_cell(MY_X, x, y, C_MISS, 0);
+    sf_cell(MY_X, x, y, C_MISS, 2);
     send_pkt('M', x, y, -1, -1);
-    if (apply && t == C_WATER) sf_status("ENEMY MISS! TURN", COL_SHIP);
+    if (apply && t == C_WATER) sf_status("ENEMY MISS! YOUR TURN", COL_SHIP);
 }
 
 void sf_radio_fire(void)
@@ -255,8 +261,8 @@ void sf_radio_fire(void)
     struct sf *s = SF;
     int retry = s->timeout;
     if (!retry) {
-        s->fx = s->cx;
-        s->fy = s->cy;
+        s->fx = s->ox = s->cx;
+        s->fy = s->oy = s->cy;
         s->started = 1;
         s->turn = 0;
     }
@@ -283,6 +289,7 @@ void sf_radio_tick(void)
     v3 = pv[slot][3];
     n = pnv[slot];
     pgot[slot] = 0;
+    wait_ms(2000);
     if (!slot) {
         uint8_t t;
         if (c != 'F' || n < 2 || (unsigned)x >= N || (unsigned)y >= N) return;
@@ -317,7 +324,7 @@ void sf_radio_tick(void)
         sf_sink(s->en, EN_X, x, y);
         clear_shot();
         s->turn = 1;
-        sf_status("ENEMY SHIP SUNK!", COL_SHIP);
+        sf_status("ENEMY SHIP SUNK! YOUR TURN", COL_SHIP);
     } else if (c == 'M' && n >= 2 && (unsigned)x < N && (unsigned)y < N) {
         AT(s->en, x, y) = C_MISS;
         sf_cell(EN_X, x, y, C_MISS, x == s->cx && y == s->cy);

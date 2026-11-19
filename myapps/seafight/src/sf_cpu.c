@@ -36,10 +36,12 @@ static int cpu_turn(void)
         }
         if (tx < 0) return 0;
     }
+    s->mx = (int8_t)tx;
+    s->my = (int8_t)ty;
     if (AT(s->my, tx, ty) == C_SHIP) {
         AT(s->my, tx, ty) = C_HIT;
         if (s->myhp) s->myhp--;
-        sf_cell(MY_X, tx, ty, C_HIT, 0);
+        sf_cell(MY_X, tx, ty, C_HIT, 2);
         if (sf_sunk(s->my, s->my, tx, ty)) {
             sf_sink(s->my, MY_X, tx, ty);
             sf_status("ENEMY HIT YOU!", GFX_RED);
@@ -47,7 +49,7 @@ static int cpu_turn(void)
         return 1;
     }
     AT(s->my, tx, ty) = C_MISS;
-    sf_cell(MY_X, tx, ty, C_MISS, 0);
+    sf_cell(MY_X, tx, ty, C_MISS, 2);
     sf_status("ENEMY MISSED!", COL_SHIP);
     return 0;
 }
@@ -56,6 +58,8 @@ void sf_cpu_fire(void)
 {
     struct sf *s = SF;
     int x = s->cx, y = s->cy;
+    s->ox = (int8_t)x;
+    s->oy = (int8_t)y;
     if (AT(s->real, x, y) == C_SHIP) {
         AT(s->en, x, y) = C_HIT;
         if (s->enhp) s->enhp--;
