@@ -89,6 +89,10 @@ static void send_pkt(const char *cmd, int x, int y, int l, int h)
     }
     kiss[k++] = 0xC0;
     STOCK_KISS_TX(kiss, (unsigned)k);
+    /* LCD or RF_SETUP right after TX cuts the frame mid-payload
+     * (on air: ">BS01:FIRE" without ,x,y). Let the modem finish, then restore the board. */
+    h9_delay(95);
+    sf_board();
 }
 
 static int self_rx(void)
