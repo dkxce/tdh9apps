@@ -90,8 +90,9 @@ static void send_pkt(const char *cmd, int x, int y, int l, int h)
     kiss[k++] = 0xC0;
     STOCK_KISS_TX(kiss, (unsigned)k);
     /* LCD or RF_SETUP right after TX cuts the frame mid-payload
-     * (on air: ">BS01:FIRE" without ,x,y). Let the modem finish, then restore the board. */
+     * (on air: ">BS01:FIRE" without ,x,y). Let the modem finish, reopen RX, then restore the board. */
     h9_delay(95);
+    aprs_quiet();
     sf_board();
 }
 
@@ -108,7 +109,7 @@ static int self_rx(void)
     return 1;
 }
 
-/* 1: a game packet from someone else is in cmd / v[0..3]. */
+/* Drain like seafight.aprs.c: raw KISS bytes, no unescape. Payload after AX.25 last-bit. */
 static int poll_rx(char *cmd, int *v, int *nv)
 {
     struct sf *s = SF;
@@ -118,9 +119,14 @@ static int poll_rx(char *cmd, int *v, int *nv)
         uint8_t b = RING[read];
         read = (read + 1u) & RING_MASK;
         if (b == 0xC0) {
-            if (s->rxn > 20 && s->rx[0] == 0 && !self_rx()) {
-                unsigned at = 17, p;
+            if (s->rxn > 2 && s->rx[0] == 0 && !self_rx()) {
+                unsigned at = 1, p;
                 int n = 0;
+                while (at + 6 < s->rxn) {
+                    if (s->rx[at + 6] & 1u) { at += 7; break; }
+                    at += 7;
+                }
+                at += 2;
                 if (at + 8 <= s->rxn && s->rx[at] == '>' && s->rx[at + 1] == 'B' && s->rx[at + 2] == 'S' &&
                     s->rx[at + 3] == (uint8_t)s->room[0] && s->rx[at + 4] == (uint8_t)s->room[1] &&
                     s->rx[at + 5] == ':') {
@@ -137,12 +143,10 @@ static int poll_rx(char *cmd, int *v, int *nv)
                     if (n) got = 1;
                 }
             }
-            s->rxn = s->esc = 0;
+            s->rxn = 0;
             if (got) break;
             continue;
         }
-        if (s->esc) { b = b == 0xDC ? 0xC0 : b == 0xDD ? 0xDB : b; s->esc = 0; }
-        else if (b == 0xDB) { s->esc = 1; continue; }
         if (s->rxn < sizeof s->rx) s->rx[s->rxn++] = b;
     }
     RING_READ = (uint16_t)read;

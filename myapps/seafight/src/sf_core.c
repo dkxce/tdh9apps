@@ -91,7 +91,7 @@ void sf_board(void)
         char hdr[8] = { 'R', 'O', 'O', 'M', ' ', s->room[0], s->room[1], 0 };
         gfx_text(EN_X + 6, 12, hdr, 8, 1, 0xF81F, GFX_BLACK);
     } else gfx_text(EN_X + 6, 12, "EN", 8, 1, 0x07FF, GFX_BLACK);
-    gfx_text(4, 117, "2468:AIM 0:FIRE #:NEW", 26, 1, GFX_GREY, GFX_BLACK);
+    gfx_text(4, 117, "24568:AIM 0:FIRE #:NEW", 26, 1, GFX_GREY, GFX_BLACK);
     sf_redraw();
 }
 
@@ -281,6 +281,7 @@ void sf_play(void (*do_fire)(void), void (*on_tick)(void))
             oy = s->cy;
             if (k == KEY_2 && s->cy) s->cy--;
             else if (k == KEY_8 && s->cy < N - 1) s->cy++;
+            else if (k == KEY_5 && s->cy < N - 1) s->cy++;
             else if (k == KEY_4 && s->cx) s->cx--;
             else if (k == KEY_6 && s->cx < N - 1) s->cx++;
             if (s->cx != ox || s->cy != oy) {
