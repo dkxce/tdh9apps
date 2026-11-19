@@ -274,8 +274,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     /* Правая панель счета (белые vs черные) */
     gfx_text(120, 10, "YOU",  4, 1, GFX_WHITE, GFX_BLACK);
     gfx_text(120, 38, "CPU",  4, 1, 0x07FF,    GFX_BLACK);
-    gfx_text(120, 98, "0:NEW",5, 1, COL_CUR,   GFX_BLACK);
-    gfx_text(120, 110,"*:EX", 5, 1, GFX_RED,   GFX_BLACK);
+    gfx_text(120, 98, "#:NEW",5, 1, COL_CUR,   GFX_BLACK);
+    gfx_text(120, 110,"0:PUT",5, 1, GFX_RED,   GFX_BLACK);
 
     rng_state = TICK ^ 0x07E11026u;
     if (!rng_state) rng_state = 777;
@@ -286,7 +286,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     for (;;) {
         unsigned k = poll_key();
 
-        if (k == KEY_BACK || k == KEY_STAR) return 0;
+        if (k == KEY_BACK) return 0;
         if (k == KEY_HASH) { reset_game(); continue; }
 
         if (!game_over && k != 0) {
