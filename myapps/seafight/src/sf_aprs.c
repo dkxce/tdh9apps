@@ -50,13 +50,17 @@ void sf_load_call(void)
     s->call[n] = 0;
 }
 
-/* dst=DKXCE, src=call, ">BS<room>:<cmd>,x,y[,len,h]". KISS buffer lives in struct sf:
- * STOCK_KISS_TX keeps the pointer. Do not touch the RF box after TX. */
+/* Same TX path as seafight.aprs.c tx_test: buffers in the module image (RAM .rodata),
+ * not in the APRS slot at 0x2B8E0 which stock reuses during STOCK_KISS_TX.
+ * Payload: ">BS01:F 4 4". SUNK: ">BS01:S x y l h". Space, not comma. */
+/* Same as tx_test: static buffers next to the module, not in 0x2B8E0. */
+static uint8_t sf_kiss[88];
+static uint8_t sf_frame[64];
+
 static void send_pkt(const char *cmd, int x, int y, int l, int h)
 {
     struct sf *s = SF;
-    uint8_t *kiss = s->kiss;
-    uint8_t frame[64];
+    uint8_t *kiss = sf_kiss, *frame = sf_frame;
     int p = 0, k = 0, i;
     pack_addr(frame + p, "DKXCE", 0); p += 7;
     pack_addr(frame + p, s->call, 1); p += 7;
@@ -68,16 +72,16 @@ static void send_pkt(const char *cmd, int x, int y, int l, int h)
     frame[p++] = (uint8_t)s->room[0];
     frame[p++] = (uint8_t)s->room[1];
     frame[p++] = ':';
-    while (*cmd) frame[p++] = (uint8_t)*cmd++;
+    frame[p++] = (uint8_t)cmd[0];
     if (x >= 0 && y >= 0) {
-        frame[p++] = ',';
+        frame[p++] = ' ';
         frame[p++] = (uint8_t)('0' + x);
-        frame[p++] = ',';
+        frame[p++] = ' ';
         frame[p++] = (uint8_t)('0' + y);
         if (l >= 0) {
-            frame[p++] = ',';
+            frame[p++] = ' ';
             frame[p++] = (uint8_t)('0' + l);
-            frame[p++] = ',';
+            frame[p++] = ' ';
             frame[p++] = (uint8_t)('0' + h);
         }
     }
@@ -90,6 +94,8 @@ static void send_pkt(const char *cmd, int x, int y, int l, int h)
     }
     kiss[k++] = 0xC0;
     STOCK_KISS_TX(kiss, (unsigned)k);
+    /* Do not touch the RF box after TX (seafight.aprs.c). */
+    while (h9_key() != H9_KEY_NONE) h9_delay(5);
     h9_delay(200);
     sf_board();
 }
@@ -134,8 +140,8 @@ static int poll_rx(char *cmd, int *v, int *nv)
                     cmd[n] = 0;
                     v[0] = v[1] = v[2] = v[3] = -1;
                     *nv = 0;
-                    if (p < s->rxn && s->rx[p] == ',') {
-                        while (p < s->rxn && *nv < 4 && s->rx[p] == ',') {
+                    if (p < s->rxn && (s->rx[p] == ' ' || s->rx[p] == ',')) {
+                        while (p < s->rxn && *nv < 4 && (s->rx[p] == ' ' || s->rx[p] == ',')) {
                             p++;
                             v[(*nv)++] = (p < s->rxn && s->rx[p] >= '0' && s->rx[p] <= '9') ? s->rx[p] - '0' : -1;
                             p++;

@@ -25,7 +25,6 @@ struct sf {
     uint8_t myhp, enhp, rxn, esc, klast, kseen;
     uint8_t aprs, turn, started, pending, timeout;
     uint32_t rng, ftick;
-    uint8_t kiss[88];
 };
 
 #define SF ((struct sf *)0x2B8E0)
