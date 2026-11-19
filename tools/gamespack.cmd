@@ -12,6 +12,6 @@ copy /y ..\myapps\seafight.h9mod .\.prepare\gamespack\
 copy /y ..\myapps\snake.h9mod .\.prepare\gamespack\
 copy /y ..\myapps\tetris.h9mod .\.prepare\gamespack\
 folderhtml -smxX -t=".\files.txt" ".\.prepare"
-"%ProgramFiles%\WinRAR\WinRAR.exe" a -afzip -r -ag-YYYYMMDD -m5 -ep1 -z".\.prepare\files.txt" "tdh9apps_v1.0.0.0.zip" ".\.prepare\*"
+"%ProgramFiles%\WinRAR\WinRAR.exe" a -afzip -r -ag-YYYYMMDD -m5 -ep1 -z".\.prepare\files.txt" "gamespack.zip" ".\.prepare\*"
 rd /s /q  .\.prepare
 pause
