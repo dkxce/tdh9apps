@@ -147,7 +147,9 @@ static void send_pkt(int cmd, int x, int y, int l, int h)
     sf_kiss[1] = 0x00;
     sf_kiss[2 + p] = 0xC0;
     STOCK_KISS_TX(sf_kiss, (unsigned)(p + 3));
-    wait_ms(200);
+    h9_delay(200);
+    aprs_quiet();
+    drain_ring();
     sf_board();
 }
 
