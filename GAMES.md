@@ -1,4 +1,4 @@
-# Game Collection (10 игр) — TIDRADIO TD-H9
+# Game Collection (11 игр) — TIDRADIO TD-H9
 
 [РАЗКИРПИЧИТЬ РУК-ВО](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
 [ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
@@ -18,9 +18,10 @@
 | 5 | Load Runner | `loadrunner.h9mod` |
 | 6 | Mineswiper | `mineswiper.h9mod` |
 | 7 | Othello | `othello.h9mod` |
-| 8 | Sea Fight | `seafight.h9mod` |
+| 8 | Sea Fight (CPU + APRS Dual Mode) | `seafight.h9mod` |
 | 9 | Snake | `snake.h9mod` |
 | 10 | Tetris | `tetris.h9mod` |
+| 11 | Aprs Pool (Local + APRS Dual Mode) | `aprspool.h9mod` |
 
 ---
 
@@ -161,7 +162,7 @@
 
 ---
 
-## 8. Sea Fight
+## 8. Sea Fight (CPU + APRS Dual Mode)
 
 <img src="scripts/render_seafight_screens/screen_menu.png" width="240"/> <img src="scripts/render_seafight_screens/screen_room.png" width="240"/> <img src="scripts/render_seafight_screens/screen_ready.png" width="240"/>    
 <img src="scripts/render_seafight_screens/screen_sent.png" width="240"/> <img src="scripts/render_seafight_screens/screen_hit.png" width="240"/> <img src="scripts/render_seafight_screens/screen_sunk.png" width="240"/>     
@@ -214,6 +215,28 @@ RADIO LINK** (игра по рации через APRS, комнаты 0–99). 
 | `8` | вниз |
 | `7` / `9` | мгновенный сброс вниз |
 | `*` | пауза |
+| `Back` | выход |
+
+---
+
+## 11. Aprs Pool (Local + APRS Dual Mode)
+
+<img src="scripts/render_games/screen_aprspool_menu.png" width="240"/> <img src="scripts/render_games/screen_aprspool_room.png" width="240"/> <img src="scripts/render_games/screen_aprspool_aprs_aim.png" width="240"/>      
+<img src="scripts/render_games/screen_aprspool_roll.png" width="240"/> <img src="scripts/render_games/screen_aprspool_win.png" width="240"/> <img src="scripts/render_games/screen_aprspool_lose.png" width="240"/>      
+
+Пул «8-ка» с двумя режимами. **1 — PLAY LOCAL** — локальная игра 
+(один игрок, шары из лузы по фолу). **2 — APRS RADIO LINK** — игра по рации через
+APRS в комнате 0–99: после удара состояние шаров синхронизируется (SYNC), ход
+передаётся сопернику (`YOU` / `WT`). Победа — забить чёрную 8-ку последней; если
+8-ка уходит в лузу раньше — `8-BALL FOUL` и проигрыш.
+
+| Кнопка | Действие |
+|---|---|
+| `4` / `6` | вращать прицел влево / вправо |
+| `1` / `3` | точная подстройка угла |
+| `2` / `8` | сильнее / слабее удар |
+| `0` (или `5` в локальном) | удар по битку |
+| `*` | пауза (только в локальном режиме) |
 | `Back` | выход |
 
 ---

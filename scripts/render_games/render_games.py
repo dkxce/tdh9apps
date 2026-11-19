@@ -916,6 +916,140 @@ def screen_tetris_over():
     return s
 
 
+# =====================================================================
+# aprspool (table 144x104 at TBL_X=8 TBL_Y=18, like 8ballpool; pl_core.c)
+# =====================================================================
+AP_TBL_X, AP_TBL_Y, AP_TBL_W, AP_TBL_H = 8, 18, 144, 104
+AP_COLORS = [0xFFFF, 0xFFE0, 0x001F, 0xF800, 0xF81F, 0xFD20, 0x07E0,
+             0x07FF, 0xC618, 0x2104]
+
+
+def ap_ball(s, x, y, idx):
+    b = AP_COLORS[idx]
+    s.fill(x - 2, y - 3, 5, 7, b)
+    s.fill(x - 3, y - 2, 7, 5, b)
+    s.fill(x - 1, y - 1, 2, 2, 0xFFFF)
+
+
+def ap_table(s):
+    s.fill(0, 0, W, H, 0x0000)
+    s.fill(AP_TBL_X - 4, AP_TBL_Y - 4, AP_TBL_W + 8, AP_TBL_H + 8, 0x8200)
+    s.fill(AP_TBL_X, AP_TBL_Y, AP_TBL_W, AP_TBL_H, 0x03E0)
+    for px6 in (AP_TBL_X, AP_TBL_X + AP_TBL_W // 2, AP_TBL_X + AP_TBL_W):
+        for py6 in (AP_TBL_Y, AP_TBL_Y + AP_TBL_H):
+            s.fill(px6 - 4, py6 - 4, 9, 9, 0x0000)
+
+
+def ap_rack(s):
+    start_x, mid_y = AP_TBL_X + 96, AP_TBL_Y + AP_TBL_H // 2
+    order = [1, 2, 3, 4, 9, 5, 6, 7, 8]
+    k = 0
+    for col in range(4):
+        count = (col + 1) if col < 3 else 3
+        cx = start_x + int(col * 6.40)
+        sy = mid_y - int(((count - 1) * 7.22) / 2)
+        for row in range(count):
+            if k >= 9:
+                break
+            ap_ball(s, cx, int(sy + row * 7.22), order[k])
+            k += 1
+    ap_ball(s, AP_TBL_X + 36, mid_y, 0)
+
+
+def ap_aim(s, slope):
+    for d in range(8, 45, 6):
+        ax = AP_TBL_X + 36 + d
+        ay = AP_TBL_Y + AP_TBL_H // 2 + d // slope
+        if AP_TBL_X + 2 < ax < AP_TBL_X + AP_TBL_W - 2 and AP_TBL_Y + 2 < ay < AP_TBL_Y + AP_TBL_H - 2:
+            s.fill(ax, ay, 2, 2, 0xFFE0)
+
+
+def ap_hud(s, shots, power, aprs=False, room="01", turn="YOU"):
+    s.fill(0, 0, W, 13, 0x0000)
+    s.text(2, 3, "SHT:", 4, 1, rgb24(0xFFFF), rgb24(0x0000))
+    s.text(28, 3, str(shots), 4, 1, rgb24(0xFFE0), rgb24(0x0000))
+    s.text(58, 3, "PWR:", 4, 1, rgb24(0xFFFF), rgb24(0x0000))
+    s.fill(84, 4, 34, 6, 0x4208)
+    s.fill(84, 4, power * 3, 6, 0xF800 if power > 8 else 0x07E0)
+    if aprs:
+        s.text(120, 3, "R" + room, 4, 1, rgb24(0xF81F), rgb24(0x0000))
+        s.text(142, 3, turn, 3, 1, rgb24(0xFFE0) if turn == "YOU" else rgb24(0xF800), rgb24(0x0000))
+    else:
+        s.text(120, 3, "*:PAU", 5, 1, rgb24(0xFFE0), rgb24(0x0000))
+        s.text(148, 3, "X", 1, 1, rgb24(0xF800), rgb24(0x0000))
+
+
+def screen_aprspool_menu():
+    s = Screen()
+    s.fill(0, 0, W, H, 0x0000)
+    s.text(14, 8, "APRS 8-BALL POOL", 18, 1, rgb24(0x07FF), rgb24(0x0000))
+    s.text(14, 28, "1: PLAY LOCAL", 18, 1, rgb24(0x07E0), rgb24(0x0000))
+    s.text(14, 42, "2: APRS RADIO LINK", 20, 1, rgb24(0xF81F), rgb24(0x0000))
+    s.text(14, 58, "(c) dkxce 2026", 18, 1, rgb24(0x8410), rgb24(0x0000))
+    s.text(14, 76, "https://github.com/dkxce", 25, 1, rgb24(0x8410), rgb24(0x0000))
+    s.text(14, 88, "IF APRS FAILS RE-POWER", 25, 1, rgb24(0x8410), rgb24(0x0000))
+    s.text(14, 108, "BACK: EXIT", 12, 1, rgb24(0xF800), rgb24(0x0000))
+    return s
+
+
+def screen_aprspool_room():
+    s = Screen()
+    s.fill(0, 0, W, H, 0x0000)
+    s.text(30, 30, "ROOM (0-99):", 12, 1, rgb24(0xFFFF), rgb24(0x0000))
+    s.text(64, 62, "01", 4, 2, rgb24(0xFFE0), rgb24(0x0000))
+    s.fill(64, 78, 10, 2, 0xF800)
+    s.text(4, 102, "0-9 DIGIT *:DEL MENU OK", 24, 1, rgb24(0x8410), rgb24(0x0000))
+    return s
+
+
+def screen_aprspool_local_aim():
+    s = Screen()
+    ap_table(s)
+    ap_hud(s, 0, 7, aprs=False)
+    ap_rack(s)
+    ap_aim(s, 6)
+    return s
+
+
+def screen_aprspool_aprs_aim():
+    s = Screen()
+    ap_table(s)
+    ap_hud(s, 1, 7, aprs=True, room="01", turn="YOU")
+    ap_rack(s)
+    ap_aim(s, 6)
+    return s
+
+
+def screen_aprspool_roll():
+    s = Screen()
+    ap_table(s)
+    ap_hud(s, 2, 7, aprs=True, room="01", turn="WT")
+    # balls spread across the cloth after the shot
+    ap_ball(s, AP_TBL_X + 80, AP_TBL_Y + AP_TBL_H // 2 - 10, 1)
+    ap_ball(s, AP_TBL_X + 64, AP_TBL_Y + AP_TBL_H // 2 + 6, 2)
+    ap_ball(s, AP_TBL_X + 92, AP_TBL_Y + AP_TBL_H // 2 + 12, 3)
+    ap_ball(s, AP_TBL_X + 40, AP_TBL_Y + AP_TBL_H // 2, 0)
+    return s
+
+
+def screen_aprspool_win():
+    s = Screen()
+    ap_table(s)
+    ap_hud(s, 3, 7, aprs=False)
+    ap_ball(s, AP_TBL_X + 36, AP_TBL_Y + AP_TBL_H // 2, 0)
+    box_msg(s, 44, 62, "YOU WIN!", 0x07E0)
+    return s
+
+
+def screen_aprspool_lose():
+    s = Screen()
+    ap_table(s)
+    ap_hud(s, 3, 7, aprs=False)
+    ap_ball(s, AP_TBL_X + 36, AP_TBL_Y + AP_TBL_H // 2, 0)
+    box_msg(s, 38, 62, "8-BALL FOUL", 0xF800)
+    return s
+
+
 def main():
     out = os.path.dirname(os.path.abspath(__file__))
     os.makedirs(out, exist_ok=True)
@@ -950,6 +1084,13 @@ def main():
         ("screen_tetris_cleared", screen_tetris_cleared),
         ("screen_tetris_pause", screen_tetris_pause),
         ("screen_tetris_over", screen_tetris_over),
+        ("screen_aprspool_menu", screen_aprspool_menu),
+        ("screen_aprspool_room", screen_aprspool_room),
+        ("screen_aprspool_local_aim", screen_aprspool_local_aim),
+        ("screen_aprspool_aprs_aim", screen_aprspool_aprs_aim),
+        ("screen_aprspool_roll", screen_aprspool_roll),
+        ("screen_aprspool_win", screen_aprspool_win),
+        ("screen_aprspool_lose", screen_aprspool_lose),
     ]
     for name, fn in jobs:
         save(os.path.join(out, name + ".png"), fn())
