@@ -136,7 +136,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 				return 0;
 	};
 	
-	if ((*SKIP_CHECK == SKIP_2BLOCK) || (*SKIP_CHECK == SKIP_KBLCKD))
+	if ((*SKIP_CHECK == SKIP_2BLOCK) || (*SKIP_CHECK == SKIP_KBLCKD)) {
         int pc = find_passcode(api, count);
         if (!pc) {
             *SKIP_CHECK = SKIP_UNLOCKED;

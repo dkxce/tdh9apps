@@ -298,7 +298,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
             } else if (sel == KBLOCK) {
                 if (pass_locked(pass)) {
                     if (*SKIP_CHECK == SKIP_NORMAL) *SKIP_CHECK = SKIP_2BLOCK;
-					else if (*SKIP_CHECK == SKIP_2BLOCK) *SKIP_CHECK = SKIP_KBLCKD
+					else if (*SKIP_CHECK == SKIP_2BLOCK) *SKIP_CHECK = SKIP_KBLCKD;
 					else *SKIP_CHECK = SKIP_NORMAL;
                 } else {
                     gfx_text(4, 100, "NO PASSWORD", 12, 1, GFX_RED, GFX_BLACK);
