@@ -40,6 +40,8 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
+#define SKIP_2BLOCK   4u /* Блок клавы (запрос) */
+#define SKIP_KBLCKD   5u /* Блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
@@ -121,12 +123,31 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	if (*KEY_HOLDED == 19) return 0;  /* Вход по     * */	    
-	if (*KEY_HOLDED == 20)            /* Вход по SHARP */ 
-	{
-		if (*KB_UNLOCKED == 0)
+	if (*KEY_HOLDED == 19) {   	         /* Вход по     * */	    
+		if (*SKIP_CHECK == SKIP_2BLOCK)  /* 1st apply   * */	 
+		{
+			*SKIP_KBLCKD = SKIP_KBLCKD;
+			return 0;
+		};
+		if (*SKIP_CHECK != SKIP_KBLCKD) 
 			return 0;
 	};
+	if (*KEY_HOLDED == 20)               = /* Вход по SHARP */ 
+	{
+		if (*SKIP_CHECK != SKIP_KBLCKD) 
+			if (*KB_UNLOCKED == 0)
+				return 0;
+	};
+	
+	/* Клава залочена */
+	if (*SKIP_CHECK == SKIP_KBLCKD) {
+        int pc = find_passcode(api, count);
+        if (!pc) {
+            *SKIP_CHECK = SKIP_UNLOCKED;
+            return 0;
+        }
+        return (unsigned)pc;
+	}
 	
 	/* Пароль-на-входе */ 
 	if (*SKIP_CHECK == SKIP_LOCKED) {

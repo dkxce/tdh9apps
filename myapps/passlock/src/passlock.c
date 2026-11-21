@@ -24,6 +24,8 @@
  * define SKIP_UNLOCKED 1u - Рация разлочена  
  * define SKIP_LOCKED   2u - Рация заблочена  
  * define SKIP_NORMAL   3u - Нужно разлочить
+ * define SKIP_2BLOCK   4u - Блок клавы (запрос) 
+ * define SKIP_KBLCKD   5u - Блок клавы  
  *
  * skip_check = 0 # включение питания (0x2B8DF)
  * <stub>
@@ -91,6 +93,8 @@
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
+#define SKIP_2BLOCK   4u /* Блок клавы  (запрос) */
+#define SKIP_KBLCKD   5u /* Блок клавы       */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
@@ -226,7 +230,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
  * the lock armed); otherwise returns 0 (back to the toolbox menu). */
 static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 {
-    enum { LOCK, UNLOCK, EXIT } sel = LOCK;
+    enum { LOCK, UNLOCK, KBLOCK, EXIT } sel = LOCK;
     for (;;) {
         title_line();
 		clear_body();
@@ -235,6 +239,8 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                  sel == LOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(4, 60, sel == UNLOCK  ? "[UNLOCK]    Clear pass" : " UNLOCK     Clear pass", 24, 1,
                  sel == UNLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
+		gfx_text(4, 76 sel == KBLOCK  ? "[KBLOCK]    Kb lock pass" : " KBLOCK     Kb lock pass", 24, 1,
+                 sel == KBLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
 		gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Menu" : " EXIT       Menu", 24, 1,
                  sel == EXIT ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(2, 118, "UP/DN: MOVE      BACK: OK", 30, 1, GFX_GREY, GFX_BLACK);
@@ -271,6 +277,17 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 					h9_delay(70);
                 } else {
                     gfx_text(4, 100, "WRITE FAIL", 12, 1, GFX_RED, GFX_BLACK);
+					h9_delay(70);
+                }
+                h9_delay(60);
+            } else if (sel == KBLOCK) {
+                if (pass_locked(pass)) {
+                    *SKIP_CHECK = SKIP_2BLOCK;
+					*KB_UNLOCKED = 0;
+                    gfx_text(4, 100, "KB LOCKED", 10, 1, GFX_GREEN, GFX_BLACK);
+					h9_delay(70);
+                } else {
+                    gfx_text(4, 100, "NO PASSWORD", 12, 1, GFX_RED, GFX_BLACK);
 					h9_delay(70);
                 }
                 h9_delay(60);
@@ -321,6 +338,38 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         STOCK_REFRESH();
         STOCK_REDRAW();
         return H9_RETURN_RADIO_LOCAL;
+    }
+	
+	if (*SKIP_CHECK == SKIP_KBLCKD) {
+        if (!pass_locked(pass)) {
+			*SKIP_CHECK = SKIP_NORMAL;
+			STOCK_REFRESH();
+            STOCK_REDRAW();
+			return H9_RETURN_RADIO_LOCAL;
+		}
+        char buf[PASS_LEN + 1];
+        okx: ;
+        clear_all();
+        gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
+        gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
+        int res = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
+		if (res == 1) return H9_RETURN_RADIO_LOCAL;
+		if (res == 2) goto okx;
+        unsigned char cur[PASS_LEN];
+        read_pass(api, cur);
+        char ascii[PASS_LEN + 1];
+        pass_ascii(cur, ascii);
+        unsigned i = 0;
+        while (buf[i] && ascii[i] && buf[i] == ascii[i]) i++;
+        if (!(buf[i] == 0 && ascii[i] == 0)) {          /* mismatch */
+            gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
+            h9_delay(90);
+            goto okx;
+        }
+        *SKIP_CHECK = SKIP_NORMAL;
+        STOCK_REFRESH();
+        STOCK_REDRAW();
+        return 0;
     }
 
     if (pass_locked(pass)) {
