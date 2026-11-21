@@ -16,7 +16,7 @@ deterrence`#`).
 * **Save GPS Point**Maintain your current position (main/reserve);
 * **Save My Own**Enter the name (T9) and coordinates manually, without a tracker;
 * **Saved Points.**- list of saved points: view coordinates,
-  name/coordinate editing, deletion, navigation to a point;
+  name/coordinate editing, deletion, point navigation
 * **Clear.**Erase all points (with confirmation).
 
 Operations 1-4 take coordinates from the running tracker (see below);
@@ -29,7 +29,7 @@ tracker not running - the app shows`<LAUNCH TRACKER FIRST>`.
 | --- | --- |
 | menu | selection/confirmation; in the editor, save |
 | Up/down | navigation through menu and list of points |
-| Back | back / cancellation; in the main menu - exit from the application |
+| Back | back / cancel; in the main menu - exit from the application |
 | 0-9 | T9-Name input; coordinate digits input |
 | `*` / `#` | in the name - cursor left / right; in the list of points - delete |
 | `[5]` | In view of the point - navigation to it (`NAVTO`) |
@@ -48,7 +48,7 @@ Go ahead.`0`inserts a gap and`0`.
 3. `SAVE`The name (T9) is entered, the dot is written at the end of the table.
 
 Records are written at the end without erasing the sector (append - programming).
-in the first free cell). Editing and deleting rewrite sector
+to the first free cell). Editing and deleting rewrite sector
 whole.
 
 ## Saved Points.
@@ -59,14 +59,14 @@ Viewing:
 
 * `NUM`- dot number;
 * `NAME`, `LAT`, `LON`- data;
-* `[5] NAVTO`set the target point in the tracker (you need a running tracker);
+* `[5] NAVTO`- set the target point in the tracker (you need a running tracker);
 * **menu**editing the name and coordinates;
 * `*` / `0` / `#`Remove the point (with a shift to the left);
 * **Back**- back to the list.
 
 ## Storage
 
-The dot table is in resource flash.**sector`0x7FE000`**(4 KiB),
+The dot table is in resource flash.**sector`0x7FE000`**(4 KIB),
 which does not use the runoff:
 
 ```
@@ -86,7 +86,7 @@ which does not use the runoff:
 
 ## Installation
 
-The assembly is in CI.`build_one.py tracksvr`), finished module`myapps/tracksvr.h9mod`. Installation on the radio - App Manager:
+The assembly is in CI.`build_one.py tracksvr`), finished module,`myapps/tracksvr.h9mod`. Installation on the radio - App Manager:
 
 ```
 poetry run python td9_apps.py install tracksvr
@@ -134,7 +134,7 @@ File--`tracksvr_points.json`(by default, or custom)`--file`:
 
 * One module`tracksvr.c`), assembly -`build_one.py tracksvr`.
 * Flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`(anything)
-  CI drops the warning. No libc and no floating arithmetic.
+  warning drops CI. No libc and no floating arithmetic.
 * Module body ≤ 6380 bytes; tracker state reads from RAM slot
   ?`struct trk_hdr`along`0x2B7EC`compatible with the tracker`TRK`). Not
   cover`struct trk`The module should not be longer.`0x2B7EC − 0x29F00`= 6380 bytes (otherwise the tracker state will be lost when downloading).
@@ -146,7 +146,7 @@ The module is loaded into the same RAM slot.`0x29F00..0x2BEFF`as well as the tra
 other applications, so only one module can live in the slot at the same time.
 
 **TRACKER SAVER is working with`TRACKER`**(Save Start/Current/NavTo/GPS)
-read`struct trk`tracker`0x2B7EC`but**It does not work with modules`GPS` и `APRS`**: when they are launched, they are closed`struct trk`and coordinates
+read`struct trk`tracker`0x2B7EC`but**It does not work with modules.`GPS` и `APRS`**: when they are launched, they are closed`struct trk`and coordinates
 The tracker becomes unavailable`<NO FIX>` / `<LAUNCH TRACKER FIRST>`?
 The GPS module can erase the dot table or state. Use them on
 queues through the application menu (holding)`#`). Point table is stored on
