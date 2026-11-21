@@ -230,8 +230,23 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
  * the lock armed); otherwise returns 0 (back to the toolbox menu). */
 static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
 {
+	const char *MD_NORMAL  = " KBLOCK     NORMAL";
+	const char *MD_ENTRY   = " KBLOCK     ENTRY";
+	const char *MD_ONSTAR  = " KBLOCK     ONSTAR";
+	const char *MD_SNORMAL = "[KBLOCK]    NORMAL";
+	const char *MD_SENTRY  = "[KBLOCK]    ENTRY";
+	const char *MD_SONSTAR = "[KBLOCK]    ONSTAR";
+	
     enum { LOCK, UNLOCK, KBLOCK, EXIT } sel = LOCK;
     for (;;) {
+		
+		const char *MD_CURR = MD_NORMAL;
+		const char *MD_SCURR = MD_SNORMAL;
+		if (*SKIP_CHECK == SKIP_2BLOCK) MD_CURR = MD_ENTRY;
+		if (*SKIP_CHECK == SKIP_KBLCKD) MD_CURR = MD_ONSTAR;
+		if (*SKIP_CHECK == SKIP_2BLOCK) MD_SCURR = MD_SENTRY;
+		if (*SKIP_CHECK == SKIP_KBLCKD) MD_SCURR = MD_SONSTAR;
+		
         title_line();
 		clear_body();
         status_line(pass);
@@ -239,7 +254,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                  sel == LOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(4, 60, sel == UNLOCK  ? "[UNLOCK]    Clear pass" : " UNLOCK     Clear pass", 24, 1,
                  sel == UNLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
-		gfx_text(4, 76, sel == KBLOCK  ? "[KBLOCK]    Clear pass" : " KBLOCK     Clear pass", 24, 1,
+		gfx_text(4, 76, sel == KBLOCK  ? MD_SCURR : MD_CURR, 24, 1,
                  sel == KBLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
 		gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Menu" : " EXIT       Menu", 24, 1,
                  sel == EXIT ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
@@ -282,9 +297,9 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                 h9_delay(60);
             } else if (sel == KBLOCK) {
                 if (pass_locked(pass)) {
-                    *SKIP_CHECK = SKIP_2BLOCK;
-                    gfx_text(4, 100, "KB LOCKED", 10, 1, GFX_GREEN, GFX_BLACK);
-					h9_delay(70);
+                    if (*SKIP_CHECK == SKIP_NORMAL) *SKIP_CHECK = SKIP_2BLOCK;
+					else if (*SKIP_CHECK == SKIP_2BLOCK) *SKIP_CHECK = SKIP_KBLCKD
+					else *SKIP_CHECK = SKIP_NORMAL;
                 } else {
                     gfx_text(4, 100, "NO PASSWORD", 12, 1, GFX_RED, GFX_BLACK);
 					h9_delay(70);
@@ -339,7 +354,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         return H9_RETURN_RADIO_LOCAL;
     }
 	
-	if (*SKIP_CHECK == SKIP_KBLCKD) {
+	if ((*SKIP_CHECK == SKIP_2BLOCK) || (*SKIP_CHECK == SKIP_KBLCKD))
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
 			STOCK_REFRESH();
