@@ -283,7 +283,6 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
             } else if (sel == KBLOCK) {
                 if (pass_locked(pass)) {
                     *SKIP_CHECK = SKIP_2BLOCK;
-					*KB_UNLOCKED = 0;
                     gfx_text(4, 100, "KB LOCKED", 10, 1, GFX_GREEN, GFX_BLACK);
 					h9_delay(70);
                 } else {
