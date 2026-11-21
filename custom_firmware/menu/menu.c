@@ -27,6 +27,9 @@
 #include "gfx.h"
 #include "vfo_persist.h"   /* put the user's VFOs back if SAT TRACK's tracker had changed them */
 
+#define PASS_ADDR 0x716FF8u
+#define PASS_LEN  8u
+
 enum { TITLE_H = 22, ROW_Y = 26, ROW_H = 18, ROWS = 5, FOOT_Y = 117, MAX_ITEMS = 64 };
 enum { ITEM_USB = -2 };
 enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
@@ -46,6 +49,27 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
 
 #define PASSCODE_NAME "PASSLOCK"
+
+static int is_digit(unsigned char c) { return c >= '0' && c <= '9'; }
+static int is_space(unsigned char c) { return c == 0x20; }
+
+static int read_pass(const struct h9_api *api, unsigned char *out)
+{
+    api->read(out, PASS_ADDR, PASS_LEN);
+    return 0;
+}
+
+static int pass_locked(const unsigned char *p)
+{
+    unsigned digits = 0;
+    for (unsigned i = 0; i < PASS_LEN; i++) {
+        if (is_digit(p[i]))        { digits++; continue; }
+        if (is_space(p[i]))         continue;
+        return 0;                   /* non-digit, non-space -> unlocked */
+    }
+    return digits > 0;              /* all digit/space and at least one digit -> locked */
+}
+
 
 static void read_entry(const struct h9_api *api, unsigned index, struct h9_entry *entry)
 {
@@ -131,8 +155,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	{
 		if (*KB_UNLOCKED == 0)
 		{
-			*SKIP_CHECK = SKIP_KBLCKD;
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
+			unsigned char pass[PASS_LEN];
+			read_pass(api, pass);    
+			if (pass_locked(pass)) { 
+				*SKIP_CHECK = SKIP_KBLCKD;
+				gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
+			} else 
+				gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);
+			gfx_wait_release();
 			return 0;
 		};
 	};
