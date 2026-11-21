@@ -354,7 +354,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         return H9_RETURN_RADIO_LOCAL;
     }
 	
-	if ((*SKIP_CHECK == SKIP_2BLOCK) || (*SKIP_CHECK == SKIP_KBLCKD))
+	if ((*SKIP_CHECK == SKIP_2BLOCK) || (*SKIP_CHECK == SKIP_KBLCKD)) {
         if (!pass_locked(pass)) {
 			*SKIP_CHECK = SKIP_NORMAL;
 			STOCK_REFRESH();
