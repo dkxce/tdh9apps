@@ -239,7 +239,7 @@ static unsigned menu_loop(const struct h9_api *api, unsigned char *pass)
                  sel == LOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
         gfx_text(4, 60, sel == UNLOCK  ? "[UNLOCK]    Clear pass" : " UNLOCK     Clear pass", 24, 1,
                  sel == UNLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
-		gfx_text(4, 76 sel == KBLOCK  ? "[KBLOCK]    Kb lock pass" : " KBLOCK     Kb lock pass", 24, 1,
+		gfx_text(4, 76, sel == KBLOCK  ? "[KBLOCK]    Clear pass" : " KBLOCK     Clear pass", 24, 1,
                  sel == KBLOCK ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);
 		gfx_text(4, 92, sel == EXIT    ? "[EXIT]      Menu" : " EXIT       Menu", 24, 1,
                  sel == EXIT ? GFX_YELLOW : GFX_WHITE, GFX_BLACK);

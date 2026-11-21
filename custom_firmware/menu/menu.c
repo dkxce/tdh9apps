@@ -126,13 +126,13 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*KEY_HOLDED == 19) {   	         /* Вход по     * */	    
 		if (*SKIP_CHECK == SKIP_2BLOCK)  /* 1st apply   * */	 
 		{
-			*SKIP_KBLCKD = SKIP_KBLCKD;
+			*SKIP_CHECK = SKIP_KBLCKD;
 			return 0;
 		};
 		if (*SKIP_CHECK != SKIP_KBLCKD) 
 			return 0;
 	};
-	if (*KEY_HOLDED == 20)               = /* Вход по SHARP */ 
+	if (*KEY_HOLDED == 20)               /* Вход по SHARP */ 
 	{
 		if (*SKIP_CHECK != SKIP_KBLCKD) 
 			if (*KB_UNLOCKED == 0)
