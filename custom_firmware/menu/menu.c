@@ -125,14 +125,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	if (*KEY_HOLDED == 19) {   	         /* Вход по     * */	    
 		if (*SKIP_CHECK == SKIP_KBLCKD) 
 			gfx_wait_release();
-		else
-			return 0;
+		return 0;
 	};
 	if (*KEY_HOLDED == 20)               /* Вход по SHARP */ 
 	{
 		if (*KB_UNLOCKED == 0)
 		{
 			*SKIP_CHECK = SKIP_KBLCKD;
+			gfx_fill(0, 21, H9_WIDTH, 2, GFX_RED);
 			return 0;
 		};
 	};
