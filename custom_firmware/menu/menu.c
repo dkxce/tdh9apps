@@ -163,9 +163,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 					*SKIP_CHECK = SKIP_KBLCKD;
 					gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
 				} else 
-					gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);
-				gfx_wait_release();
+					gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);			
 			};
+			gfx_wait_release();
 			return 0;
 		};
 	};
