@@ -205,6 +205,13 @@ static void pass_ascii(const unsigned char *p, char *out)
     out[n] = 0;
 }
 
+static char *hex(char *d, uint32_t v, unsigned n)
+{
+    for (unsigned i = n; i--;) { d[i] = "0123456789ABCDEF"[v & 15]; v >>= 4; }
+    d[n] = 0;
+    return d + n;
+}
+
 /* Enter up to 8 digits. `mask` = 1 shows '*' instead of the digits (used on
  * the RADIO IS LOCK screen); 0 shows the digits (used when setting a new
  * password in the menu). Returns 0 on Menu-confirm, 1 on Back-cancel,
@@ -215,7 +222,13 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
     unsigned len = 0;
     buf[0] = 0;
     gfx_fill(0, y, H9_WIDTH, 16, GFX_BLACK);
-    gfx_text(50, y, prompt, 20, 1, GFX_YELLOW, GFX_BLACK);
+	
+	char b[3]; // 2 символа для hex + 1 байт для '\0'
+	hex(b, *KB_UNLOCKED, 2);
+	
+	
+    gfx_text(50, y, b, 20, 1, GFX_YELLOW, GFX_BLACK);
+    // gfx_text(50, y, prompt, 20, 1, GFX_YELLOW, GFX_BLACK);
     gfx_wait_release();
     for (;;) {
         char shown[PASS_LEN + 1];
