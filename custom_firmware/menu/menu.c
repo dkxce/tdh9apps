@@ -153,16 +153,18 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	};
 	if (*KEY_HOLDED == 20)               /* Вход по SHARP */ 
 	{
-		if ((*KB_UNLOCKED == 0) && (*SKIP_CHECK == SKIP_NORMAL))
+		if (*KB_UNLOCKED == 0)
 		{
-			unsigned char pass[PASS_LEN];
-			read_pass(api, pass);    
-			if (pass_locked(pass)) { 
-				*SKIP_CHECK = SKIP_KBLCKD;
-				gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
-			} else 
-				gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);
-			gfx_wait_release();
+			if (*SKIP_CHECK == SKIP_UNLOCKED) {
+				unsigned char pass[PASS_LEN];
+				read_pass(api, pass);    
+				if (pass_locked(pass)) { 
+					*SKIP_CHECK = SKIP_KBLCKD;
+					gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
+				} else 
+					gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);
+				gfx_wait_release();
+			};
 			return 0;
 		};
 	};
