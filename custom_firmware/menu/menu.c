@@ -152,7 +152,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 			gfx_wait_release();
 		return 0;
 	};
-	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по SHARP */ 
+	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по SHARP */ 
 	{
 		if (*KB_UNLOCKED == 0)
 		{
