@@ -153,7 +153,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	};
 	if (*KEY_HOLDED == 20)               /* Вход по SHARP */ 
 	{
-		if (*KB_UNLOCKED == 0)
+		if ((*KB_UNLOCKED == 0) && (*SKIP_CHECK == SKIP_NORMAL))
 		{
 			unsigned char pass[PASS_LEN];
 			read_pass(api, pass);    

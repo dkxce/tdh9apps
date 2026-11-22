@@ -24,7 +24,6 @@
  * define SKIP_UNLOCKED 1u - Рация разлочена  
  * define SKIP_LOCKED   2u - Рация заблочена  
  * define SKIP_NORMAL   3u - Нужно разлочить
- * define SKIP_KBLCKD   4u - Блок клавы
  *
  * skip_check = 0 # включение питания (0x2B8DF)
  * <stub>
@@ -92,7 +91,6 @@
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
-#define SKIP_KBLCKD   4u /* Блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
@@ -210,7 +208,8 @@ static void pass_ascii(const unsigned char *p, char *out)
 /* Enter up to 8 digits. `mask` = 1 shows '*' instead of the digits (used on
  * the RADIO IS LOCK screen); 0 shows the digits (used when setting a new
  * password in the menu). Returns 0 on Menu-confirm, 1 on Back-cancel,
- * 2 on Up/Down, 3 - on Star. */
+ * and, when `mask` = 1, 2 on Up/Down (LOCK NOW -- leave locked, exit to the
+ * radio). */
 static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned y, int mask)
 {
     unsigned len = 0;
@@ -237,9 +236,6 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
         } else if (k == H9_KEY_MENU) {
             buf[len] = 0;
             return 0;
-        } else if (k == 20) { /* # */
-            buf[len] = 0;
-            return 3;
         }
     }
 }
@@ -328,8 +324,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         clear_all();
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
-		int res = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);		
-        if (res == 2) { /* UP/DOWN */
+        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) {
 			show_logo(api);
 			gfx_wait_release();
 			for (;;) {
@@ -337,16 +332,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 				h9_delay(5);
 			}
 			goto okb;
-		};
-		if ((res == 3) && (*KB_UNLOCKED > 1))
-			return H9_RETURN_RADIO_LOCAL;
-		if ((res == 3) && (*KB_UNLOCKED == 0)) { /* # */
-			*SKIP_CHECK = SKIP_KBLCKD;
-			clear_all();
-			STOCK_REFRESH();
-			STOCK_REDRAW();
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
-			return H9_RETURN_RADIO_LOCAL;
 		};
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
