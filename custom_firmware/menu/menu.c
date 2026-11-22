@@ -146,12 +146,13 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	if (*KEY_HOLDED == 19) {   	         /* Вход по     * */	    
+	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по     * */	    
+	{
 		if (*SKIP_CHECK == SKIP_KBLCKD) 
 			gfx_wait_release();
 		return 0;
 	};
-	if (*KEY_HOLDED == 20)               /* Вход по SHARP */ 
+	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по SHARP */ 
 	{
 		if (*KB_UNLOCKED == 0)
 		{
