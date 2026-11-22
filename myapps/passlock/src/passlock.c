@@ -215,19 +215,17 @@ static char *hex(char *d, uint32_t v, unsigned n)
 /* Enter up to 8 digits. `mask` = 1 shows '*' instead of the digits (used on
  * the RADIO IS LOCK screen); 0 shows the digits (used when setting a new
  * password in the menu). Returns 0 on Menu-confirm, 1 on Back-cancel,
- * and, when `mask` = 1, 2 on Up/Down (LOCK NOW -- leave locked, exit to the
- * radio). */
+ * 2 on Up/Down, 3 - on # */
 static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned y, int mask)
 {
     unsigned len = 0;
     buf[0] = 0;
     gfx_fill(0, y, H9_WIDTH, 16, GFX_BLACK);
 	
-	char b[3]; // 2 символа для hex + 1 байт для '\0'
-	hex(b, *KB_UNLOCKED, 2);
-	
-	
+	char b[3];
+	hex(b, *KB_UNLOCKED, 2);	
     gfx_text(50, y, b, 20, 1, GFX_YELLOW, GFX_BLACK);
+	
     // gfx_text(50, y, prompt, 20, 1, GFX_YELLOW, GFX_BLACK);
     gfx_wait_release();
     for (;;) {
@@ -249,6 +247,14 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
         } else if (k == H9_KEY_MENU) {
             buf[len] = 0;
             return 0;
+        } else if (k == 20) { /* HASH */
+            buf[len] = 0;
+			gfx_wait_release();			
+			for (;;) {
+				STOCK_REFRESH();
+				if (KEY_HOLDED != 0) return 3;
+				h9_delay(5);
+			};
         }
     }
 }
