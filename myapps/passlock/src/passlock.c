@@ -252,7 +252,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
 			gfx_wait_release();			
 			for (;;) {
 				STOCK_REFRESH();
-				if (KEY_HOLDED != 0) return 3;
+				if (*KEY_HOLDED != 0) break;
 				h9_delay(5);
 			};
         }
