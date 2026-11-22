@@ -338,7 +338,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 			}
 			goto okb;
 		};
-		if ((res == 3) && (*KB_UNLOCKED != 1))
+		if ((res == 3) && (*KB_UNLOCKED > 1))
 			return H9_RETURN_RADIO_LOCAL;
 		if ((res == 3) && (*KB_UNLOCKED == 0)) { /* # */
 			*SKIP_CHECK = SKIP_KBLCKD;
