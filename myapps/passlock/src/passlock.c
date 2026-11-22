@@ -237,7 +237,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
         } else if (k == H9_KEY_MENU) {
             buf[len] = 0;
             return 0;
-        } else if (k == 19) {
+        } else if (k == 20) { /* # */
             buf[len] = 0;
             return 3;
         }
@@ -338,7 +338,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 			}
 			goto okb;
 		};
-		if ((res == 3) && (*KB_UNLOCKED == 0)) { /* STAR */
+		if ((res == 3) && (*KB_UNLOCKED == 0)) { /* # */
 			*SKIP_CHECK = SKIP_KBLCKD;
 			STOCK_REFRESH();
 			STOCK_REDRAW();
