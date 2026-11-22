@@ -116,6 +116,25 @@
 #define LOCK_SECTOR 0x716000u
 #define SECTOR_SIZE 0x1000u
 
+
+enum {
+    LOGO_ADDRESS = 0xA00000,
+    WIDTH = 160,
+    HEIGHT = 128,
+    LOGO_BYTES = WIDTH * HEIGHT * 2,   /* 40,960 */
+    CHUNK = 128,
+};
+
+static void show_logo(const struct h9_api *api)
+{
+    uint8_t buffer[CHUNK];
+    h9_lcd_window(0, 0, WIDTH - 1, HEIGHT - 1);
+    for (uint32_t offset = 0; offset < LOGO_BYTES; offset += CHUNK) {
+        api->read(buffer, LOGO_ADDRESS + offset, CHUNK);
+        h9_lcd_write(buffer, CHUNK);
+    }
+}
+
 static int is_digit(unsigned char c) { return c >= '0' && c <= '9'; }
 static int is_space(unsigned char c) { return c == 0x20; }
 
@@ -305,7 +324,15 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         clear_all();
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
-        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) goto okb;
+        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) {
+			show_logo(api);
+			gfx_wait_release();
+			for (;;) {
+				if (h9_key() != H9_KEY_NONE) break;
+				h9_delay(5);
+			}
+			goto okb;
+		};
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
         char ascii[PASS_LEN + 1];
