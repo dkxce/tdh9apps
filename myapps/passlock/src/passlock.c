@@ -205,12 +205,14 @@ static void pass_ascii(const unsigned char *p, char *out)
     out[n] = 0;
 }
 
+/*
 static char *hex(char *d, uint32_t v, unsigned n)
 {
     for (unsigned i = n; i--;) { d[i] = "0123456789ABCDEF"[v & 15]; v >>= 4; }
     d[n] = 0;
     return d + n;
 }
+*/
 
 /* Enter up to 8 digits. `mask` = 1 shows '*' instead of the digits (used on
  * the RADIO IS LOCK screen); 0 shows the digits (used when setting a new
@@ -221,12 +223,12 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
     unsigned len = 0;
     buf[0] = 0;
     gfx_fill(0, y, H9_WIDTH, 16, GFX_BLACK);
-	
+	/*
 	char b[3];
 	hex(b, *KB_UNLOCKED, 2);	
     gfx_text(50, y, b, 20, 1, GFX_YELLOW, GFX_BLACK);
-	
-    // gfx_text(50, y, prompt, 20, 1, GFX_YELLOW, GFX_BLACK);
+	*/
+    gfx_text(50, y, prompt, 20, 1, GFX_YELLOW, GFX_BLACK);
     gfx_wait_release();
     for (;;) {
         char shown[PASS_LEN + 1];
@@ -237,7 +239,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
         gfx_text(40, y + 12, shown, maxlen, 2, GFX_WHITE, GFX_BLACK);
         unsigned k = gfx_wait_key();
         if (k == H9_KEY_UP || k == H9_KEY_DOWN) {
-            if (mask) return 2;            /* LOCK NOW on the lock screen */
+            if (mask) return 2;             /* LOCK NOW on the lock screen */
         } else if (k >= 2 && k <= 11) {     /* digits 0-9: key = digit + 2 */
             if (len < maxlen) buf[len++] = (char)('0' + (k - 2));
             buf[len] = 0;
@@ -250,11 +252,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
         } else if (k == 20) { /* HASH */
             buf[len] = 0;
 			gfx_wait_release();			
-			for (;;) {
-				STOCK_REFRESH();
-				if (*KEY_HOLDED != 0) break;
-				h9_delay(5);
-			};
+			return 3;
         }
     }
 }
