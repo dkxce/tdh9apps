@@ -338,12 +338,16 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 			}
 			goto okb;
 		};
-		if ((res == 3) && (*KB_UNLOCKED == 0)) { /* # */
-			*SKIP_CHECK = SKIP_KBLCKD;
-			STOCK_REFRESH();
-			STOCK_REDRAW();
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
-			return H9_RETURN_RADIO_LOCAL;
+		if (res == 3)  /* # */
+		{
+			gfx_wait_release();
+			if (*KB_UNLOCKED == 0) {
+				*SKIP_CHECK = SKIP_KBLCKD;
+				STOCK_REFRESH();
+				STOCK_REDRAW();
+				gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
+				return H9_RETURN_RADIO_LOCAL;
+			};
 		};
         unsigned char cur[PASS_LEN];
         read_pass(api, cur);
