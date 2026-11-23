@@ -155,6 +155,10 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	};
 	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по SHARP */ 
 	{
+		if (*SKIP_CHECK == SKIP_KBLCKD) {
+			gfx_wait_release();
+			return 0;
+		};
 		if (*KB_UNLOCKED == 0)
 		{
 			if (*SKIP_CHECK == SKIP_UNLOCKED) {
