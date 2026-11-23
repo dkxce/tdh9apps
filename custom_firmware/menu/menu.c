@@ -154,11 +154,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		return 0;
 	};
 	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по SHARP */ 
-	{
-		if (*SKIP_CHECK == SKIP_KBLCKD) {
-			gfx_wait_release();
-			return 0;
-		};
+	{		
 		if (*KB_UNLOCKED == 0)
 		{
 			if (*SKIP_CHECK == SKIP_UNLOCKED) {
@@ -168,9 +164,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 					*SKIP_CHECK = SKIP_KBLCKD;
 					gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
 				} else 
-					gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);			
+					gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);
 			};
 			gfx_wait_release();
+			return 0;
+		};
+		if (*SKIP_CHECK == SKIP_KBLCKD) {
+			gfx_wait_release();
+			gfx_fill(0, 19, H9_WIDTH, 2, 0x8010);
 			return 0;
 		};
 	};
