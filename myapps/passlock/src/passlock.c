@@ -24,6 +24,7 @@
  * define SKIP_UNLOCKED 1u - Рация разлочена  
  * define SKIP_LOCKED   2u - Рация заблочена  
  * define SKIP_NORMAL   3u - Нужно разлочить
+ * define SKIP_KBLCKD   4u - Блок клавы
  *
  * skip_check = 0 # включение питания (0x2B8DF)
  * <stub>
@@ -91,6 +92,7 @@
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
+#define SKIP_KBLCKD   4u /* Блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
