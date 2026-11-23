@@ -5,7 +5,7 @@
 [Hand-to-hand games](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
 
 Collection of game widgets for radio**TIDRADIO TD-H9**(castom firmware with
-Application manager. All modules are poured in as`.h9mod`by Bluetooth (see para.[installation](#установка)).
+Application manager. All modules are flooded as`.h9mod`by Bluetooth (see para.[installation](#установка)).
 
 ## Collection
 
@@ -20,7 +20,7 @@ Application manager. All modules are poured in as`.h9mod`by Bluetooth (see para.
 | 7 | Othello | `othello.h9mod` |
 | 8 | Sea Fight (CPU + APRS Dual Mode) | `seafight.h9mod` |
 | 9 | Snake. | `snake.h9mod` |
-| 10 | tetris | `tetris.h9mod` |
+| 10 | Tetris | `tetris.h9mod` |
 | 11 | Aprs Pool (Local + APRS Dual Mode) | `aprspool.h9mod` |
 
 ---
@@ -29,7 +29,7 @@ Application manager. All modules are poured in as`.h9mod`by Bluetooth (see para.
 
 <img src="scripts/render_games/screen_8ballpool.png" width="240"/> <img src="scripts/render_games/screen_8ballpool_pause.png" width="240"/> <img src="scripts/render_games/screen_8ballpool_win.png" width="240"/>
 
-Classic pool. Ten balls (white bar + 8 colored + black eight) on
+Classic pool. Ten balls (white bit + 8 colored + black eight) on
 green cloth. Turn the sight, set the force of the impact and hit the bat. Victory to score
 The black ball (8th) is the last; if the 8th flies into the hole, while there are colored -**foul**and losing.
 
@@ -50,7 +50,7 @@ The black ball (8th) is the last; if the 8th flies into the hole, while there ar
 
 The tank arcade. We defend our headquarters (eagle) at the bottom of the map from three enemy tanks.
 35 levels. Tile: brick (destructible), steel (indestructible), water (tanks not)
-They pass, shells fly by, forest (masking objects). +100 for the enemy, the player
+They pass, shells fly by, forest (mask objects). +100 for the enemy, the player
 3 lives.
 
 | Button | Action. |
@@ -86,7 +86,7 @@ loss.
 
 <img src="scripts/render_games/screen_bomberman2.png" width="240"/> <img src="scripts/render_games/screen_bomberman2_explode.png" width="240"/> <img src="scripts/render_games/screen_bomberman2_clear.png" width="240"/> <img src="scripts/render_games/screen_bomberman2_over.png" width="240"/>
 
-An extended version of the bomberman. Up to 3 simultaneous bombs, manual detonator (keyboard)`#`), passage through bricks. Three types of enemies: pink ball (ordinary), blue
+An extended version of the bomberman. Up to 3 simultaneous bombs, manual detonator (keyboard)`#`), passing through bricks. Three types of enemies: pink ball (ordinary), blue
 Hunter (follows the line), green ghost (walks through bricks). 4 replaceable
 Color themes of the field, enemies more and more with increasing level.
 
@@ -106,14 +106,14 @@ Color themes of the field, enemies more and more with increasing level.
 <img src="scripts/render_games/screen_loadrunner.png" width="240"/> <img src="scripts/render_games/screen_loadrunner_exit.png" width="240"/> <img src="scripts/render_games/screen_loadrunner_clear.png" width="240"/> <img src="scripts/render_games/screen_loadrunner_over.png" width="240"/>
 
 Ice runner on stairs and crossbars. We collect all the gold, it opens.
-There is a hidden exit (yellow staircase), we reach it. Guards chasing
+There is a hidden exit (yellow stairs up), we get to it. Guards chasing
 They can be caught by burning a brick so that they fall into a hole. 12 levels.
 
 | Button | Action. |
 | --- | --- |
 | `4` / `6` | left/right |
 | `2` | climb |
-| `8`or`5`) | downward |
+| `8`or`5`) | downhill |
 | `1` / `7` | pit |
 | `3` / `9` | pit |
 | `*` | pause |
@@ -145,9 +145,9 @@ The algorithm opens up empty areas. Victory - open all the cells without mines.
 <img src="scripts/render_othello_screens/screen_start.png" width="240"/> <img src="scripts/render_othello_screens/screen_after.png" width="240"/> <img src="scripts/render_othello_screens/screen_pass.png" width="240"/>   
 <img src="scripts/render_othello_screens/screen_skip.png" width="240"/> <img src="scripts/render_othello_screens/screen_win.png" width="240"/> <img src="scripts/render_othello_screens/screen_lose.png" width="240"/>
 
-Reversi (Othello) vs. AI. The board is 8×8, the player is white, the CPU is black. AI
+Reversi (Othello) vs. AI. Board 8×8, player – white chips, CPU – black. AI
 assesses the position by weights of cells (corners are the most valuable) and flips the captured ones
-chips. Blue dots are hints of available moves. End by chip count.
+chips. Blue dots are clues to the available moves. End by chip count.
 (WIN/LOSE/DRAW).
 
 | Button | Action. |
@@ -200,7 +200,7 @@ loss.
 
 ---
 
-## 10. tetris
+## 10. Tetris
 
 <img src="scripts/render_games/screen_tetris.png" width="240"/> <img src="scripts/render_games/screen_tetris_cleared.png" width="240"/> <img src="scripts/render_games/screen_tetris_pause.png" width="240"/> <img src="scripts/render_games/screen_tetris_over.png" width="240"/>
 
@@ -211,8 +211,8 @@ instantaneous discharge (`7/9`), pause (`*`).
 | Button | Action. |
 | --- | --- |
 | `4` / `6` | left/right |
-| `5` | turning |
-| `8` | downward |
+| `5` | turn |
+| `8` | downhill |
 | `7` / `9` | drop-down |
 | `*` | pause |
 | `Back` | exit |
@@ -225,7 +225,7 @@ instantaneous discharge (`7/9`), pause (`*`).
 <img src="scripts/render_games/screen_aprspool_roll.png" width="240"/> <img src="scripts/render_games/screen_aprspool_win.png" width="240"/> <img src="scripts/render_games/screen_aprspool_lose.png" width="240"/>
 
 Pool 8 with two modes.**1 - Play Local**- local play
-(one player, foul pocket balls).**2 - APRS RADIO LINK**- radio game through
+(one player, foul balls).**2 - APRS RADIO LINK**- radio game through
 APRS in room 0-99: after impact, the state of the balls is synchronized (SYNC),
 transmitted to the opponent (`YOU` / `WT`). Winning - to score the black 8th last; if
 8 goes into the hole early.`8-BALL FOUL`and losing.
@@ -254,7 +254,7 @@ transmitted to the opponent (`YOU` / `WT`). Winning - to score the black 8th las
 td9_apps.exe install 8ballpool battlecity bomberman bomberman2 loadrunner mineswiper othello seafight snake tetris
 ```
 
-The app menu is set automatically. Take a look at this.
+The app menu is automatically installed. Take a look at this.
 
 ```
 td9_apps.exe peek
@@ -269,7 +269,7 @@ poetry run python td9_apps.py install 8ballpool battlecity bomberman bomberman2 
 
 ### After installation
 
-Open up.**menu** — **retention`#`**on the radio. The list will appear.
+Open up.**menu** — **retention`#`**on the radio. The list will appear
 Installed games, go to the right buttons`🡅`/`🡇`and confirm`MENU`.
 
 > Retention`#`Opens the app menu; you don’t need to hold back.

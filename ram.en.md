@@ -14,18 +14,18 @@ TIDRADIO TD-H9 memory card (JieLi AC695X) RAM addresses - physical
 | `0xC4A1` / `0xC4A7` | APRS callsign (6 bytes) / SSID [STATIC] |
 | `0x11AD0` | App core state block: +100 river mode, +101 tech mode; +138 BLE descriptor; +6636 DAC descriptor [HW] |
 | `0x11AD0+0x1BC` | Current frequency (u32, 10 Hz) [HW, VFO Probe] |
-| `0x11AD0+0x1C8`grow,`+0x1CC`offset TX,`+0x789`direction of the shift [STATIC] |  |
+| `0x11AD0+0x1C8`grow`+0x1CC`offset TX,`+0x789`direction of the shift [STATIC] |  |
 | `0x11AD0+0x1D0` / `0x1D8` | VFO A/VFO B (u32, 10 Hz) [HW, VFO PROBE] |
 | `0x11AD0+0x10CD` | Byte range: 1 = UHF, 0 = VHF [HW] |
 | `0x12234` | NOR marker "ready" =`0x5AA5`[HW] |
 | `0x12550` / `0x12558` / `0x12560` | GPS fix: validity/latitude/longitude (signed micro-degrees) [STATIC] |
 | `0x13D10` | Last decoded AX.25 packet (324B) [STATIC] |
-| `0x16634` | APRS serial ring (2048 B; record indices)`h[0x16634]`→`0x16E34`reading`0x16E36`) [HW] |
+| `0x16634` | APRS serial ring (2048 B; record indexes)`h[0x16634]`→`0x16E34`reading`0x16E36`) [HW] |
 | `0x1D8B0` | 100-Hz tick counter [HW] |
-| `0x1D7D0` | Heap free-bit map (blocks of 128B) |
+| `0x1D7D0` | Heap free-bit map (128 B blocks) |
 | `0x1D8A8` / `0x1D8AA` | Heap: blocks occupied/all [HW] |
 | `0x1E4D8–0x2BF00` | First Range of Stock Heap [STATIC] |
-| `0x29F00–0x2BEFF` | **Module-loader**: slot modules 8 KB; "run next" mailbox in the after 32 B`0x2BEE0`magic`HRUN`) [HW] |
+| `0x29F00–0x2BEFF` | **Module-loader**: 8 KiB modules slot; "run next" mailbox in the after 32 B`0x2BEE0`magic`HRUN`) [HW] |
 | `0x2B8B4` | magic`CSRT`Resident Tracker (Satshare) [STATIC] |
 
 ---
@@ -35,20 +35,20 @@ TIDRADIO TD-H9 memory card (JieLi AC695X) RAM addresses - physical
 | Range. | Appointment |
 | --- | --- |
 | `0x00000–0x04FFF` | **Boot region**. HID recovery cannot read/write [HW] |
-| `0x05000–0xD9FFF` | **Appropriate image**, encrypted: each 32-B XOR block with a CRC key stream`0xF181 ^ ((flash−0x5000)>>2)`[HW] |
+| `0x05000–0xD9FFF` | **Appropriate image**Encrypted: Each 32-B XOR block with a CRC key stream`0xF181 ^ ((flash−0x5000)>>2)`[HW] |
 | `0xDA000–0xE9FFF` | **Settings VM**two banks of 32 KB (`0xDA000`, `0xE2000`) [STATIC] |
 | `0xEA000–0xFBFFF` | Free (72 KB), plain, executed on site`0x01EE5000`[HW] |
 | `0xFC000–0xFFFFF` | Stock data (leave alone) [HW] |
 
 ---
 
-## Resource chip (16 MB SPI NOR, SPI2)
+## Resource chip (16 MiB SPI NOR, SPI2)
 
-| Address | Appointment | Writes |
+| Address | Appointment | Writes. |
 | --- | --- | --- |
 | `0x3A7000–0x3FFFFF` | The tail of the voice party: erased, runoff does not write [HW] | — |
 | `0x3FE000` | User VFO backup (log 16-B records) – overlap with the voice of the game [STATIC] | - |
-| `0x3FF000` | **Last GPS fix**log`GFX1`, 256×16 B) [HW] | loader stub |
+| `0x3FF000` | **Last GPS fix.**log`GFX1`, 256×16 B) [HW] | loader stub |
 | `0x717000–0x7FFFFF` | The tail of the font party [HW] | — |
 | `0x802000`, `0x80B606` | APRS inbox/beacon list`sys_data`) [STATIC] | runoff |
 | `0x900000` | `rw_freq`VFO settings,**Stock writes here**[HW] | runoff |
@@ -80,7 +80,7 @@ cross the boundaries of the blocks.
 | Icon symbol | `0x30D6` | byte |
 | Mic-E start/type | `0x30D7` / `0x30D8` | yesno/byte |
 | Route 1 name/count | `0x30D9` / `0x30E1` | text8/byte |
-| Route 2 name/count | `0x30E2` / `0x30EA` | text8/byte |
+| Route 2 name / count | `0x30E2` / `0x30EA` | text8/byte |
 | Reports (volt/sats/mil) | `0x30EB` / `0x30EC` / `0x30ED` | yes |
 | PTT link | `0x30EE` | yes |
 | Timed beacon | `0x30EF` | yes |

@@ -1,13 +1,13 @@
 # TD-H9 RADIO LOCK / Password locking
 
-Owner's radio safety feature (for the owner, no bypassing protection).
+Owner's radio security function (for the owner, no circumvention of protection).
 
 ## Password storage
 
 | Thing. | Meaning. |
 | --- | --- |
 | Address | flash**`0x716FF8`**8 bytes |
-| Where | region before pictures (`0x717000`); last sector font (`0x716000`) |
+| Where | area before pictures (`0x717000`); last sector font (`0x716000`) |
 | Parolene. | all 8 bytes = numbers`0-9`gap`0x20`(The gaps finish the tail, at least 1 digit) |
 | Not paroled. | At least one byte is not a number and not a space (mod writes).`0xFF`, erased cell ) |
 
@@ -20,7 +20,7 @@ The condition "is parole":`pass_locked`= all bytes {`0-9`, `0x20`} **и**There's
 
 ## fly
 
-Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not specified (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`There is a password, you need to check.
+Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not set (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`There is a password, you need to check.
 
 ```
 <RADIO LOCK FLOW>
@@ -76,17 +76,17 @@ skip_check = 0 # включение питания (0x2B8DF)
 
 | Component | File. | Status |
 | --- | --- | --- |
-| Stub: Exposition`skip_check`along`0x716FF8`+ entrance to the menu by`#`or`skip_check>1` | patch`custom_firmware/stub/stub.s` | working |
+| Stubble: exhibit`skip_check`along`0x716FF8`+ entrance to the menu by`#`or`skip_check>1` | patch`custom_firmware/stub/stub.s` | working |
 | Menu:`skip_check==2`search and launch`PASSLOCK`If you fail-open; if you fail-open.`skip_check!=2`Regular list of modules | `custom_firmware/menu/menu.c`base`menu_base.c`) | working |
 | Module`PASSLOCK`: boot branch (`skip_check==2`Input + verification, the usual branch (`menu_loop`: Lock/UNLOCK/LOCK NOW | `myapps/passlock/src/passlock.c` | working |
 | Reading through`api->read` | `0x716FF8`8 bytes | confirmed |
 | Record password via S2 (erase+program, bypass font protection) | `td9_kpi.py pass / passclear / passread` | working |
 
 Implementation notes:
-- stub reads.`0x716FF8`through`ml_read`(stock)`0x01E4FF22`) only in the first passage; further`skip_check`auto-entry to the menu (if 2) or regular hold-#`0x14`).
--`ml_main`in stub made return (keep frame) - menu and PASSCODE do not drop / do not replay the radio when leaving.
+- stub reads.`0x716FF8`through`ml_read`(stock)`0x01E4FF22`) only on the first passage; further`skip_check`Auto-entry to the menu (if 2) or regular hold-#`0x14`).
+-`ml_main`in stub made return (keep frame) - menu and PASSCODE do not drop / do not reclaim the radio when leaving.
 - The menu.`skip_check==2`It does not draw a list, but immediately returns the index.`PASSLOCK`(or fail-open)`skip_check=1`in his absence).
--`PASSLOCK`upon`skip_check==2`Only displays the password entry screen before matching (incorrect password → re-enter).
+-`PASSLOCK`upon`skip_check==2`Only displays the password entry screen, before matching (incorrect password → re-enter).
 Locked: Locked Menu (LOCK/UNLOCK/LOCK NOW) is available when you log in to PASSCODE from the module list.`skip_check != 2`).
 
 ## Tool (BLE)
@@ -97,7 +97,7 @@ python td9_kpi.py passclear                       # сбросить (0xFF)
 python td9_kpi.py passread                        # прочитать 8 байт
 ```
 
-Writes in`0x716FF8`via S2: Programs a 32-byte block without touching the font sector (write only in erased ones)`0xFF`cells.
+Writes in`0x716FF8`via S2: Programs a 32-byte block without touching the font sector (write only in erased ones).`0xFF`cells.
 
 ## It's important.
 
@@ -108,7 +108,7 @@ So you can activate the full keyboard lock mode (without the possibility of its 
 When you activate the full keyboard lock mode at the top of the screen next to the signal scale, a red horizontal line will appear.
 To unlock the radio, turn it on and off, enter the password when you turn on (if it is set) and remove the keyboard lock with an asterisk.
 
-If you need to leave the walkie-talkie working in stock mode but at the same time disable the ability to unlock the keyboard you can
+If you need to leave the walkie-talkie working in the drain mode but at the same time disable the ability to unlock the keyboard you can
 Use a password starting from zero (0). In this case, when power is turned on, the radio will block button retention`*` и `#`.
 That is, if you have activated the keyboard lock, you will not be able to unlock the walkie-talkie (complete keyboard lock mode).
 When this mode is activated, a yellow horizontal line will appear at the top of the screen next to the signal scale.
@@ -117,4 +117,4 @@ To turn off when you turn on the mode of full keyboard lock hold`#`- a password 
 ## Stack.
 
 The following components must be installed to operate the lock function:
-- Firmware[TD-H9-V1.0.38 dkxce passlock.fw](custom_firmware/TD-H9-V1.0.38_dkxce_passlock.fw)- Menu.[menu. h9mod](myapps/menu.h9mod)- Application module[passlock. h9mod](myapps/passlock.h9mod)
+- Firmware[TD-H9-V1.0.38DKXCE.fw](custom_firmware/TD-H9-V1.0.38DKXCE.fw)- Menu.[menu. h9mod](myapps/menu.h9mod)- Application module[passlock. h9mod](myapps/passlock.h9mod)
