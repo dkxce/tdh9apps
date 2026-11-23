@@ -111,13 +111,15 @@ jobs:
       # aprs_mute.s is the optional normal-radio APRS speaker gate: build.py
       # concatenates it onto stub.s and patches the speaker-call sites only when
       # --aprs-mute is passed. The vendored minimal archive may not ship it, so
-      # install our copy before the module-loader build.
+      # install our copy before the module-loader build. build.py reads it from
+      # module-loader/stub/aprs_mute.s (ROOT / "stub" / "aprs_mute.s").
       - name: Install aprs_mute.s (APRS speaker gate)
         run: |
+          mkdir -p vendor/firmware-research/module-loader/stub
           cp custom_firmware/stub/aprs_mute.s \
-             vendor/firmware-research/module-loader/src/aprs_mute.s
+             vendor/firmware-research/module-loader/stub/aprs_mute.s
           grep -c "ml_mute_squelch" \
-            vendor/firmware-research/module-loader/src/aprs_mute.s
+            vendor/firmware-research/module-loader/stub/aprs_mute.s
 
       # Build a minimal bundle: only the menu (module 0) ships in the
       # lock-firmware, so the radio's toolbox shows just the lock flow and
