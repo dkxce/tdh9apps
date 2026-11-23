@@ -304,7 +304,7 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
     hook_sites = []
     if aprs_mute:
         hook_sites += [(0x7B7A0, 0x5224C, "ml_mute_squelch"), (0x706A2, 0x52228, "ml_mute_volume")]
-        hook_sites += [(0x86324, 0x85682, "ml_popup_beep"), (0x87494, 0x82EB2, "ml_beacon_tick")]
+        hook_sites += [(0x862C6, 0x55EC2, "ml_popup_beep"), (0x87494, 0x82EB2, "ml_beacon_tick")]
     for site, original, name in hook_sites:
         expected_call = call_bytes(original, site)
         if stock[site:site + 4] != expected_call or base[site:site + 4] != expected_call:
@@ -368,7 +368,7 @@ def build(stock_image: Path, stock_package: Path, toolchain: Path, out: Path, ap
         "aprs_mute": {"enabled": aprs_mute, "hardware_tested": True},
         "aprs_ext": {"enabled": aprs_mute, "hardware_tested": False,
                      "beep_tone_id": 42, "beacon_key": "V/M 0x10, 40 hold ticks",
-                     "hooks": "popup 0x86324 -> 0x85682, timed beacon 0x87494 -> 0x82EB2"},
+                     "hooks": "popup request 0x862C6 -> 0x55EC2, timed beacon 0x87494 -> 0x82EB2"},
     }
     (out / "h9_toolbox_modules-manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
     return manifest

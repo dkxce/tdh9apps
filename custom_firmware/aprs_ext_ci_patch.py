@@ -30,7 +30,11 @@ from pathlib import Path
 
 MARKER = "/* ---- aprs_ext.s (installed by aprs_ext_ci_patch.py) ---- */"
 DEF = re.compile(r"^[ \t]*ml_beacon_tick:", re.M)
-EXTRA_SITES = ('(0x86324, 0x85682, "ml_popup_beep")', '(0x87494, 0x82EB2, "ml_beacon_tick")')
+EXTRA_SITES = ('(0x862C6, 0x55EC2, "ml_popup_beep")', '(0x87494, 0x82EB2, "ml_beacon_tick")')
+# Older vendor build.py hooked the screen function (0x1E85782) that stock skips
+# when the RX popup setting is on; move it to the popup request call (0x1E55FC2).
+OLD_POPUP_SITE = '(0x86324, 0x85682, "ml_popup_beep")'
+NEW_POPUP_SITE = '(0x862C6, 0x55EC2, "ml_popup_beep")' 
 
 
 def strip_ext(text: str) -> str:
@@ -93,6 +97,10 @@ def main(argv: list[str]) -> int:
     if len(carriers) != 1:
         raise SystemExit(f"ml_beacon_tick carriers (need exactly one): {carriers}")
 
+    if OLD_POPUP_SITE in src:
+        src = src.replace(OLD_POPUP_SITE, NEW_POPUP_SITE)
+        build.write_text(src, encoding="utf-8")
+        print(f"{build}: popup hook moved to 0x862C6")
     if "ml_popup_beep" in src and "ml_beacon_tick" in src:
         print(f"{build}: hook sites already present")
         return 0
