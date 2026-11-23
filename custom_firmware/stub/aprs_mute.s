@@ -3,7 +3,8 @@
  * reservation or persistent-settings writes. Enabled by --aprs-mute only.
  * Stock 1.0.38: config 0xC0F0+944 = APRS enabled, +1090 = RX side (2=B).
  * app_core +444=current frequency, +464=A, +472=B. A wins on equal A/B.
- * These meanings and hardware/dual-watch behavior still require bench tests.
+ * These meanings and hardware/dual-watch behavior were verified on the
+ * bench (TD-H9, 2026-11-23): CH-B APRS receive is muted as intended.
  */
     .section .text,"ax",@progbits
     .globl ml_mute_squelch
