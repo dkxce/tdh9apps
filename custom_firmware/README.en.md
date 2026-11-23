@@ -28,6 +28,32 @@ folder`stub/`additionally`stub_base.s`(source loader) and`make_diff.py`(generati
 | File. | Appointment |
 | --- | --- |
 | <TD-H9-V1.0.38DKXCE.fw> | Firmware with stub: support for passlock, download through`#`/`*` |
+| [TD-H9-V1.0.38DKXCE MUTE APRS.fw](TD-H9-V1.0.38DKXCE_MUTE_APRS.fw) | Firmware with stub: support for passlock, download through`#`/`*`+ off sound on the CH-B APRS channel |
+
+### TD-H9-V1.0.38DKXCE MUTE APRS.fw
+
+```
+Начало проверки
+       │
+       ▼
+APRS включен? ────────────(Нет)──► [Динамик ВКЛЮЧЕН (Unmute)]
+       │
+     (Да)
+       ▼
+RX-сторона == B? ─────────(Нет)──► [Динамик ВКЛЮЧЕН (Unmute)]
+       │
+     (Да)
+       ▼
+Текущая частота == B? ────(Нет)──► [Динамик ВКЛЮЧЕН (Unmute)]
+       │
+     (Да)
+       ▼
+Частота A != Частота B? ──(Нет)──► [Динамик ВКЛЮЧЕН (Unmute)]
+       │
+     (Да)
+       ▼
+[Динамик ВЫКЛЮЧЕН (Mute)]
+```
 
 What key does stub listen to to log into the menu?`#`or`*`sets`stub/stub.s`(checking)`0xC3AF`) rather than specific`.fw`file. Retention`#`about 0.4 seconds opens the menu.
 
