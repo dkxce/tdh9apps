@@ -103,10 +103,16 @@ Writes in`0x716FF8`via S2: Programs a 32-byte block without touching the font se
 
 When you firmware the walkie-talkie module passcode and set the password, it is recommended to leave the walkie-talkie with bluetooth enabled. When you make sure everything is working properly, you can turn it off.
 
-If you try to enter the widget menu when the keyboard is blocked, the radio will be blocked before restarting. (You need to hold # when the keyboard is locked.)
-So you can activate the mode of full locking of the keyboard (without the possibility of unlocking it), the radio will work in the drain mode.
-When you activate the full keyboard lock mode, a red horizontal line will appear at the top of the screen next to the signal scale.
+If you try to enter the widget menu when the keyboard is blocked, the radio will be blocked before restarting. (We have to hold on)`#`when the keyboard is locked.
+So you can activate the full keyboard lock mode (without the possibility of its unlocking by standard rusting).`*`), the walkie-talkie will be running in effluent mode.
+When you activate the full keyboard lock mode at the top of the screen next to the signal scale, a red horizontal line will appear.
 To unlock the radio, turn it on and off, enter the password when you turn on (if it is set) and remove the keyboard lock with an asterisk.
+
+If you need to leave the walkie-talkie working in stock mode but at the same time disable the ability to unlock the keyboard you can
+Use a password starting from zero (0). In this case, when power is turned on, the radio will block button retention`*` и `#`.
+That is, if you have activated the keyboard lock, you will not be able to unlock the walkie-talkie (complete keyboard lock mode).
+When this mode is activated, a yellow horizontal line will appear at the top of the screen next to the signal scale.
+To turn off when you turn on the mode of full keyboard lock hold`#`- a password will be requested upon activation.
 
 ## Stack.
 
