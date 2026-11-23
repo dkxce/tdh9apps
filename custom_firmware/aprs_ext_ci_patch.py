@@ -12,9 +12,10 @@ Two vendor layouts are supported:
 
 In both cases the script removes a previously appended aprs_ext.s block from
 every other aprs_mute.s, so the assembled stub can never define ml_popup_beep
-twice, and it makes build.py hook exactly one APRS site:
+twice, and it makes build.py hook exactly two APRS sites:
 
     0x862C6 -> 0x55EC2   stock popup request -> ml_popup_beep
+    0x7E21C -> 0x52472   PF action dispatch -> ml_pf_action (beacon on Weather)
 
 An older build.py may still carry the retired timed-beacon hook
 (0x87494 -> 0x82EB2, ml_beacon_tick); that entry is removed because
@@ -33,6 +34,7 @@ from pathlib import Path
 MARKER = "/* ---- aprs_ext.s (installed by aprs_ext_ci_patch.py) ---- */"
 DEF = re.compile(r"^[ \t]*ml_popup_beep:", re.M)
 POPUP_SITE = '(0x862C6, 0x55EC2, "ml_popup_beep")'
+PF_SITE = '(0x7E21C, 0x52472, "ml_pf_action")'
 OLD_POPUP_SITE = '(0x86324, 0x85682, "ml_popup_beep")'
 BEACON_SITE = '(0x87494, 0x82EB2, "ml_beacon_tick")'
 
@@ -112,16 +114,17 @@ def main(argv: list[str]) -> int:
     if src != before:
         build.write_text(src, encoding="utf-8")
         print(f"{build}: hook sites updated (beacon retired, popup at 0x862C6)")
-    if POPUP_SITE in src:
-        print(f"{build}: popup hook present")
-        return 0
-    m = re.search(r"^([ \t]*)mute_sites = \((.*)\)[ \t]*$", src, re.M)
-    if not m:
-        raise SystemExit(f"{build}: `mute_sites = (...)` not found")
-    indent, inner = m.group(1), m.group(2)
-    build.write_text(src[:m.start()] + f"{indent}mute_sites = ({inner}, {POPUP_SITE})" + src[m.end():],
-                     encoding="utf-8")
-    print(f"{build}: mute_sites += popup")
+    for site, label in ((POPUP_SITE, "popup"), (PF_SITE, "pf action")):
+        if site in src:
+            print(f"{build}: {label} hook present")
+            continue
+        m = re.search(r"^([ \t]*)mute_sites = \((.*)\)[ \t]*$", src, re.M)
+        if not m:
+            raise SystemExit(f"{build}: {label} hook missing and no `mute_sites = (...)` line")
+        indent, inner = m.group(1), m.group(2)
+        src = src[:m.start()] + f"{indent}mute_sites = ({inner}, {site})" + src[m.end():]
+        build.write_text(src, encoding="utf-8")
+        print(f"{build}: mute_sites += {label}")
     return 0
 
 

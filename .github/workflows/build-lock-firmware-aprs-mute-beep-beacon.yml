@@ -110,10 +110,11 @@ jobs:
 
       # aprs_mute.s is the optional normal-radio APRS speaker gate: build.py
       # concatenates it onto stub.s and patches the speaker-call sites only when
-      # --aprs-mute is passed. aprs_ext.s adds the APRS popup beep and the V/M
-      # beacon; it must sit in exactly one aprs_mute.s (the one build.py reads),
-      # so the patcher installs both files there and extends mute_sites.
-      - name: Install aprs_mute.s + aprs_ext.s (gate, popup beep, V/M beacon)
+      # --aprs-mute is passed. aprs_ext.s adds the APRS popup beep and the PF
+      # action test hook (beacon on Weather); it must sit in exactly one
+      # aprs_mute.s (the one build.py reads), so the patcher installs both files
+      # there and extends mute_sites.
+      - name: Install aprs_mute.s + aprs_ext.s (gate, popup beep, PF action hook)
         run: |
           python3 custom_firmware/aprs_ext_ci_patch.py \
             vendor/firmware-research/module-loader \
@@ -127,6 +128,8 @@ jobs:
             vendor/firmware-research/module-loader/*/aprs_mute.s \
             vendor/firmware-research/module-loader/*/aprs_ext.s 2>/dev/null || true
           grep -n "ml_popup_beep" \
+            vendor/firmware-research/module-loader/build.py
+          grep -n "ml_pf_action" \
             vendor/firmware-research/module-loader/build.py
 
       # Build a minimal bundle: only the menu (module 0) ships in the

@@ -298,11 +298,13 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
 
     # Optional APRS hooks (--aprs-mute), retargeted to the stub: the stock
     # squelch (0x5224C) and volume (0x52228) call sites for the speaker gate,
-    # and the popup request call (0x55EC2) for beep-beep.
+    # the popup request call (0x55EC2) for beep-beep, and the PF action
+    # dispatcher call (0x52472) that we retarget to send a beacon on Weather.
     hook_sites = []
     if aprs_mute:
         hook_sites += [(0x7B7A0, 0x5224C, "ml_mute_squelch"), (0x706A2, 0x52228, "ml_mute_volume")]
         hook_sites += [(0x862C6, 0x55EC2, "ml_popup_beep")]
+        hook_sites += [(0x7E21C, 0x52472, "ml_pf_action")]
     for site, original, name in hook_sites:
         expected_call = call_bytes(original, site)
         if stock[site:site + 4] != expected_call or base[site:site + 4] != expected_call:
@@ -365,7 +367,8 @@ def build(stock_image: Path, stock_package: Path, toolchain: Path, out: Path, ap
         "hardware_observation": "Not yet flashed",
         "aprs_mute": {"enabled": aprs_mute, "hardware_tested": True},
         "aprs_ext": {"enabled": aprs_mute, "hardware_tested": True,
-                     "beep_tone_id": 42, "hooks": "popup request 0x862C6 -> 0x55EC2"},
+                     "beep_tone_id": 42, "hooks": "popup request 0x862C6 -> 0x55EC2",
+                     "pf_action_test_hook": "0x7E21C -> 0x52472, beacon on action 6 (Weather); NOT hardware tested"},
     }
     (out / "h9_toolbox_modules-manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
     return manifest

@@ -1,7 +1,8 @@
 /* APRS extras for the loader stub (shipped with --aprs-mute, build.py).
  *
- * One stock hook, retargeted by build.py (app offsets; CPU = app + 0x01E00100):
+ * Two stock hooks, retargeted by build.py (app offsets; CPU = app + 0x01E00100):
  *   0x862C6  call 0x55EC2  -> ml_popup_beep    (popup request 0x01E55FC2)
+ *   0x7E21C  call 0x52472  -> ml_pf_action     (PF action dispatch, TEST hook)
  *
  * When the APRS RX popup is requested (b[0xC0F0+1095] == 1, the "RX Oto Popup"
  * setting), stock posts UI request 9 and calls 0x01E55FC2. The hook sits on
@@ -42,6 +43,42 @@ ml_popup_beep:
     r2 = r6
     {rets, r6-r4} = [sp++]
     r3 = 0x01e55fc2
+    goto r3
+
+/* ---- PF action dispatch -> beacon on "Weather" (TEST hook) --------------
+ *
+ * The side-button action list is dispatcher 0x01E7E318: it takes the action
+ * number in r0, does `r0 = r0 - 1; if (r0 > 7) return`, and switches over the
+ * tbb table at 0x1E7E336. The range fits the menu
+ *   None, FM Radio, GNSS SW, Tone, Alarm, Weather, PTT2, OD PTT
+ * so Weather = 6 (6th item, index 5 from zero as seen in the radio menu).
+ *
+ * The hook sits on `call 0x1E52572` at CPU 0x01E7E31C (app offset 0x7E21C) -
+ * the call the dispatcher makes right after keeping the action number in r2.
+ * The callee ignores its arguments, so only rets has to survive the beacon.
+ *
+ * TEST behaviour: send one beacon and let stock open the weather screen as
+ * before. When the beacon really fires on the Weather item, replace the last
+ * `goto` with a return to drop the screen.
+ */
+    .globl ml_pf_action
+ml_pf_action:
+    [--sp] = {rets, r5, r4}
+    r4 = r0                      /* action number, 1-based */
+    r1 = 6                       /* Weather */
+    if (r4 != r1) goto pf_done
+    r4 = 72400
+    r5 = b[r4+78] (u)            /* stock's timed-beacon path skips the stop */
+    r3 = 0x01e5c3d4              /* stock beacon sender */
+    call r3
+    if (r5 == 1) goto pf_done
+    if (r0 == 0) goto pf_done
+    r0 = 0
+    r3 = 0x01e5cdec              /* end of transmission, else PTT stays keyed */
+    call r3
+pf_done:
+    {rets, r5, r4} = [sp++]
+    r3 = 0x1e52572               /* original callee of the hooked call */
     goto r3
 
 /* ---- Reference: sending an APRS beacon from stock code (NOT WIRED) -------
