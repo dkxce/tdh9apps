@@ -1,6 +1,7 @@
 **Кастомизированная прошивка** trck-153 на основе v1.0.3.8 и h9toolbox от melidosian/h9toolbox.      
 Основной функционал:
 - добавлена блокировка рации по паролю (стек: **TD-H9-V1.0.38DKXCE.fw** + **menu.h9mod** + **passlock.h9mod**)
+- добавлена блокировка рации по паролю c выкл. звука на APRS канале <B> (стек: **TD-H9-V1.0.38DKXCE_MUTE_APRS.fw** + **menu.h9mod** + **passlock.h9mod**)
 - добавлена блокировка клавиатуры рации по паролю (условно, стек: **TD-H9-V1.0.38DKXCE.fw** + **menu.h9mod** + **passlock.h9mod**)
 - добавлена смена bootscreen через скрипт (стек: **td9_logo.exe**)
 - добавлен просмотр bootscreen через модуль (стек: **bootscreen.h9mod**)
@@ -17,6 +18,7 @@
 Key features:
 - Added password-based radio locking (stack: TD-H9-V1.0.38DKXCE.fw + menu.h9mod + passlock.h9mod)
 - Added locking of the radio keyboard by password (conditionally, stack: TD-H9-V1.0.38DKXCE.fw + menu.h9mod + passlock.h9mod)
+- Added locking of the radio keyboard by password with mute CH-B APRS (conditionally, stack: TD-H9-V1.0.38DKXCE_MUTE_APRS.fw + menu.h9mod + passlock.h9mod)
 - Added the ability to change the boot screen via a script (stack: td9_logo.exe)
 - Added a boot screen viewer module (stack: bootscreen.h9mod)
 - Added the ability to upload images via a script and view them on the radio (stack: td9_kpi.exe + dkxcepic.h9mod)
