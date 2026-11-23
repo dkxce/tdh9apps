@@ -25,6 +25,7 @@
  * define SKIP_LOCKED   2u - Рация заблочена  
  * define SKIP_NORMAL   3u - Нужно разлочить
  * define SKIP_KBLCKD   4u - Блок клавы
+ * define SKIP_2BLCKD   5u - Блок клавы
  *
  * skip_check = 0 # включение питания (0x2B8DF)
  * <stub>
@@ -93,6 +94,7 @@
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define SKIP_KBLCKD   4u /* Блок клавы */
+#define SKIP_2BLCKD   5u /* Нужен блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
@@ -259,17 +261,6 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
     }
 }
 
-/* READONLY PASSWORD, USE IT ON KEYBOARD LOCK ONLY TO ALLOW USE STOCK-THREAD */
-static int check_readonly(const unsigned char pass[PASS_LEN]) {
-	const unsigned char READONLY[PASS_LEN] = "66597323";
-    for (int i = 0; i < PASS_LEN; i++) {
-        if (pass[i] != READONLY[i]) {
-            return 0; // Нашли отличие, дальше не проверяем
-        }
-    }
-    return 1; // Все 8 байт совпали
-}
-
 /* Menu of the radio-lock manager. Returns 1 (H9_RETURN_RADIO_LOCAL) when the
  * user chose LOCK NOW (password written, leave to the radio immediately with
  * the lock armed); otherwise returns 0 (back to the toolbox menu). */
@@ -349,8 +340,8 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		};
-		if (check_readonly(pass)) {
-			*SKIP_CHECK = SKIP_KBLCKD;
+		if ((pass[0] == '0') && (*KEY_HOLDED != 20) { /* pass starts with 0 and no # holded */
+			*SKIP_CHECK = SKIP_2BLCKD;
 			STOCK_REFRESH();
             STOCK_REDRAW();
 			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);

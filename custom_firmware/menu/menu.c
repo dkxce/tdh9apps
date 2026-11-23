@@ -44,6 +44,7 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_LOCKED   2u /* Рация заблочена  */
 #define SKIP_NORMAL   3u /* Нужно разлочить  */
 #define SKIP_KBLCKD   4u /* Блок клавы */
+#define SKIP_2BLCKD   5u /* Нужен блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
 #define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
@@ -185,6 +186,16 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
          STOCK_REDRAW();
+		 h9_delay(120);
+         return 0;
+    }
+	
+	if (*SKIP_CHECK == SKIP_2BLCKD) {
+		*SKIP_CHECK = SKIP_KBLCKD;
+		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
+         STOCK_REFRESH();
+         STOCK_REDRAW();
+		 gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
 		 h9_delay(120);
          return 0;
     }
