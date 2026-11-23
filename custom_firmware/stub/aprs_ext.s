@@ -1,88 +1,24 @@
 /* APRS extras for the loader stub (shipped with --aprs-mute, build.py).
  *
- * Two stock hooks, both retargeted by build.py (app offsets; CPU = app + 0x01E00100):
+ * One stock hook, retargeted by build.py (app offsets; CPU = app + 0x01E00100):
  *   0x862C6  call 0x55EC2  -> ml_popup_beep    (popup request 0x01E55FC2)
- *   0x87494  call 0x82EB2  -> ml_beacon_tick   (stock timed-beacon check 0x01E82FB2)
  *
- * 1. Holding V/M (scan byte 0xC3AF = 0x10) sends one beacon with stock's own
- *    sender, 0x01E5C3D4, from the APRS tick context. The trigger is 30 stock
- *    hold ticks (h[0xC3B2]); afterwards every tick keeps the stock hold counter
- *    at zero, so stock never reaches its own long-press threshold and the V/M
- *    action (VFO/Memory) does not fire.
- *    Immediately after the sender, the stock tail of the timed-beacon path runs
- *    (0x01E83008..0x01E8301E): unless b[0x72400+78] == 1 or the sender returned
- *    0, call 0x01E5CDEC(0), which finishes the transmission - without it PTT
- *    stays keyed.
- *    State: 0x2BEF2 (0 idle / 1 armed / 2 sent) and 0x2BEF3 (u8 baseline);
- *    they are the tail of the run-next request's name[16], which a module
- *    rewrites when it posts one.
+ * When the APRS RX popup is requested (b[0xC0F0+1095] == 1, the "RX Oto Popup"
+ * setting), stock posts UI request 9 and calls 0x01E55FC2. The hook sits on
+ * that call, so the beep happens only when the popup is really requested.
+ * Note 0x1E85782 is NOT used in this configuration: with the setting on, the
+ * packet handler jumps past it.
  *
- * 2. When the APRS RX popup is requested (b[0xC0F0+1095] == 1, the "RX Oto
- *    Popup" setting), stock posts UI request 9 and calls 0x01E55FC2. The hook
- *    sits on that call, so the beep happens only when the popup is really
- *    requested. Note 0x1E85782 is NOT used in this configuration: with the
- *    setting on, the packet handler jumps past it.
- *    The beep is stock's own key-beep wrapper 0x01E52BD0(42, 20, 1), the path
- *    stock uses from 0x01E75998. Tone 42 is
- *    "storage/res_nor/C/tone/d_sound.*": a sound file on the resource chip, so
- *    it needs the prompt player and its audio routing (the wrapper does
- *    0x01E50820 / 0x01E521CE itself; the bare 0x01E5241A stayed silent).
- *    The request arguments (r0=0, r1=3) are preserved and passed on.
+ * The beep is stock's own key-beep wrapper 0x01E52BD0(42, 20, 1), the path
+ * stock uses from 0x01E75998. Tone 42 is
+ * "storage/res_nor/C/tone/d_sound.*": a sound file on the resource chip, so it
+ * needs the prompt player and its audio routing (the wrapper does 0x01E50820 /
+ * 0x01E521CE itself; the bare 0x01E5241A stays silent). Two calls give
+ * beep-beep. The request arguments (r0=0, r1=3) are preserved and passed on.
  *
- * Addresses were found in app.bin v1.0.38 and cross-checked with h9toolbox's
- * evidence (aprs-timed-beacon.asm, main-ui-radio-superloop.md) and
- * far-hello/audio.c ("stock app+0x5231A").
+ * Verified on hardware (TD-H9, 2026-11-23): beep-beep plays with the popup.
  */
     .section .text,"ax",@progbits
-
-/* ---- V/M hold -> beacon (runs inside the stock APRS tick) ---------------- */
-    .globl ml_beacon_tick
-ml_beacon_tick:
-    [--sp] = {rets, r7-r4}
-    r4 = 0x0000c3af
-    r0 = b[r4+0] (u)
-    r5 = 0x0002bef2
-    if (r0 != 16) goto bt_idle
-    r1 = b[r5+0] (u)
-    if (r1 > 2) goto bt_idle     /* stale/garbage: start over */
-    r2 = 0x0000c3b2
-    r3 = h[r2+0] (u)
-    r3 = r3 & 0xff
-    if (r1 == 0) goto bt_arm
-    if (r1 == 2) goto bt_hold    /* already sent: keep stock from seeing a long press */
-    r6 = b[r5+1] (u)
-    r3 -= r6
-    if (r3 < 30) goto bt_done
-    r1 = 2
-    b[r5+0] = r1                 /* one beacon per hold */
-    r3 = 0x01e5c3d4
-    call r3
-    /* Stock's timed-beacon path ends the transmission right after the sender
-     * (0x01E83008..0x01E8301E): unless b[0x72400+78] == 1 or the sender
-     * returned 0, it calls 0x01E5CDEC(0). Without this PTT stays keyed. */
-    r6 = 0x00072400
-    r6 = b[r6+78] (u)
-    if (r6 == 1) goto bt_hold
-    if (r0 == 0) goto bt_hold
-    r0 = 0
-    r3 = 0x01e5cdec
-    call r3
-bt_hold:
-    r1 = 0
-    h[r2+0] = r1                 /* stock's hold counter stays short: no V/M action */
-    goto bt_done
-bt_arm:
-    b[r5+1] = r3
-    r1 = 1
-    b[r5+0] = r1
-    goto bt_done
-bt_idle:
-    r1 = 0
-    b[r5+0] = r1
-bt_done:
-    {rets, r7-r4} = [sp++]
-    r3 = 0x01e82fb2
-    goto r3
 
 /* ---- popup request -> beep-beep ----------------------------------------- */
     .globl ml_popup_beep
@@ -107,3 +43,39 @@ ml_popup_beep:
     {rets, r6-r4} = [sp++]
     r3 = 0x01e55fc2
     goto r3
+
+/* ---- Reference: sending an APRS beacon from stock code (NOT WIRED) -------
+ *
+ * The V/M hold trigger was removed on 2026-11-23 (it also left the radio in
+ * TX and fought stock's V/M action). The pieces below are the verified stock
+ * path, kept here so the feature can be re-wired without another reverse.
+ *
+ * Sender: 0x01E5C3D4, no arguments, call it from the APRS task context
+ * (inside the tick 0x01E8752E, or a hook on a call inside it).
+ * Before sending it checks, and silently returns when:
+ *   b[0xC0F0+218] == 1   APRS/TX enabled          (app+0x5224C family config)
+ *   b[0x72400+2688] != 0 APRS state ready
+ *   [0x72400+2704] and [0x72400+2708] not both 0   fixed position / GPS fix
+ *   b[0xC0F0+1091] <= 4  beacon frame type
+ * then switches on the frame type (Mic-E / position / ...) via tbb/tbh.
+ *
+ * End of transmission: stock's timed-beacon path (0x01E83008..0x01E8301E)
+ * does it right after the sender:
+ *   r4 = b[0x72400+78]
+ *   call 0x01E5C3D4
+ *   if (r4 == 1) done
+ *   if (r0 == 0) done
+ *   r0 = 0; call 0x01E5CDEC        <- without this PTT stays keyed
+ *
+ * Where the timed beacon runs: 0x01E82FB2, called from the APRS tick at the
+ * call site app+0x87494 (call app+0x82EB2); it reads b[0xC0F0+1059] (timed
+ * beacon on) and h[0xC0F0+1060] (interval, seconds), counts ticks in
+ * [0x72400+540] and fires every interval*100 ticks.
+ *
+ * To wire a new trigger: retarget app+0x87494 to a stub that calls
+ * 0x01E5C3D4 + 0x01E5CDEC as above, then tail-jumps to 0x01E82FB2; keep the
+ * sender in the APRS task context, never in the main loop (airtime ~2 s).
+ * Free RAM bytes used by the removed trigger: 0x2BEF2 (state), 0x2BEF3
+ * (u8 hold baseline) - the tail of the run-next request's name[16].
+ */
+

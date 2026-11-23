@@ -11,12 +11,14 @@ Two vendor layouts are supported:
     aprs_ext.s to that aprs_mute.s.
 
 In both cases the script removes a previously appended aprs_ext.s block from
-every other aprs_mute.s, so the assembled stub can never define
-ml_beacon_tick twice, and it adds the two extra call sites to `mute_sites`
-unless build.py already references them:
+every other aprs_mute.s, so the assembled stub can never define ml_popup_beep
+twice, and it makes build.py hook exactly one APRS site:
 
-    0x86324 -> 0x85682   stock popup screen   -> ml_popup_beep
-    0x87494 -> 0x82EB2   timed-beacon check   -> ml_beacon_tick
+    0x862C6 -> 0x55EC2   stock popup request -> ml_popup_beep
+
+An older build.py may still carry the retired timed-beacon hook
+(0x87494 -> 0x82EB2, ml_beacon_tick); that entry is removed because
+aprs_ext.s no longer defines the symbol.
 
 It fails loudly when the vendor does not look like either layout; that is a
 signal to look at the vendor build.py, not to skip the check.
@@ -29,12 +31,10 @@ import sys
 from pathlib import Path
 
 MARKER = "/* ---- aprs_ext.s (installed by aprs_ext_ci_patch.py) ---- */"
-DEF = re.compile(r"^[ \t]*ml_beacon_tick:", re.M)
-EXTRA_SITES = ('(0x862C6, 0x55EC2, "ml_popup_beep")', '(0x87494, 0x82EB2, "ml_beacon_tick")')
-# Older vendor build.py hooked the screen function (0x1E85782) that stock skips
-# when the RX popup setting is on; move it to the popup request call (0x1E55FC2).
+DEF = re.compile(r"^[ \t]*ml_popup_beep:", re.M)
+POPUP_SITE = '(0x862C6, 0x55EC2, "ml_popup_beep")'
 OLD_POPUP_SITE = '(0x86324, 0x85682, "ml_popup_beep")'
-NEW_POPUP_SITE = '(0x862C6, 0x55EC2, "ml_popup_beep")' 
+BEACON_SITE = '(0x87494, 0x82EB2, "ml_beacon_tick")'
 
 
 def strip_ext(text: str) -> str:
@@ -56,7 +56,7 @@ def main(argv: list[str]) -> int:
     mute_src = Path(argv[2]).read_text(encoding="utf-8-sig")
     ext = Path(argv[3]).read_text(encoding="utf-8-sig")
     if not DEF.search(ext):
-        raise SystemExit(f"{argv[3]}: ml_beacon_tick not defined")
+        raise SystemExit(f"{argv[3]}: ml_popup_beep not defined")
 
     build = loader / "build.py"
     src = build.read_text(encoding="utf-8")
@@ -95,22 +95,33 @@ def main(argv: list[str]) -> int:
         if DEF.search(path.read_text(encoding="utf-8-sig")):
             carriers.append(str(path.relative_to(loader)))
     if len(carriers) != 1:
-        raise SystemExit(f"ml_beacon_tick carriers (need exactly one): {carriers}")
+        raise SystemExit(f"ml_popup_beep carriers (need exactly one): {carriers}")
 
-    if OLD_POPUP_SITE in src:
-        src = src.replace(OLD_POPUP_SITE, NEW_POPUP_SITE)
+    # build.py: retire the timed-beacon hook, move the old popup site, add ours.
+    before = src
+    if f", {BEACON_SITE}" in src:
+        src = src.replace(f", {BEACON_SITE}", "")
+    elif f"{BEACON_SITE}, " in src:
+        src = src.replace(f"{BEACON_SITE}, ", "")
+    else:
+        src = src.replace(BEACON_SITE, "")
+    if f", {OLD_POPUP_SITE}" in src:
+        src = src.replace(f", {OLD_POPUP_SITE}", f", {POPUP_SITE}")
+    else:
+        src = src.replace(OLD_POPUP_SITE, POPUP_SITE)
+    if src != before:
         build.write_text(src, encoding="utf-8")
-        print(f"{build}: popup hook moved to 0x862C6")
-    if "ml_popup_beep" in src and "ml_beacon_tick" in src:
-        print(f"{build}: hook sites already present")
+        print(f"{build}: hook sites updated (beacon retired, popup at 0x862C6)")
+    if POPUP_SITE in src:
+        print(f"{build}: popup hook present")
         return 0
     m = re.search(r"^([ \t]*)mute_sites = \((.*)\)[ \t]*$", src, re.M)
     if not m:
         raise SystemExit(f"{build}: `mute_sites = (...)` not found")
     indent, inner = m.group(1), m.group(2)
-    replacement = f"{indent}mute_sites = ({inner}, {EXTRA_SITES[0]}, {EXTRA_SITES[1]})"
-    build.write_text(src[:m.start()] + replacement + src[m.end():], encoding="utf-8")
-    print(f"{build}: mute_sites += popup, timed beacon")
+    build.write_text(src[:m.start()] + f"{indent}mute_sites = ({inner}, {POPUP_SITE})" + src[m.end():],
+                     encoding="utf-8")
+    print(f"{build}: mute_sites += popup")
     return 0
 
 
