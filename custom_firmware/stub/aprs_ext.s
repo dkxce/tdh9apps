@@ -17,9 +17,6 @@
  * 0x01E521CE itself; the bare 0x01E5241A stays silent). Two calls give
  * beep-beep. The request arguments (r0=0, r1=3) are preserved and passed on.
  *
- * The beep only plays with the keypad unlocked: KB_UNLOCKED byte 0x0C3C8 must
- * be 1 (the popup request itself is still passed through either way).
- *
  * Verified on hardware (TD-H9, 2026-11-23): beep-beep plays with the popup.
  */
     .section .text,"ax",@progbits
@@ -31,9 +28,6 @@ ml_popup_beep:
     r4 = r0                      /* request arguments (0, 3) */
     r5 = r1
     r6 = r2
-    r3 = 0x0c3c8                 /* KB_UNLOCKED: 1 = keyboard unlocked */
-    r3 = b[r3+0] (u)
-    if (r3 != 1) goto beep_done
     r0 = 42
     r1 = 20
     r2 = 1
@@ -44,7 +38,6 @@ ml_popup_beep:
     r2 = 1
     r3 = 0x01e52bd0
     call r3
-beep_done:
     r0 = r4
     r1 = r5
     r2 = r6
