@@ -31,11 +31,24 @@
 
 | Файл | Назначение |
 |---|---|
-| [TD-H9-V1.0.38DKXCE.fw](TD-H9-V1.0.38DKXCE.fw) | Прошивка со stub: поддержка passlock, загрузка через `#`/`*` |
-| [TD-H9-V1.0.38DKXCE_MUTE_APRS.fw](TD-H9-V1.0.38DKXCE_MUTE_APRS.fw) | Прошивка со stub: поддержка passlock, загрузка через `#`/`*` + выкл. звука на CH-B APRS канале |
+| [TD-H9-V1.0.38DKXCE.fw](TD-H9-V1.0.38DKXCE.fw) | stub + passlock |
+| [TD-H9-V1.0.38DKXCE_APRS_mute.fw](TD-H9-V1.0.38DKXCE_APRS_mute.fw) | stub + passlock + aprs mute |
+| [TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw](TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw) | stub + passlock + aprs mute + beep-beep + send beacon |
 
+Менеджер приложений (виджетов) во всех сборках открывается удержанием `#`.    
 
-### Флоу выключения звука TD-H9-V1.0.38DKXCE_MUTE_APRS.fw
+### Сборка TD-H9-V1.0.38DKXCE.fw
+
+Основа для всех остальных прошивок:
+- Открывается удержанием `#`. 
+- Поддерживает выбор и загрузку приложений. 
+- Поддерживает блокировку рации паролем.
+- Поддерживает режим полной блокировки клавиатуры. (см. [lock-pass.md](../lock-pass.md) )
+
+### Сборка TD-H9-V1.0.38DKXCE_APRS_mute.fw
+
+Включает функционал сборки TD-H9-V1.0.38DKXCE.fw а также:
+- Выключает динамик при включенном APRS на B-канале, см. флоу ниже
 
 ```
 Начало проверки
@@ -60,53 +73,57 @@ RX-сторона == B? ─────────(Нет)──► [Динам
 [Динамик ВЫКЛЮЧЕН (Mute)]
 ```
 
-Какую клавишу слушает stub для входа в меню (`#` или `*`), задаёт
-`stub/stub.s` (проверка `0xC3AF`), а не конкретный `.fw` файл. Удержание
-`#` около 0,4 с открывает меню.
+### Сборка TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw
+
+Включает функционал сборки TD-H9-V1.0.38DKXCE.fw и TD-H9-V1.0.38DKXCE_APRS_mute.fw а также:
+- Поддерживает назначение на боковую кнопку отправку APRS-пакета (beacon) вместо стокового Weather (Weather все еможно открыть удержанием `0`)
+- Поддерживает звуковой сигнал бип-бип вместе с APRS POPUP (если в настройках APRS включен Resport Sats) см. флоу ниже
+
+```
+Пришел APRS-пакет
+       │
+       ▼
+APRS -> Advanced Set -> RX Auto POPUP включен? ───(Нет)──► [Нет звука]
+       │
+     (Да)
+       ▼
+APRS -> Beacon Set -> Report Sats включен? ──(Нет)──► [Нет звука]
+       │
+     (Да)
+       ▼
+[Beep-Beep]
+```
 
 ## Автосборка через GitHub Actions (рекомендуется)
-
-Без доступа к `melidosian/h9toolbox` вам не нужен: workflow
-[`build-lock-firmware.yml`](../.github/workflows/build-lock-firmware.yml) (`Build
-TD-H9 lock firmware`) клонирует его как публичный vendor, применяет
-`stub/stub.patch`, ставит `menu/menu.c`, извлекает stock `app.bin` из
-`firmware/TD-H9-V1.0.38.fw` в вашем репо, скачивает JieLi toolchain из вашего
-релиза `toolchain` и собирает прошивку.
 
 Установка:
 1. README и файлы уже лежат в репозитории `dkxce/tdh9apps`
    (`custom_firmware/` рядом с `firmware/`, workflow в `.github/workflows/`).
 2. Убедитесь, что в релизе `tdh9apps` с тегом `toolchain` есть asset `.tar.xz`
    с тулчейном (папка внутри содержит `pi32v2/bin/clang`), и в релизе с тегом
-   `buildable` — asset `buildable.zip` (минимальный vendor-архив h9toolbox).
-3. Actions → **Build TD-H9 lock firmware** → Run workflow.
-4. Артефакт `lock-firmware` содержит `h9_toolbox_modules_OFFLINE_EXPERIMENT.fw`
-   (прошивка со stub), `h9_modules.bin` и манифест.
+   `buildable` — asset `.zip` (минимальный архив h9toolbox).
+3. Actions → **Build TD-H9-...** → Run workflow.
+4. Артефакт `.zip` содержит `*.fw` (прошивку со stub), меню приложений `menu.h9mod` и манифест.
 
 Заливка: `h9_flash.py --fw <файл.fw>` (HID, PTT+2).
 
-Учтите: та же прошивка собирает и модули (меню/APRS/...). Модуль PASSLOCK со
-строкой unlock-only (self==0xFFFF) собирается отдельным workflow
-`Build myapps modules` из `myapps/passlock/src/passlock.c` и устанавливается
+Модуль PASSLOCK собирается отдельным workflow
+`Build myapps modules *.h9mod` из `myapps/passlock/src/passlock.c` и устанавливается
 через App Manager.
 
 ## Куда класть и как собрать (вручную)
 
 ### 1. Загрузчик (`stub.s`)
-Репозиторий: `melidosian/h9toolbox`.
-- Скопируйте `stub/stub.s` в `firmware-research/module-loader/src/stub.s`
-  (или примените `stub.patch`: `git apply stub.patch`).
-- Соберите прошивку: см. `firmware-research/module-loader/README.md`.
-  ```
-  JIELI_TOOLCHAIN=<toolchain> python3 -I build.py --stock-image <app.bin> --stock-package <TD-H9-V1.0.38.fw>
-  ```
-- Проверка локально (без тулчейна): ассемблер и линкер собираются
-  (stub = 1448 байт, каверна = 1632, запас 184 байта).
+Репозиторий: `dkxce/tdh9apps`.
+- Подготовьте `custom_firmware/stub/stub.s`
+- Подготовьте `custom_firmware/stub/aprs_mute.s`
+- Подготовьте `custom_firmware/stub/aprs_ext.s`
+- Запустите `make_diff.py`
+- Соберите прошивку через CI `Build TD-H9-...`, установите на рацию.
 
 ### 2. Модуль (`passlock.c`)
-Репозиторий: `dkxce/tdh9apps` (TDH9Unbrick).
-- Исходник уже лежит в `myapps/passlock/src/passlock.c`.
-- Соберите модуль через CI `Build myapps modules`
+- Подготовьте `myapps/passlock/src/passlock.c`.
+- Соберите модуль через CI `Build myapps modules *.h9mod`
   (`build_one.py passlock`), получите `passlock.h9mod`, установите на рацию.
 
 ## Порядок на рации
