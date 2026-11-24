@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 
 env:
-  PATCH: custom_firmware/stub/stub.patch
   H9FW: firmware/TD-H9-V1.0.38.fw
   VENDOR_ASSET: TD-H9-V1.0.38DKXCE_APRS.zip
   VENDOR_TAG: buildable
@@ -80,25 +79,12 @@ jobs:
           rm "$ROOT/vendor/vendor.zip"
           ls "$ROOT/vendor/firmware-research/module-loader/src/stub.s"
 
-      # ---- apply our stub patch --------------------------------------
-      # The vendored archive is not a git repo, so apply with `patch` instead
-      # of `git apply`. The patch paths (src/stub.s) are relative to
-      # module-loader/, matching the original CI invocation.
-      - name: Apply owner-lock stub patch
-        run: |
-          cp "$PATCH" vendor-patch.patch
-          cd vendor/firmware-research/module-loader
-          # The vendored archive was built on Windows: stub.s is CRLF, and the
-          # patch freshly generated on Windows may be CRLF too. Normalize BOTH
-          # to LF before applying, or `patch` chokes on the line-ending mismatch.
-          sed -i 's/\r$//' src/stub.s
-          sed -i 's/\r$//' ../../../vendor-patch.patch
-          patch -p1 < ../../../vendor-patch.patch
-          cd "$GITHUB_WORKSPACE"
-          echo "patched stub.s lines:"
-          wc -l vendor/firmware-research/module-loader/src/stub.s
+# The owner-lock stub is kept ready-made in this repo
+      # (custom_firmware/stub/stub.s) and build_lock_lib.py links it directly,
+      # so no stub.patch step is needed anymore and the vendored
+      # module-loader/src/stub.s is not touched.
 
-# Our menu adds the owner-lock boot path (skip_check == 2 -> run PASSCODE
+      # Our menu adds the owner-lock boot path (skip_check == 2 -> run PASSCODE
       # or fail open). build_lock_aprs_mute_beep_beacon.py compiles
       # custom_firmware/menu/menu.c directly, so nothing has to be copied into
       # the vendor tree.
