@@ -40,5 +40,5 @@ jobs:
       - name: Upload .h9mod artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: myapps-h9mod
+          name: tdh9-dkxce-modules
           path: myapps/*.h9mod

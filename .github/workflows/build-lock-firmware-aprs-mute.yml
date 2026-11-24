@@ -182,5 +182,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: lock-firmware
+          name: TD-H9-V1.0.38DKXCE_APRS_mute
           path: artifacts/*
