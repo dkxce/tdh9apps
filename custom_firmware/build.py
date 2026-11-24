@@ -49,7 +49,8 @@ HOOK = 0x88906                       # my_app loop call, hooked by Brick Breaker
 CAVE, TABLES = 0xA77F0, 0xA7E50      # Brick Breaker's game cave; S2 tables follow
 OLD_LAUNCHER, SVC = 0xA9D9E, 0xA9E00  # Brick Breaker's launcher; S2 .svc follows
 HEAP_END_SITE, HEAP_END_OLD = 0x05FA9E, bytes.fromhex("c5ff00bf0200")
-SHORTKEY_LABELS = "123456789"         # "Weather" -> "1Beacon", "2Beacon", ... (7 bytes each)
+SHORTKEY_NAME_SITE = 0xB1893          # shortkey action label "Weather" (CPU 0x01EB1993)
+SHORTKEY_NAME_OLD, SHORTKEY_NAME_NEW = b"Weather", b"SBeacon"
 LOAD, SLOT_END = 0x29F00, 0x2BF00
 SLOT_DIRECTORY, SLOT_DATA, SLOT_LIMIT = 0xCC0000, 0xCC1000, 0xCE0000
 
@@ -312,21 +313,15 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
             raise ValueError(f"APRS hook at {site:#x} differs from stock")
         patched[site:site + 4] = call_bytes(symbol(stub_prog, name) - IMAGE_BASE, site)
 
-    # Diagnostic: number every "Weather" string so the radio shows which one the
-    # shortkey list really uses (1Beacon, 2Beacon, ...). 7 bytes, in place.
-    weather_labels = []
+    # The shortkey list takes its label from app 0xB1893 (the second of the two
+    # stock "Weather" strings; the first one is "Weather Site" and stays). The
+    # replacement is 7 bytes, so the string table does not shift.
+    shortkey_label = None
     if aprs_mute:
-        pos = 0
-        while True:
-            i = patched.find(b"Weather", pos)
-            if i < 0:
-                break
-            if len(weather_labels) >= len(SHORTKEY_LABELS):
-                raise ValueError("more Weather strings than labels")
-            label = SHORTKEY_LABELS[len(weather_labels)] + "Beacon"
-            patched[i:i + 7] = label.encode()
-            weather_labels.append((i, label))
-            pos = i + 7
+        if patched[SHORTKEY_NAME_SITE:SHORTKEY_NAME_SITE + 7] != SHORTKEY_NAME_OLD:
+            raise ValueError(f"shortkey name at {SHORTKEY_NAME_SITE:#x} differs from stock")
+        patched[SHORTKEY_NAME_SITE:SHORTKEY_NAME_SITE + 7] = SHORTKEY_NAME_NEW
+        shortkey_label = f"{SHORTKEY_NAME_SITE:#x}: Weather -> {SHORTKEY_NAME_NEW.decode()}"
 
     raw = out / "h9_toolbox_modules_NOT_FOR_FLASH.raw"
     raw.write_bytes(patched)
@@ -342,7 +337,7 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
     changed = {o for o in range(0, len(original), 4096) if original[o:o + 4096] != target[o:o + 4096]}
     expected = H9TB_SECTORS | {(HEAP_END_SITE + 0x5100) & ~0xFFF}
     expected |= {(site + 0x5100) & ~0xFFF for site, _, _ in hook_sites}
-    expected |= {(i + 0x5100) & ~0xFFF for i, _ in weather_labels}
+    expected |= {(SHORTKEY_NAME_SITE + 0x5100) & ~0xFFF} if aprs_mute else set()
     if changed != expected:
         raise ValueError(f"changed sectors {sorted(map(hex, changed))}, expected {sorted(map(hex, expected))}")
     return {
@@ -351,7 +346,7 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
         "flash_sha256": sha256(target).hexdigest(),
         "changed_flash_sectors": [hex(c) for c in sorted(changed)],
         "stub_bytes": len(stub), "stub_sha256": sha256(stub).hexdigest(),
-        "weather_labels": [f"{hex(i)}: Weather -> {label}" for i, label in weather_labels],
+        "shortkey_label": shortkey_label,
         "stub_symbols": {n: hex(symbol(stub_prog, n)) for n in ("ml_hotkey", "ml_main", "ml_api", "ml_read")},
         "heap_end": hex(LOAD),
     }
