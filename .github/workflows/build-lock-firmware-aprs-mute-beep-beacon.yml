@@ -6,7 +6,7 @@ on:
 env:
   PATCH: custom_firmware/stub/stub.patch
   H9FW: firmware/TD-H9-V1.0.38.fw
-  VENDOR_ASSET: buildable_mute_beep_beacon.zip
+  VENDOR_ASSET: TD-H9-V1.0.38DKXCE_APRS.zip
   VENDOR_TAG: buildable
   # The minimal vendor ships firmware.py only under brick-breaker/tools/
   # (no top-level firmware-research/h9-firmware-research in the archive).
@@ -98,59 +98,10 @@ jobs:
           echo "patched stub.s lines:"
           wc -l vendor/firmware-research/module-loader/src/stub.s
 
-      # Our menu adds the owner-lock boot path (skip_check == 2 -> run PASSCODE
-      # or fail open). The vendored copy does not have it, so overwrite it with
-      # ours before module-loader/build.py compiles the bundle.
-      - name: Install owner-lock menu.c
-        run: |
-          cp custom_firmware/menu/menu.c \
-             vendor/firmware-research/module-loader/modules/menu/menu.c
-          grep -c "SKIP_CHECK" \
-            vendor/firmware-research/module-loader/modules/menu/menu.c
-
-      # aprs_mute.s is the optional normal-radio APRS speaker gate: build.py
-      # concatenates it onto stub.s and patches the speaker-call sites only when
-      # --aprs-mute is passed. aprs_ext.s adds the APRS popup beep and the PF
-      # action test hook (beacon on Weather); it must sit in exactly one
-      # aprs_mute.s (the one build.py reads), so the patcher installs both files
-      # there and extends mute_sites.
-      - name: Install aprs_mute.s + aprs_ext.s (gate, popup beep, PF action hook)
-        run: |
-          python3 custom_firmware/aprs_ext_ci_patch.py \
-            vendor/firmware-research/module-loader \
-            custom_firmware/stub/aprs_mute.s \
-            custom_firmware/stub/aprs_ext.s
-          grep -c "ml_mute_squelch" \
-            vendor/firmware-research/module-loader/*/aprs_mute.s
-          # One carrier: either aprs_ext.s (this repo's build.py) or the tail of
-          # aprs_mute.s (stock build.py). The patcher already asserts exactly one.
-          grep -rc "ml_beacon_tick" \
-            vendor/firmware-research/module-loader/*/aprs_mute.s \
-            vendor/firmware-research/module-loader/*/aprs_ext.s 2>/dev/null || true
-          grep -n "ml_popup_beep" \
-            vendor/firmware-research/module-loader/build.py
-          grep -n "ml_pf_action" \
-            vendor/firmware-research/module-loader/build.py
-
-      # Build a minimal bundle: only the menu (module 0) ships in the
-      # lock-firmware, so the radio's toolbox shows just the lock flow and
-      # nothing else. The rest of build_modules (bb, apron, satpass...) only
-      # sets up the vendor catalog; we override the returned list.
-      - name: Ship only the menu module
-        run: |
-          cd vendor/firmware-research/module-loader
-          python3 - <<'PY'
-          import re, pathlib
-          p = pathlib.Path("build.py")
-          src = p.read_text()
-          old = "    return [menu, bb, *screens, aprs, satpass, satplot, sattrack, satauto, satdata, gps, vfo_probe, about]"
-          if old not in src:
-              raise SystemExit("module list return not found")
-          src = src.replace(old, "    return [menu]")
-          p.write_text(src)
-          print("module list -> [menu]")
-          PY
-          cd "$GITHUB_WORKSPACE"
+# Our menu adds the owner-lock boot path (skip_check == 2 -> run PASSCODE
+      # or fail open). build_lock_aprs_mute_beep_beacon.py compiles
+      # custom_firmware/menu/menu.c directly, so nothing has to be copied into
+      # the vendor tree.
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -205,59 +156,29 @@ jobs:
           ls -l "$OUT"/h9_toolbox_firmware_NOT_FOR_FLASH.raw
 
       # ---- module-loader: the stub + apps -----------------------------
-      # module-loader/build.py compiles .c through `docker run h9-jieli`.
-      # That image does not exist on linux-latest runners, so we rewrite
-      # compile_c to call the extracted JieLi clang directly; ubuntu-latest
-      # already has libstdc++6/zlib1g/libtinfo6, which the toolchain needs.
-      - name: Patch module-loader to call clang directly
-        run: |
-          cd vendor/firmware-research/module-loader
-          python3 - <<'PY'
-          import re, pathlib
-          p = pathlib.Path("build.py")
-          src = p.read_text()
-          old = re.search(r'def compile_c\(source: Path, out: Path, toolchain: Path\) -> Path:.*?return obj', src, re.S)
-          if not old:
-              raise SystemExit("compile_c not found")
-          # -Wno-missing-braces: the vendored APRS third-party code
-          # (smartbeacon.c) triggers this with the newer clang, and -Werror
-          # turns it into a hard error.
-          new = (
-            "def compile_c(source: Path, out: Path, toolchain: Path) -> Path:\n"
-            "    obj = out / (source.stem + \".o\")\n"
-            "    clang = toolchain / \"pi32v2\" / \"bin\" / \"clang\"\n"
-            "    run([str(clang), *C_FLAGS, \"-Wno-missing-braces\",\n"
-            "         \"-I\", str(ROOT / \"modules\" / \"common\"),\n"
-            "         \"-c\", str(source), \"-o\", str(obj)])\n"
-            "    return obj"
-          )
-          p.write_text(src[:old.start()] + new + src[old.end():])
-          print("patched compile_c")
-          PY
-          cd "$GITHUB_WORKSPACE"
-
+      # The driver (custom_firmware/build_lock_aprs_mute_beep_beacon.py)
+      # compiles the modules with the extracted JieLi clang directly and patches
+      # the stock app; the vendor archives no longer ship a copy of the build
+      # script.
       - name: Build module-loader firmware
         run: |
-          # The module loader looks up H9TB_RAW at resource-service/build
-          # (absolute default), which the step above already filled. Its own
-          # --output is also kept inside the vendor tree so the JieLi paths
-          # stay relativizable to RESEARCH.
           cd vendor/firmware-research/module-loader
+          ML="$PWD"
           OUT="$GITHUB_WORKSPACE/vendor/firmware-research/module-loader/build"
           mkdir -p "$OUT"
           JIELI_TOOLCHAIN="$JIELI_TOOLCHAIN" \
-            python3 -I build.py \
+            python3 "$GITHUB_WORKSPACE/custom_firmware/build_lock_aprs_mute_beep_beacon.py" \
+              --module-loader "$ML" \
               --stock-image "$GITHUB_WORKSPACE/$HFR/wicked-extract/app.bin" \
               --stock-package "$GITHUB_WORKSPACE/$H9FW" \
-              --aprs-mute \
               --output "$OUT"
 
       - name: Collect artifacts
         run: |
           mkdir -p "$GITHUB_WORKSPACE/artifacts"
           ML="$GITHUB_WORKSPACE/vendor/firmware-research/module-loader/build"
-          cp "$ML"/h9_toolbox_modules_OFFLINE_EXPERIMENT.fw "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
-          cp "$ML"/h9_modules.bin "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
+          cp "$ML"/TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
+          cp "$ML"/menu.h9mod "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
           cp "$ML"/h9_toolbox_modules-manifest.json "$GITHUB_WORKSPACE/artifacts/" 2>/dev/null
           ls -l "$GITHUB_WORKSPACE/artifacts"
 
