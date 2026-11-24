@@ -1,6 +1,7 @@
 ﻿# Tidradio TD-H9 HID Unbricker + Custom Apps
 
 [РАЗКИРПИЧИТЬ РУК-ВО](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
+[КАСТОМНАЯ ПРОШИВКА РУК-ВО](custom_firmware/README.md) | [CUSTOM FIRMWARE MANUAL](custom_firmware/README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
 [ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
 [ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
 
