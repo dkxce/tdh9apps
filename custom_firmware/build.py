@@ -368,7 +368,8 @@ def build(stock_image: Path, stock_package: Path, toolchain: Path, out: Path, ap
         "aprs_mute": {"enabled": aprs_mute, "hardware_tested": True},
         "aprs_ext": {"enabled": aprs_mute, "hardware_tested": True,
                      "beep_tone_id": 42, "hooks": "popup request 0x862C6 -> 0x55EC2",
-                     "pf_action_test_hook": "0x7E21C -> 0x52472, beacon on action 6 (Weather); NOT hardware tested"},
+                     "pf_action": "0x7E21C -> 0x52472, beacon on action 6 (Weather) instead of the weather screen; "
+                                  "beacon verified on hardware, screen cancellation not tested"},
     }
     (out / "h9_toolbox_modules-manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
     return manifest

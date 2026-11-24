@@ -45,7 +45,7 @@ ml_popup_beep:
     r3 = 0x01e55fc2
     goto r3
 
-/* ---- PF action dispatch -> beacon on "Weather" (TEST hook) --------------
+/* ---- PF action "Weather" -> beacon instead of the weather screen --------
  *
  * The side-button action list is dispatcher 0x01E7E318: it takes the action
  * number in r0, does `r0 = r0 - 1; if (r0 > 7) return`, and switches over the
@@ -57,9 +57,12 @@ ml_popup_beep:
  * the call the dispatcher makes right after keeping the action number in r2.
  * The callee ignores its arguments, so only rets has to survive the beacon.
  *
- * TEST behaviour: send one beacon and let stock open the weather screen as
- * before. When the beacon really fires on the Weather item, replace the last
- * `goto` with a return to drop the screen.
+ * For Weather: send the beacon, then force r2 = 0. The dispatcher computes
+ * `r0 = r2 - 1` = -1, fails its own `if (r0 > 7)` bound and returns from the
+ * epilogue - no weather screen, the radio stays on the current one.
+ *
+ * Verified on hardware (TD-H9, 2026-11-24): beacon goes out on the Weather
+ * item. The screen cancellation below is not tested yet.
  */
     .globl ml_pf_action
 ml_pf_action:
@@ -71,11 +74,13 @@ ml_pf_action:
     r5 = b[r4+78] (u)            /* stock's timed-beacon path skips the stop */
     r3 = 0x01e5c3d4              /* stock beacon sender */
     call r3
-    if (r5 == 1) goto pf_done
-    if (r0 == 0) goto pf_done
+    if (r5 == 1) goto pf_void
+    if (r0 == 0) goto pf_void
     r0 = 0
     r3 = 0x01e5cdec              /* end of transmission, else PTT stays keyed */
     call r3
+pf_void:
+    r2 = 0                       /* invalid action -> dispatcher returns */
 pf_done:
     {rets, r5, r4} = [sp++]
     r3 = 0x1e52572               /* original callee of the hooked call */
