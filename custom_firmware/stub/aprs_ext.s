@@ -17,10 +17,10 @@
  * 0x01E521CE itself; the bare 0x01E5241A stays silent). Two calls give
  * beep-beep. The request arguments (r0=0, r1=3) are preserved and passed on.
  *
- * The beep only plays with the keypad unlocked: the stock keylock byte is
- * 0x0C3C8 (menu.c KB_UNLOCKED), where 0 means locked - menu.c treats that
- * value as the blocked state, so any non-zero value is "unlocked". The popup
- * request is passed through either way.
+ * The beep only plays with the keypad unlocked: b[0x72400+79] must be 0 - the
+ * same byte stock itself checks before beeping a key (0x01E7597A also requires
+ * b[0x72400+4308] != 0, its keypad-beep setting; we do not copy that one). The
+ * popup request is passed through either way.
  *
  * Verified on hardware (TD-H9, 2026-11-23): beep-beep plays with the popup.
  */
@@ -33,9 +33,9 @@ ml_popup_beep:
     r4 = r0                      /* request arguments (0, 3) */
     r5 = r1
     r6 = r2
-    r3 = 0x0c3c8                 /* KB_UNLOCKED: 0 = keypad locked (menu.c) */
-    r3 = b[r3+0] (u)
-    if (r3 == 0) goto beep_done
+    r3 = 72400                   /* 0 = keypad unlocked */
+    r3 = b[r3+79] (u)
+    if (r3 != 0) goto beep_done
     r0 = 42
     r1 = 20
     r2 = 1
