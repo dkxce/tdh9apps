@@ -1,8 +1,10 @@
 # Tracker Navigation and Track Recording for TD-H9
 
+[RU](README.md) | [EN](README.en.md)
+
 Tracker app: shows current position, navigation to target
 (fixed coordinates or stored point), records track in memory
-radios and gives a view on the radar and the map. Written for the TD-H9 platform
+radio and gives you a view on the radar and the map. Written for the TD-H9 platform
 
 One appendix.**six** (`build.json`): visible`TRACKER`(menu/help/setup) and five hidden screens`.TRK *`which
 switching.
@@ -27,7 +29,7 @@ switching.
 | --- | --- |
 | menu | in the menu - selection / confirmation;**on RADAR / MAP - recording / pause / continuation** |
 | Up/down | menu list; transition RADAR MAP |
-| 1..9. | Quick selection of menu items, entering numbers in editors |
+| 1..9. | Quick selection of menu item, entering numbers in editors |
 | 5 | Points |
 | 0 | RADAR/MAP: full screen or split with value field |
 | `*` | RADAR: Dial signatures (N E S W / 12 03 06 09 / 00 09 18 27); MAP: scale − |
@@ -106,7 +108,7 @@ After installation - application menu (holding)`#`?**TRACKER**.
 ## Assembly and limitations
 
 * Flags:`-Oz -ffreestanding -fno-builtin -Wall -Werror`(anything)
-  warning drops CI.
+  CI drops the warning.
 * Without libc and without floating arithmetic; global`const`- tables,
   variable data - in`struct trk`.
 * Body of each module ≤ 8192 bytes; when overflowing`trk_open`show`MODULE TOO BIG +N`It doesn't start. Exact limits and techniques
@@ -117,7 +119,7 @@ After installation - application menu (holding)`#`?**TRACKER**.
 The modules are loaded into one RAM slot.`0x29F00..0x2BEFF`therefore simultaneously
 Only one module can live in it.**Tracker and Tracker Saver are working
 together**(tracksvr reading)`struct trk`tracker`0x2B7EC`but**not working
-module`GPS` и `APRS`**: the launch of any of them is blocked`struct trk` (`0x2B7EC`), and the tracker points/coordinates are lost.
+module`GPS` и `APRS`**: the launch of any of them is blocked`struct trk` (`0x2B7EC`) and the tracker points/coordinates are lost.
 Use them in turn through the app menu (hold)`#`). Details about
 reasons and about the frame addresses - in[LIMITS. md](LIMITS.md).
 
