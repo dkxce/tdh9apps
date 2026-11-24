@@ -118,13 +118,22 @@ def main(argv: list[str]) -> int:
         if site in src:
             print(f"{build}: {label} hook present")
             continue
-        m = re.search(r"^([ \t]*)mute_sites = \((.*)\)[ \t]*$", src, re.M)
-        if not m:
-            raise SystemExit(f"{build}: {label} hook missing and no `mute_sites = (...)` line")
-        indent, inner = m.group(1), m.group(2)
-        src = src[:m.start()] + f"{indent}mute_sites = ({inner}, {site})" + src[m.end():]
+        # Mirror the shape of the popup entry: it is already wired, so its
+        # container is the one this build.py uses (mute_sites tuple, one
+        # element per line, or a `hook_sites += [...]` statement).
+        line = next((ln for ln in src.splitlines() if POPUP_SITE in ln), None)
+        if line is None:
+            raise SystemExit(f"{build}: {label} hook missing and no popup entry to copy")
+        indent = line[:len(line) - len(line.lstrip())]
+        if "=" in line and line.rstrip().endswith(")"):
+            new = line.rstrip()[:-1] + f", {site})"
+        elif line.rstrip().endswith(","):
+            new = f"{line}\n{indent}{site},"
+        else:
+            new = f"{line}\n{indent}hook_sites += [{site}]"
+        src = src.replace(line, new, 1)
         build.write_text(src, encoding="utf-8")
-        print(f"{build}: mute_sites += {label}")
+        print(f"{build}: {label} hook added next to the popup entry")
     return 0
 
 
