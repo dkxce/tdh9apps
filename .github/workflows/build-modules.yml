@@ -1,4 +1,4 @@
-name: Build myapps modules
+name: Build myapps modules *.h9mod
 
 on:
   workflow_dispatch:

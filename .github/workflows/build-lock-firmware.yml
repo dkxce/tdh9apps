@@ -1,4 +1,4 @@
-name: Build TD-H9 lock firmware
+name: Build TD-H9-V1.0.38DKXCE & MENU
 
 on:
   workflow_dispatch:

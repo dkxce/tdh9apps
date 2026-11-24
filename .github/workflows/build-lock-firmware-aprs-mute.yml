@@ -1,4 +1,4 @@
-name: Build TD-H9 lock firmware APRS mute
+name: Build TD-H9-V1.0.38DKXCE_APRS_mute.fw & MENU
 
 on:
   workflow_dispatch:

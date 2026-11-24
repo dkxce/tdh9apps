@@ -1,4 +1,4 @@
-name: Build TD-H9 lock firmware APRS mute beep beacon
+name: Build TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw & MENU
 
 on:
   workflow_dispatch:
