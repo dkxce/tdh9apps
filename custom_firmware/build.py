@@ -49,6 +49,8 @@ HOOK = 0x88906                       # my_app loop call, hooked by Brick Breaker
 CAVE, TABLES = 0xA77F0, 0xA7E50      # Brick Breaker's game cave; S2 tables follow
 OLD_LAUNCHER, SVC = 0xA9D9E, 0xA9E00  # Brick Breaker's launcher; S2 .svc follows
 HEAP_END_SITE, HEAP_END_OLD = 0x05FA9E, bytes.fromhex("c5ff00bf0200")
+SHORTKEY_NAME_SITE = 0xB1893          # shortkey action label "Weather" (CPU 0x01EB1993)
+SHORTKEY_NAME_OLD, SHORTKEY_NAME_NEW = b"Weather\0", b"SBeacon\0"
 LOAD, SLOT_END = 0x29F00, 0x2BF00
 SLOT_DIRECTORY, SLOT_DATA, SLOT_LIMIT = 0xCC0000, 0xCC1000, 0xCE0000
 
@@ -311,6 +313,12 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
             raise ValueError(f"APRS hook at {site:#x} differs from stock")
         patched[site:site + 4] = call_bytes(symbol(stub_prog, name) - IMAGE_BASE, site)
 
+    if aprs_mute:
+        # Same 8 bytes, so the shortkey list label changes in place.
+        if stock[SHORTKEY_NAME_SITE:SHORTKEY_NAME_SITE + 8] != SHORTKEY_NAME_OLD:
+            raise ValueError(f"shortkey name at {SHORTKEY_NAME_SITE:#x} differs from stock")
+        patched[SHORTKEY_NAME_SITE:SHORTKEY_NAME_SITE + 8] = SHORTKEY_NAME_NEW
+
     raw = out / "h9_toolbox_modules_NOT_FOR_FLASH.raw"
     raw.write_bytes(patched)
 
@@ -325,6 +333,8 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
     changed = {o for o in range(0, len(original), 4096) if original[o:o + 4096] != target[o:o + 4096]}
     expected = H9TB_SECTORS | {(HEAP_END_SITE + 0x5100) & ~0xFFF}
     expected |= {(site + 0x5100) & ~0xFFF for site, _, _ in hook_sites}
+    if aprs_mute:
+        expected |= {(SHORTKEY_NAME_SITE + 0x5100) & ~0xFFF}
     if changed != expected:
         raise ValueError(f"changed sectors {sorted(map(hex, changed))}, expected {sorted(map(hex, expected))}")
     return {
@@ -333,6 +343,7 @@ def build_firmware(stock: bytes, stock_package: Path, out: Path, aprs_mute: bool
         "flash_sha256": sha256(target).hexdigest(),
         "changed_flash_sectors": [hex(c) for c in sorted(changed)],
         "stub_bytes": len(stub), "stub_sha256": sha256(stub).hexdigest(),
+        "shortkey_label": "0xB1893: Weather -> SBeacon" if aprs_mute else None,
         "stub_symbols": {n: hex(symbol(stub_prog, n)) for n in ("ml_hotkey", "ml_main", "ml_api", "ml_read")},
         "heap_end": hex(LOAD),
     }
