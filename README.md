@@ -8,7 +8,9 @@
 - [РАЗКИРПИЧИТЬ РУК-ВО](UNBRICK.md) | [UNBRICK MANUAL](UNBRICK.en.md)      
 - [КАСТОМНАЯ ПРОШИВКА РУК-ВО](custom_firmware/README.md) | [CUSTOM FIRMWARE MANUAL](custom_firmware/README.en.md)           
 - [ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md)              
-- [ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md)      
+- [ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md)
+- [ИНСТРУКЦИЯ](https://github.com/dkxce/Tidradio-TD-H9/blob/main/TD-H9_manual.ru.md) | [MANUAL](https://github.com/dkxce/Tidradio-TD-H9/blob/main/TD-H9_manual.en.md)
+- [ПРОЧАЯ ДОК-ИЯ И СОФТ](https://github.com/dkxce/Tidradio-TD-H9/blob/main/README.md) | [OTHER DOCS & SOFT](https://github.com/dkxce/Tidradio-TD-H9/blob/main/README.md)     
 - [RELEASES](https://github.com/dkxce/tdh9apps/releases)      
 
 ---
