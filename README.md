@@ -6,7 +6,7 @@
 **Quick links**:     
 - [RU](README.md) | [EN](README.en.md)      
 - [РАЗКИРПИЧИТЬ РУК-ВО](UNBRICK.md) | [UNBRICK MANUAL](UNBRICK.en.md)      
-- [КАСТОМНАЯ ПРОШИВКА РУК-ВО](custom_firmware/README.md) | [CUSTOM FIRMWARE MANUAL](custom_firmware/README.en.md)releases)            
+- [КАСТОМНАЯ ПРОШИВКА РУК-ВО](custom_firmware/README.md) | [CUSTOM FIRMWARE MANUAL](custom_firmware/README.en.md)           
 - [ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md)              
 - [ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md)      
 - [RELEASES](https://github.com/dkxce/tdh9apps/releases)      
