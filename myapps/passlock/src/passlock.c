@@ -96,8 +96,18 @@
 #define SKIP_KBLCKD   4u /* Блок клавы */
 #define SKIP_2BLCKD   5u /* Нужен блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_LOCKED     ((volatile unsigned char *)0x11AC2u) /* KEYLOCK FLAG REAL */
+#define KEY_STAR      ((volatile unsigned char *)0x0C3C7u) /* STAR IS PRESSED */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
+
+/* Состояние клавиш стока. 0xC3C7 — '*' (запись 16, app+0xAF1D0), 0xC3C8 — '#'
+ * (запись 17, app+0xAF1E8), 0xC3AF — код удержанной клавиши, h[0xC3B2] — тики
+ * удержания (порог 100). Отпускание '*' при запертой клавиатуре выходит из
+ * 0x01E78D52 до записи нуля, поэтому 0xC3C7 остаётся = 1 и после снятия
+ * 0x11AC2 сток выполняет функцию '*' — гасим состояние сами. */
+#define KEY_STAR    ((volatile unsigned char  *)0x0C3C7u)
+#define KEY_SHARP   ((volatile unsigned char  *)0x0C3C8u)
+#define KEY_HOLDED2 ((volatile unsigned char  *)0x0C3AFu)
+#define KEY_HOLD_T  ((volatile unsigned short *)0x0C3B2u)
 
 #ifndef STOCK_REFRESH
 #define STOCK_REFRESH() ((void (*)(unsigned))0x01E58E3E)(0)   /* full RF refresh: reloads both VFOs (satauto.c) */
@@ -128,6 +138,14 @@ enum {
     LOGO_BYTES = WIDTH * HEIGHT * 2,   /* 40,960 */
     CHUNK = 128,
 };
+
+static void stock_keys_idle(void)
+{
+    *KEY_HOLD_T = 0;   /* иначе счётчик удержания дойдёт до 100 на следующем тике */
+    *KEY_HOLDED2 = 0;
+    *KEY_STAR  = 0;
+    *KEY_SHARP = 0;
+}
 
 static void show_logo(const struct h9_api *api)
 {
@@ -333,18 +351,19 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-    if (*SKIP_CHECK == SKIP_LOCKED) {
-        if (!pass_locked(pass)) {
-			*SKIP_CHECK = SKIP_NORMAL;
+    if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLCKD)) {                    /* on radio power-on flow on kbhardlock unlock */
+        if (!pass_locked(pass)) {                                                          /* no password */
+			if(*SKIP_CHECK == SKIP_KBLCKD) *KB_LOCKED = 0;                                 // on kbhardlock unlock
+			*SKIP_CHECK = SKIP_NORMAL;			
 			STOCK_REFRESH();
             STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		};
-		if ((*KB_LOCKED != 0) && (*KEY_HOLDED != 20)) { /* kb locked and no # holded */
+		if ((*KB_LOCKED != 0) && (*SKIP_CHECK != SKIP_KBLCKD) && (*KEY_HOLDED != 20)) {    /* kb locked and no # holded */
 			*SKIP_CHECK = SKIP_2BLCKD;
 			STOCK_REFRESH();
             STOCK_REDRAW();
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
+			gfx_fill(0, 19, H9_WIDTH, 2, 0x8010); // Violet
 			return H9_RETURN_RADIO_LOCAL;
 		};
         char buf[PASS_LEN + 1];
@@ -353,14 +372,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
 		int res = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
-		if ((res == 1) && (*KB_LOCKED != 0)) {
+		if ((res == 1) && (*KB_LOCKED != 0)) {                                             /* kb locked and skip enter pass */
 			*SKIP_CHECK = SKIP_2BLCKD;
 			STOCK_REFRESH();
             STOCK_REDRAW();
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
+			gfx_fill(0, 19, H9_WIDTH, 2, 0x8010); // Violet
 			return H9_RETURN_RADIO_LOCAL;
 		};
-        if (res == 2) {
+        if (res == 2) {                                                                    /* UP/DOWN pressed */
 			show_logo(api);
 			gfx_wait_release();
 			for (;;) {
@@ -379,14 +398,21 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
             h9_delay(90);
             goto okb;
-        }
+        };
+		if(*SKIP_CHECK == SKIP_KBLCKD) {                                                   // on kbhardlock unlock
+			gfx_wait_release();
+			stock_keys_idle();
+			*KB_LOCKED = 0;
+		};
         *SKIP_CHECK = SKIP_NORMAL;
         STOCK_REFRESH();
         STOCK_REDRAW();
         return H9_RETURN_RADIO_LOCAL;
     }
 
-    if (pass_locked(pass)) {
+    /* application manual select flow */
+	
+    if (pass_locked(pass)) { 
         char buf[PASS_LEN + 1];
         ok: ;
         clear_all();
