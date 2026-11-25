@@ -1,301 +1,70 @@
-﻿# Tidradio TD-H9 HID Unbricker + Custom Apps
+﻿# Tidradio TD-H9 HID Unbricker + Custom Firmware + Apps + Games
 
-[РАЗКИРПИЧИТЬ РУК-ВО](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
+[RU](README.md) | [EN](README.en.md)      
+
+---
+
+[РАЗКИРПИЧИТЬ РУК-ВО](UNBRICK.md) | [UNBRICK MANUAL](UNBRICK.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
 [КАСТОМНАЯ ПРОШИВКА РУК-ВО](custom_firmware/README.md) | [CUSTOM FIRMWARE MANUAL](custom_firmware/README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
 [ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
-[ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
+[ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)     
 
-Инструменты для раскирпичивания основной flash-памяти радиостанции **TIDRADIO TD-H9**
-в **HID-режиме** (без перехода чипа в UBOOT-режим). Проект состоит из двух частей:
+---
 
-- **`h9_flash.py`** — консольный флешер (CLI) на Python.
-- **`ui_app/app.py`** — оконное приложение (GUI) на PySide6, которое повторяет
-  ту же логику и добавляет кнопки, прогресс и журнал.
+[ОПИСАНИЕ РЕПОЗИТОРИЯ](#описание)     
+[ДОКУМЕНТАЦИЯ](#документация-md)     
+[ПРОЧИЕ ПРИЛОЖЕНИЯ](#прочие-приложения)      
+[СКРИНШОТЫ](#скриншоты-экранов-виджетов-приложений)     
+[RELEASES](https://github.com/dkxce/tdh9apps/releases)     
 
-> **Что делает инструмент.** Распаковывает пакет `.fw` (извлекает `flash.bin`),
-> сравнивает CRC секторов рации с целевым образом и перезаписывает **только
-> отличающиеся** секторы, затем проверяет запись по CRC. Boot-область
+## Описание
+
+Этот репозиторий — набор инструментов и прошивок для **радиостанции TIDRADIO
+TD-H9**. Здесь собрано всё, что относится к работе с рацией:
+
+- **Unbrick** — раскирпичивание основной flash-памяти в **HID-режиме**
+  (без перехода чипа в UBOOT-режим). Включает консольный флешер `h9_flash.py`
+  и оконное приложение `ui_app/app.py` (PySide6), которые распаковывают
+  пакет `.fw`, сравнивают CRC секторов и перезаписывают только отличающиеся.
+- **Custom firmware** — кастомная прошивка с поддержкой запароливания
+  (`custom_firmware/`), а также утилиты для смены boot-логотипа, загрузки
+  картинок и прошивки приложений.
+- **Apps** — приложения/виджеты для рации (меню, трекер, путевые точки,
+  запароливател и другие модули).
+- **Games** — игры для рации (например, морской бой).
+- **Python scripts** — набор скриптов автоматизации: `h9_flash.py`,
+  `td9_aprs.py` (настройки APRS/GNSS), `td9_apps.py`, `td9_logo.py`,
+  `td9_kpi.py` и др.
+
+> **Что делает unbrick-инструмент.** Распаковывает пакет `.fw` (извлекает
+> `flash.bin`), сравнивает CRC секторов рации с целевым образом и перезаписывает
+> **только отличающиеся** секторы, затем проверяет запись по CRC. Boot-область
 > `0x0000..0x4FFF` и область настроек `0xDA000..0x100000` **не трогаются**.
 
 ---
 
-## 1. Зачем это нужно
-
-Официальная прошивка TD-H9 поставляется в виде файла `*.fw` (например,
-`TD-H9-V1.0.38.fw`). Штатно её заливают фирменной программой через **USB Update
-(UBOOT)** режим.
-
-Однако у чипа есть и **второй путь** — **HID-режим** (PTT+2 при включении),
-когда рация определяется как HID-устройство `VID 0x4C4A, PID 0x4155`.
-Скрипты работают именно по HID-каналу.
-
----
-
-## 2. Что понадобится
-
-| Компонент | Зачем | Где взять |
-|-----------|-------|-----------|
-| **TIDRADIO TD-H9** | рация, которую прошиваем | у вас |
-| **USB-C кабель с передачей данных** | физическое соединение (не «зарядка»!) | у вас |
-| **Python 3.11+** | среда выполнения | python.org |
-| **Poetry** | управление зависимостями и окружением | python-poetry.org |
-| **Пакет `hid`** (pyhidapi) | доступ к HID-устройству | `poetry add hid` |
-| **`hidapi.dll` (x64)** | нативная библиотека для `hid` | github.com/libusb/hidapi/releases |
-| **PySide6** | только для GUI | `poetry add pyside6` |
-| **PyInstaller** | сборка exe | `poetry add pyinstaller` |
-| **Файл прошивки `.fw`** | что заливаем | в папке firmware |
-
-> **Важно про `hidapi.dll`.** Пакет `pyhidapi` — это лишь Python-обёртка. Ей нужна
-> нативная библиотека **`hidapi.dll`**. Положите её **рядом со скриптом**
-> `h9_flash.py` (в корень проекта).
-
----
-
-## 3. Установка
-
-Проект использует **Poetry** для управления зависимостями. Все зависимости
-(`hid`, `pyside6`, `pyinstaller`, …) объявлены в `pyproject.toml`.
-
-```powershell
-# 1) Установить Poetry (один раз, если ещё нет)
-pip install poetry
-
-# 2) Перейти в папку проекта
-cd <path>
-
-# poetry env use "<path to python C:\...>"   # опционально
-
-# 3) Установить зависимости и создать виртуальное окружение
-poetry install
-
-# 4) Положить hidapi.dll (x64) в корень проекта:
-#    — скачать: https://github.com/libusb/hidapi/releases
-#    — взять архив hidapi-win.zip, распаковать x64\hidapi.dll
-#    — поместить рядом с h9_flash.py
-```
-
-Все команды дальше запускаются через `poetry run python ...` (или активируйте
-окружение Poetry: `poetry shell`, затем просто `python ...`).
-
----
-
-## 4. Подготовка рации (вход в HID-режим)
-
-1. **Выключите рацию.**
-2. **Зажмите одновременно PTT и кнопку `[2]`.**
-3. **Удерживая кнопки, включите рацию** — она войдёт в HID-режим (updater).
-4. **Подключите USB-C кабель** (обязательно с данными) к компьютеру.
-5. В системе рация должна определиться как устройство
-   **`Jieli Technology USB Composite Device`** с `VID 0x4C4A, PID 0x4155`.
-
-Проверить можно командой:
-
-```powershell
-poetry run python h9_flash.py --list
-```
-
-Ожидаемый вывод:
-
-```
-Scanning for JieLi HID devices (VID 0x4C4A):
-  VID:0x4C4A PID:0x4155  Jieli Technology USB Composite Device (TD-H9 HID flash mode)
-```
-
-Или использовать [USBTreeView](https://www.uwe-sieber.de/usbtreeview_e.html)      
-
-> Если записи нет — проверьте кабель (нужен с данными, а не только зарядка),
-> удерживание кнопок и порядок включения.
-
----
-
-## 5. Консольный флешер `h9_flash.py`
-
-### 5.1. Справка
-
-```powershell
-poetry run python h9_flash.py --help
-```
-
-| Флаг | Назначение |
-|------|-----------|
-| `--list` | показать найденные JieLi HID-устройства |
-| `--fw <файл.fw>` | путь к пакету прошивки (обязательно для заливки) |
-| `--backup <файл.bin>` | сохранить текущий образ в файл перед записью |
-| `--verify` | медленная полная проверка по сдвинутым CRC перед записью |
-| `--nocheck` | пропустить сверку CRC и принудительно перезаписать все секторы |
-| `--yes` | не спрашивать подтверждения |
-
-### 5.2. Базовый запуск
-
-```powershell
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --backup before.bin
-```
-
-Скрипт:
-1. распакует пакет и покажет SHA-256 пакета и образа;
-2. откроет рацию и проверит геометрию;
-3. сделает CRC-скан секторов;
-4. покажет список секторов к перезаписи и спросит подтверждение;
-5. запишет секторы (от старших к младшим) с проверкой каждого;
-6. выполнит финальную проверку всех секторов.
-
-После успеха — выключите USB и перезапустите рацию.
-
-### 5.3. Автоматический запуск (без подтверждения)
-
-```powershell
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --backup before.bin --yes
-```
-
-### 5.4. Полная (медленная) проверка `--verify`
-
-Скрипт перед записью дополнительно делает проверку по
-**сдвинутым CRC-окнам** — это доказывает, что реальные байты в памяти совпадают
-с образом, а не только 16-битные CRC секторов (исключает коллизии). Эта проверка
-медленная (тысячи HID-запросов), поэтому по умолчанию выключена.
-
-```powershell
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --verify --yes
-```
-
-При несовпадении запись будет запрещена.
-
-### 5.5. Принудительная перезапись `--nocheck`
-
-Если нужно перезаписать **все** секторы приложения независимо от текущего CRC
-(не останавливаясь при совпадении) — используйте `--nocheck`:
-
-```powershell
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --nocheck --yes
-```
-
-> `--nocheck` отключает и `--verify` (если задан вместе). Стирание/запись/проверка
-> каждого сектора всё равно выполняются — пропускается только предварительная
-> сверка.
-
----
-
-## 6. Оконное приложение `ui_app/app.py`
-
-GUI повторяет консольную логику и добавляет удобства.
-
-### 6.1. Запуск
-
-```powershell
-poetry run python ui_app\app.py
-```
-
-### 6.2. Что в окне
-
-- **Инструкция входа в HID-режим** вверху окна (сводка из раздела 4).
-- **Firmware** — выбор файла `.fw` (кнопка Browse).
-- **Options** — опциональный путь к бэкапу, чекбоксы `--verify` и `--nocheck`.
-- **Progress bar** — прогресс по секторам.
-- **Журнал (лог)** — все сообщения; лог копируемый (выделение + Ctrl+C, либо
-  кнопка **Copy log**), а также кнопка **Clear** (очистить).
-- **Detect device** — поиск и вывод подключённых JieLi HID-устройств.
-- **Flash** — запуск прошивки в фоновом потоке (окно не зависает).
-- **Stop** — досрочная остановка.
-
-### 6.3. Порядок работы в GUI
-
-1. Подключите рацию в HID-режиме (PTT+2 при включении).
-2. Нажмите **Detect device** — убедитесь, что видна `4C4A:4155`.
-3. Выберите файл `.fw`.
-4. (Опционально) укажите путь к бэкапу.
-5. (Опционально) включите `--verify` / `--nocheck`.
-6. Нажмите **Flash**, следите за прогрессом и логом.
-7. По завершении отключите USB и перезапустите рацию.
-
----
-
-## 7. Сборка exe (PyInstaller)
-
-Сборка выполняется через PyInstaller (объявлен в poetry). Способ через
-spec-файл (рекомендуемый — включает `h9_flash.py` и `hidapi.dll`):
-
-```powershell
-poetry run pyinstaller --noconfirm ui_app\flasher.spec
-```
-
-Результат: `dist\TDH9Flasher.exe` — single-file GUI-приложение, в которое
-упакованы `app.py`, модуль `h9_flash` и `hidapi.dll`.
-
----
-
-## 8. Структура файлов
-
-```
-Chat-20/
-├── h9_flash.py          # консольный флешер (CLI)
-├── hidapi.dll           # нативная библиотека (нужна для CLI и GUI)
-├── pyproject.toml       # зависимости Poetry
-├── ui_app/
-│   ├── app.py           # оконное приложение (GUI, PySide6)
-│   └── flasher.spec     # spec-файл PyInstaller для сборки exe
-└── README.md            # этот файл
-```
-
-### Документация (`.md`)
+## Документация (`.md`)
 
 | Документ | RU | EN |
 |---|---|---|
-| Корневой README | [README.md](README.md) | [README.en.md](README.en.md) |
-| Запароливание рации | [lock-pass.md](lock-pass.md) | [lock-pass.en.md](lock-pass.en.md) |
-| Карта памяти | [ram.md](ram.md) | [ram.en.md](ram.en.md) |
+| Описание репозитория (этот файл) | [README.md](README.md) | [README.en.md](README.en.md) |
+| **UNBRICK**: раскирпичивание HID | [UNBRICK.md](UNBRICK.md) | [UNBRICK.en.md](UNBRICK.en.md) |
+| Кастомная прошивка | [custom_firmware/README.md](custom_firmware/README.md) | [custom_firmware/README.en.md](custom_firmware/README.en.md) |
+| Приложения/виджеты | [APPLICATIONS.md](APPLICATIONS.md) | [APPLICATIONS.en.md](APPLICATIONS.en.md) |
 | Установка приложений | [td9_apps.md](td9_apps.md) | [td9_apps.en.md](td9_apps.en.md) |
+| Запароливание рации | [lock-pass.md](lock-pass.md) | [lock-pass.en.md](lock-pass.en.md) |
+| Игры | [GAMES.md](GAMES.md) | [GAMES.en.md](GAMES.en.md) |
 | Boot-логотип | [td9_logo.md](td9_logo.md) | [td9_logo.en.md](td9_logo.en.md) |
 | Пакет картинок | [td9_kpi.md](td9_kpi.md) | [td9_kpi.en.md](td9_kpi.en.md) |
 | Настройки APRS/GNSS | [td9_aprs.md](td9_aprs.md) | — |
-| Кастомная прошивка | [custom_firmware/README.md](custom_firmware/README.md) | [custom_firmware/README.en.md](custom_firmware/README.en.md) |
 | Трекер | [myapps/tracking/README.md](myapps/tracking/README.md) | [myapps/tracking/README.en.md](myapps/tracking/README.en.md) |
 | Путевые точки | [myapps/tracksvr/README.md](myapps/tracksvr/README.md) | [myapps/tracksvr/README.en.md](myapps/tracksvr/README.en.md) |
 | Ограничения трекера | [myapps/tracking/LIMITS.md](myapps/tracking/LIMITS.md) | [myapps/tracking/LIMITS.en.md](myapps/tracking/LIMITS.en.md) |
-| Лицензия | [LICENSE.md](LICENSE.md) | — |
-| Сторонние компоненты | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | — |
-| Версия | [version.md](version.md) | — |
+| Карта памяти | [ram.md](ram.md) | [ram.en.md](ram.en.md) |
 
 ---
 
-## 9. Безопасность и предупреждения
-
-- **Прошивка деструктивна.** Перед первым запуском всегда делайте бэкап, если
-  есть возможность.
-- Инструмент **не пишет** boot-область `0x0000..0x4FFF` и настройки
-  `0xDA000+`.
-- Используйте **только** проверенный пакет, предназначенный для **вашей** рации.
-  Несовместимая прошивка может нарушить работу радио.
-- Не отключайте рацию и USB во время записи — при прерывании можно получить
-  частично записанное состояние. Повторный запуск перепроверит секторы.
-- `--nocheck` опаснее обычного режима: принудительная перезапись без сверки.
-  Используйте осознанно.
-
----
-
-## 10. Частые проблемы
-
-| Проблема | Решение |
-|----------|---------|
-| `ImportError: Unable to load ... hidapi.dll` | положите `hidapi.dll` (x64) в корень проекта |
-| Устройство `4C4A:4155` не видно в `--list` | проверьте кабель (с данными), PTT+2 при включении, работу от имени admin при необходимости |
-| `Package unpack error` | выбранный файл — не валидный TD-H9 пакет `.fw` |
-| `Radio already matches ... Nothing to write` | рация уже совпадает с образом; используйте `--nocheck` если нужна принудительная перезапись |
-| Окно GUI не открывается (PySide6) | `poetry run python -c "import PySide6"` — если ошибка, проверьте `poetry install` |
-
----
-
-## 11. Прочие приложения
-
-- [Кастомная прошивка](custom_firmware/README.md) с поддержкой запароливания: [TD-H9-V1.0.38DKXCE.fw](custom_firmware/TD-H9-V1.0.38DKXCE.fw) 
-- [Смена загрузочной картинки](td9_logo.md)
-- [Загрузка картинок](td9_kpi.md)
-- [Загрузка приложений](td9_apps.md)
-- [Запароливание рации](lock-pass.md)
-- [Конфигурирование APRS-настроек](td9_aprs.md)
-
----
-
-## 12. Скриншоты экранов виджетов приложений
+## Скриншоты экранов виджетов приложений
 
 ### Меню и Запаролеватель
 
@@ -314,9 +83,9 @@ Chat-20/
 
 ---
 
-## 13. Credits & Acknowledgments
+## Credits & Acknowledgments
 
-Приложения основаны на тулбоксе и кастомной прошивке [melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).    
+Приложения основаны на тулбоксе и кастомной прошивке [melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).
 
 ---
 
@@ -324,4 +93,4 @@ Chat-20/
 **Android**: [dkxce/tdh9android](https://github.com/dkxce/tdh9android)      
 **Desktop**: [dkxce/tdh9desktop](https://github.com/dkxce/tdh9desktop)      
 **Widgets**: [dkxce/tdh9apps](https://github.com/dkxce/tdh9apps)      
-**Manual**: [dkxce/Tidradio-TD-H9](https://github.com/dkxce/Tidradio-TD-H9)  
+**Manual**: [dkxce/Tidradio-TD-H9](https://github.com/dkxce/Tidradio-TD-H9)

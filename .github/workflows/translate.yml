@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'README.md'
+      - 'UNBRICK.md'
       - 'APPLICATIONS.md'
       - 'GAMES.md'
       - 'custom_firmware/README.md'
@@ -33,6 +34,7 @@ jobs:
         with:
           translate_paths: |
             README.md
+            UNBRICK.md
             APPLICATIONS.md
             GAMES.md
             custom_firmware/README.md
