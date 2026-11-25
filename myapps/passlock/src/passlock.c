@@ -340,8 +340,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		};
-		if ((pass[0] == '0') && (*KEY_HOLDED != 20)) { /* pass starts with 0 and no # holded */
+		if ((*KB_LOCKED != 0) && (*KEY_HOLDED != 20)) { /* kb locked and no # holded */
 			*SKIP_CHECK = SKIP_2BLCKD;
+			// *KB_LOCKED = 1;
 			STOCK_REFRESH();
             STOCK_REDRAW();
 			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
