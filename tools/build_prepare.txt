@@ -1,31 +1,50 @@
-**Кастомизированная прошивка** trck-153 на основе v1.0.3.8 и h9toolbox от melidosian/h9toolbox.      
-Основной функционал:
-- [добавлено](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): блокировка рации по паролю и режим полной блокировки клавиатуры `stub + passlock` (стек: **TD-H9-V1.0.38DKXCE.fw** + **menu.h9mod** + **passlock.h9mod**)
-- [добавлено](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + aprs mute` (стек: **TD-H9-V1.0.38DKXCE_APRS_mute.fw** + **menu.h9mod** + **passlock.h9mod**)
-- [добавлено](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + aprs mute + beep-beep + send beacon` (стек: **TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw** + **menu.h9mod** + **passlock.h9mod**)
+Возможности / Features:
+
++ passlock
++ kbhardlock
++ aprs mute (CH-B)
++ beep-beep (if Report Sats)
++ send beacon (PF1/PF2 shortcut)
++ change bootscreen
++ image viewer
++ app manager
++ games
++ navigation tracker
+
+**Кастомизированная прошивка** trck-153 на основе v1.0.3.8 и h9toolbox от melidosian/h9toolbox.
+Основной функционал (блокировка рации по паролю и режим полной блокировки клавиатуры kbhardlock):
+- [добавлено](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + kbhardlock` (стек: **.fw** + **menu.h9mod** + **passlock.h9mod**)
+- [добавлено](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + kbhardlock + aprs mute` (стек: **_APRS_mute.fw** + **menu.h9mod** + **passlock.h9mod**)
+- [добавлено](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + kbhardlock + aprs mute + beep-beep + send beacon` (стек: **_APRS_mute_bb_beacon.fw** + **menu.h9mod** + **passlock.h9mod**)
 - [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): смена bootscreen через скрипт (стек: **td9_logo.exe**)
-- [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): просмотр bootscreen через модуль (стек: **bootscreen.h9mod**)
-- [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): загрузка картинок через скрипт и просмотр на рации (стек: **td9_kpi.exe** +**dkxcepic.h9mod**)
-- [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): загрузка приложений через скрипт (стек: **TD-H9-V1.0.38DKXCE.fw** + **td9_apps.exe**)
+- [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): просмотр bootscreen через модуль (стек: **bootscreen.h9mod** / **dkxcepic.h9mod**)
+- [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): загрузка картинок через скрипт и просмотр на рации (стек: **td9_kpi.exe** + **dkxcepic.h9mod**)
+- [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): загрузка приложений через скрипт (стек: **.fw** + **td9_apps.exe**)
 - добавлена загрузка/выгрузка aprs-настроек (стек: **td9_aprs.exe**)
 - добавлен раскирпичиватель рации через HID (стек: **h9_ui_flash.exe**)
 - [добавлено](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): модуль GPS-трекера-навигатора (стек: **tracking.h9mod**)
 - добавлено [11 игр](https://github.com/dkxce/tdh9apps/blob/main/GAMES.md) (9 одиночных и 2 APRS) 
 
+[custom firmware / stub](https://github.com/dkxce/tdh9apps/blob/main/custom_firmware/README.md)     
+[passlock + kbhardlock](https://github.com/dkxce/tdh9apps/blob/main/lock-pass.md)      
+
 ---
 
 **Custom firmware** based on v1.0.3.8, utilizing the h9toolbox by melidosian/h9toolbox.       
-Key features:
-- [added](https://github.com): radio password lock and full keypad lock mode `stub + passlock` (stack: **TD-H9-V1.0.38DKXCE.fw** + **menu.h9mod** + **passlock.h9mod**)
-- [added](https://github.com): `stub + passlock + aprs mute` (stack: **TD-H9-V1.0.38DKXCE_APRS_mute.fw** + **menu.h9mod** + **passlock.h9mod**)
-- [added](https://github.com): `stub + passlock + aprs mute + beep-beep + send beacon` (stack: **TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw** + **menu.h9mod** + **passlock.h9mod**)
+Key features (radio password lock and full keypad lock mode kbhardlock):
+- [added](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + kbhardlock` (stack: **.fw** + **menu.h9mod** + **passlock.h9mod**)
+- [added](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + kbhardlock + aprs mute` (stack: **_APRS_mute.fw** + **menu.h9mod** + **passlock.h9mod**)
+- [added](https://github.com/dkxce/tdh9apps/tree/main/custom_firmware): `stub + passlock + kbhardlock + aprs mute + beep-beep + send beacon` (stack: **_APRS_mute_bb_beacon.fw** + **menu.h9mod** + **passlock.h9mod**)
 - [added](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): bootscreen replacement via script (stack: **td9_logo.exe**)
-- [added](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): bootscreen viewer module (stack: **bootscreen.h9mod**)
+- [added](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): bootscreen viewer module (stack: **bootscreen.h9mod** / **dkxcepic.h9mod**)
 - [added](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): image uploading via script and viewing on the radio (stack: **td9_kpi.exe** + **dkxcepic.h9mod**)
-- [added](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): app uploading via script (stack: **TD-H9-V1.0.38DKXCE.fw** + **td9_apps.exe**)
+- [added](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): app uploading via script (stack: **.fw** + **td9_apps.exe**)
 - added APRS settings upload/download (stack: **td9_aprs.exe**)
 - added radio unbricker via HID (stack: **h9_ui_flash.exe**)
 - [added](https://github.com/dkxce/tdh9apps/blob/main/APPLICATIONS.md): GPS tracker/navigator module (stack: **tracking.h9mod**)
 - added [11 games](https://github.com/dkxce/tdh9apps/blob/main/GAMES.en.md) (9 single-player and 2 APRS)
 
+[custom firmware / stub](https://github.com/dkxce/tdh9apps/blob/main/custom_firmware/README.en.md)     
+[passlock + kbhardlock](https://github.com/dkxce/tdh9apps/blob/main/lock-pass.en.md)      
 
+---

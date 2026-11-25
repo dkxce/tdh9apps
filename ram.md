@@ -54,10 +54,11 @@ flash 0xD8D2C (конец области приложения)
 | Адрес RAM | Назначение |
 |---|---|
 | `0xC3AF` | Байт кнопки стокового скана: **цифра d → d+2**, Menu 12, Up 13, Down 14, Back 15 [HW] |
-| `0xC3C8` | `KB_UNLOCKED` из `menu.c` — читает menu.h9mod и passlock.h9mod, **сток её не пишет** [DISASM] |
+| `0xC3C7` | Клавиша `*` [STATIC] |
+| `0xC3C8` | Клавиша `#` [STATIC] |
 | `0xC3DC` | Байт-счётчик 0/1: инкремент с обнулением при `>= 2` в тике `0x01E896C8` [DISASM] |
 | `0xC0F0` | **База RAM-кэша настроек рации** (см. § 1.1) [DISASM] |
-| `0x11AC2` | Флаг «иконка блокировки отрисована» (`0x01E895F0`) [DISASM] |
+| `0x11AC2` | **`KB_LOCKED` — реальный флаг блокировки клавиатуры** (≠0 = залочена). Сток ставит через codeplug `0x300C` бит `0x20` (замок клавиатуры), читает загрузчик `0x01E722CE`; сбрасывается при kbhardlock-unlock (`*KB_LOCKED = 0`) [HW] |
 | `0x11AD0` | Блок состояния app_core: +100 рек. режим, +101 тек. режим; +138 дескриптор BLE; +6636 DAC-дескриптор [HW] |
 | `0x11AD0+0x1BC` | Текущая частота приёма (u32, 10 Гц) [HW, VFO PROBE] |
 | `0x11AD0+0x1C8` раст, `+0x1CC` оффсет TX, `+0x789` направление сдвига [STATIC] |
@@ -130,7 +131,7 @@ flash 0xD8D2C (конец области приложения)
 | `0x2B880` | Верхняя граница тел модулей: «satshare» (SAT PASS), тела не должны её пересекать [STATIC] |
 | `0x2B8B4` | Магия `CSRT` резидентного трекера (satshare) [STATIC] |
 | `0x2B8DE` | `MDL_LOADED` — модуль отработал [STATIC] |
-| `0x2B8DF` | `skip_check` owner-lock: 0 свежий, 1 разлочено, 2 заблочено, 4 блок клавы, 5 нужен блок [HW] |
+| `0x2B8DF` | `skip_check` owner-lock: 0 свежий, `1`=UNLOCKED разлочено, `2`=LOCKED заблочено, `3`=NORMAL разлочить, `4`=KBLCKD блок клавы, `5`=2BLCKD нужен блок клавы [HW] |
 | `0x2B8E0–0x2BEE0` | Состояние игр: `struct sf` (SEAFIGHT), `struct pl` (APRS 8-BALL). Перекрывает верх `struct trk` — одновременно с TRACKING не живёт [HW] |
 | `0x2BEE0–0x2BF00` | Mailbox `HRUN`: `magic`, `name[16]`, `spare[3]` [HW] |
 | `0x2BEF2`, `0x2BEF3` | Свободные байты в хвосте `name[16]` [STATIC] |
@@ -167,6 +168,7 @@ flash 0xD8D2C (конец области приложения)
 | `0x3A7000–0x3FFFFF` | Хвост voice-партиции: стёрт, сток не пишет [HW] | — |
 | `0x3FE000` | User VFO backup (лог 16-Б записей) [STATIC] | — |
 | `0x3FF000` | **Last GPS fix** (лог `GFX1`, 256×16 Б) [HW] | loader stub |
+| `0x716000` | Сектор пароля рации: 8 Б lock-записи по `0x716FF8`, остальное стёрто (0xFF) [HW] | PASSLOCK |
 | `0x717000–0x7FFFFF` | Хвост font-партиции; **пак картинок DKXCEPIC** (`DKXCEPI`) [HW] | `td9_kpi.py` |
 | `0x7FE000` | **Точки TRACKER SAVER** (4 КиБ, `DKXCETRACKSAVES`) [HW] | TRACKER SAVER |
 | `0x802000`, `0x80B606` | APRS inbox / beacon list (`sys_data`) [STATIC] | сток |
