@@ -18,7 +18,7 @@ Custom firmware includes blocking the radio with a password.
 | --- | --- |
 | <TD-H9-V1.0.38DKXCE.fw> | stub + passlock |
 | [TD-H9-V1.0.38DKXCE APRS mute.fw](TD-H9-V1.0.38DKXCE_APRS_mute.fw) | stub + passlock + aprs mute |
-| [TD-H9-V1.0.38DKXCE APRS mute bb beacon.fw.](TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw) | stub + passlock + aprs mute + beep + beep + send beacon |
+| [TD-H9-V1.0.38DKXCE APRS mute bb beacon.fw](TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw) | stub + passlock + aprs mute + beep + beep + send beacon |
 
 The manager of applications (widgets) in all builds opens with retention`#`.
 
@@ -61,8 +61,8 @@ RX-сторона == B? ─────────(Нет)──► [Динам
 ### Build TD-H9-V1.0.38DKXCE APRS mute bb beacon.fw
 
 Includes assembly functionality TD-H9-V1.0.38DKXCE.fw and TD-H9-V1.0.38DKXCE APRS mute.fw as well as:
-Supports assigning a side button to send an APRS packet (beacon) instead of a stock Weather (Weather can all open retention) n`0`)
-Supports beep-beep sound with APRS POPUP (if APRS has Resport Sats enabled) see the flow below
+Supports assigning a side button to send an APRS packet (beacon) instead of a stock Weather (Weather can open retention all the time) n`0`)
+Supports beep beep beep with APRS POPUP (if APRS has Resport Sats enabled)
 
 ```
 Пришел APRS-пакет
@@ -91,7 +91,7 @@ Installation:
 Pour:`h9_flash.py --fw <файл.fw>`(HID, PTT+2).
 
 The PASSLOCK module is assembled as a separate workflow`Build myapps modules *.h9mod`from`myapps/passlock/src/passlock.c`and established
-via App Manager.
+through App Manager.
 
 ## Where to put and how to collect (manually)
 
@@ -116,6 +116,6 @@ Repository:`dkxce/tdh9apps`.
 
 ## Safety note
 
-* The logic is written so that in the absence of an installed module`PASSLOCK`lock-up**unblocked silently**- she stays locked up.
-  (The session flag shall be placed only after the actual run of the module.)
+* The logic is written so that in the absence of an installed module`PASSLOCK`walkie**unblocking silently**- she stays locked up.
+  (The session flag is placed only after the actual run of the module).
 * No tips / methods of bypassing: this is a regular function of the owner.

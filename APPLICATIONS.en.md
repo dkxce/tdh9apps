@@ -1,11 +1,12 @@
 # Tidradio TD-H9 Widget Installation Guide
 
-[Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
+[Open your hand.](UNBRICK.md) | [UNBRICK MANUAL](UNBRICK.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
+[Hand-to-hand stitching](custom_firmware/README.md) | [Custom Fireware Manual](custom_firmware/README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
 [Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
 [Hand-to-hand games](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
 
 Copy from[releases](https://github.com/dkxce/tdh9apps/releases) **custom**for
-TIDRADIO TD-H9 with a set of tools for managing applications.
+TIDRADIO TD-H9 with application management toolset.
 
 > In this instruction, the app menu opens**retention`#`**on the radio. No need to hold back.
 
@@ -29,11 +30,11 @@ TIDRADIO TD-H9 with a set of tools for managing applications.
 | --- | --- |
 | `firmware/*.fw` | **Custom firmware**(with support for password lock and application manager) |
 | `firmware/Update App.exe` | official sewer`.fw`) |
-| `h9_ui_flash.exe` | scatterer / scatterer through HID (`--help`for regimes) |
+| `h9_ui_flash.exe` | scatterer/producer via HID (`--help`for regimes) |
 | `td9_apps.exe` | Application management (installation/removal)`.h9mod`) |
 | `td9_kpi.exe` | loading`DKXCEPIC`) + setting/resetting the radio password |
 | `td9_logo.exe` | boot-logo |
-| `td9_aprs.exe` | read/write APRS/GNSS settings |
+| `td9_aprs.exe` | Read/write APRS/GNSS settings |
 | `td9_tracksvr.exe` | editor/import/export of appendix points`TRACKER SAVER` |
 | `myapps/*.h9mod` | finished application modules (`passlock`, `dkxcepic`, `bootscreen`, `tracking`, `tracksvr`) |
 | `hidapi.dll` | Bluetooth communication library (should lie next to the`.exe`) |
@@ -42,21 +43,21 @@ TIDRADIO TD-H9 with a set of tools for managing applications.
 
 # Part 1. For regular users (ready-made .exe)
 
-You don't need any Python. It is enough to unpack the archive and run`.exe`.
+No Python is needed. It is enough to unpack the archive and run`.exe`.
 
 ## 1.1. Sweeve the custom firmware
 
 1. Unpack the archive in a separate folder.
 2. Go to the file.`firmware`.
 3. Launch it.**`Update App.exe`**(official sewer).
-4. Put the radio in firmware mode:**turn off**Hold it.**PTT + button`[2]`**And without letting go, turn on the walkie-talkie, and it's defined as an HID device.
+4. Put the radio in firmware mode:**turn off**Hold it.**PTT + button`[2]`**And, without letting go, turn on the walkie-talkie, and it will be defined as an HID device.
    Or hold on to normal mode.**8**.
    Connect by USB (data transfer cable).
-5. Select a file**`TD-H9-V1.0.38DKXCE.fw`**or**. fw**and press it.
+5. Select the file**`TD-H9-V1.0.38DKXCE.fw`**or**. fw**and press it.
 6. Once completed, turn off the USB and turn off/on the radio.
 
 > Make sure that the firmware is used, simple: retention`#`menu
-> Applications (stock firmware does not have such a menu). Entering DTMF codes will be turned off.
+> Applications (stock firmware does not have such a menu). Entering DTMF codes will be disabled.
 > But first you have to install widgets.
 
 ## 1.2. Install applications (td9 apps.exe)
@@ -90,7 +91,7 @@ Delete everything:
 td9_apps.exe remove
 ```
 
-After installation, open**menu**deterrence`#`- there will appear
+Open after installation**menu**deterrence`#`- there will appear
 installed modules.
 
 > Tip: in order to password the radio, it is necessary to interpret the module`passlock`.
@@ -146,8 +147,8 @@ td9_kpi.exe pass --password 1234
 ```
 
 * Password: 1 to 8 digits.
-* After installation, turn off and turn on the radio: when turned on, ask for a password.
-* Unlock:`td9_kpi.exe passclear`.
+* After installation, turn off and turn on the radio: when turned on, it will ask for a password.
+* Remove the lock:`td9_kpi.exe passclear`.
 
 > Blocking works only with the installed application`passlock`.
 > Don’t lose your password and keep Bluetooth on while you check that everything works.
@@ -169,7 +170,7 @@ td9_tracksvr.exe load          # записать points.json в рацию (с 
 
 * File format`tracksvr_points.json`: `{"points": [{"name": "HOME", "lat": 55.7558, "lon": 37.6173}, ...]}`;
   Custom way.`--file <путь>`.
-* `load`erases the sector and writes the entire table; before erasing, saves
+* `load`erases the sector and writes the table as a whole; before erasing saves
   old sector`tracksvr-sector-backup.bin`or`--backup <файл>`).
 * The radio should be on, Bluetooth is active.
 
@@ -190,7 +191,7 @@ The same functionality, but the original scripts`td9_apps.py`, `td9_kpi.py`,
 
 ## 2.1. Environment preparation
 
-You need Python.**3. 10. +**(recommended 3.11) and`pip`.
+We need Python.**3. 10 +**(recommended 3.11) and`pip`.
 
 ```
 # 1) Склонировать проект (или взять исходники из репозитория)
@@ -214,7 +215,7 @@ environment activated).
 
 ## Firmware (HID)
 
-Flasher works via HID mode (PTT+2 when turned on):
+Flasher works through HID mode (PTT+2 when turned on):
 
 ```
 poetry run python h9_flash.py --fw firmware/TD-H9-V1.0.38DKXCE.fw --backup before.bin
@@ -253,7 +254,7 @@ poetry run python td9_kpi.py pass --password 1234
 poetry run python td9_kpi.py passclear
 ```
 
-## 2.7. APRS settings (td9 aprs.py)
+## APRS settings (td9 aprs.py)
 
 ```
 poetry run python td9_aprs.py show
@@ -290,14 +291,14 @@ tdh9apps/
 ## 3.2. About assembly of modules (demo: new module)
 
 Modules - C-files without libc, link under jeli-tulchain.
-New Module = Just Create a Catalogue`.c`:
+A new module = just create a directory with one`.c`:
 
 ```
 myapps/<app>/src/<app>.c      # функция module_main(const struct h9_api*, unsigned)
 ```
 
 CI workflow`build-module.yml`(GitHub Actions) Downloads JieLi-Tulchain
-release`toolchain`will`build_one.py <app>`give away`myapps/<app>.h9mod`.
+release`toolchain`will`build_one.py <app>`give`myapps/<app>.h9mod`.
 
 Multi-track application - add`myapps/<app>/build.json`listed
 modules and their sources (example -`myapps/tracking`).
@@ -306,9 +307,9 @@ Download yours:`td9_apps.py install <app>`.
 
 ## 3.3. About firmware assembly
 
-The firmware is assembled in CI (`build-lock-firmware.yml`): runoff is taken`firmware/TD-H9-V1.0.38.fw`from it is extracted`app.bin`superimposed
+The firmware is assembled in CI (`build-lock-firmware.yml`): runoff is taken`firmware/TD-H9-V1.0.38.fw`from it is extracted`app.bin`overlay
 yours`custom_firmware/stub/stub.s`(patch) placed`custom_firmware/menu/menu.c`.
-And the firmware is assembled with a built-in application manager.
+And it assembles the firmware with the built-in application manager.
 
 Locally (without GitHub) - see`custom_firmware/README.md`:
 
@@ -346,11 +347,11 @@ For its correct assembly, you need an actual stub.
 
 | What? | Meaning. |
 | --- | --- |
-| Image area of DKXCEPIC | resource`0x717000` |
-| Points Tracker Saver | resource`0x7FE000`(4 KiB, magic)`DKXCETRACKSAVES`) |
-| Boot logo | resource`0xA00000`(160×128 RGB565) |
+| Image area of DKXCEPIC | resource resource`0x717000` |
+| Tracker Saver Points | resource resource`0x7FE000`(4 KB), magic.`DKXCETRACKSAVES`) |
+| Boot logo | resource resource`0xA00000`(160×128 RGB565) |
 | Lock flag`skip_check` | Ram.`0x2B8DF` |
-| Modules | resource`0xCC0000`(catalogue), data`0xCC1000` |
+| Modules | resource resource`0xCC0000`(catalogue), data`0xCC1000` |
 | RAM slot module | `0x29F00..0x2BEFF`(8 KB) |
 
 ## Real Photos

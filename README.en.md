@@ -1,296 +1,71 @@
-Tidradio TD-H9 HID Unbricker + Custom Apps
+Tidradio TD-H9 Customization
 
-[Open your hand.](README.md) | [UNBRICK MANUAL](README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
-[Hand-to-hand stitching](custom_firmware/README.md) | [Custom Fireware Manual](custom_firmware/README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
-[Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)   
-[Hand-to-hand games](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)
-
-Tools for debugging the main flash memory of the radio station**TIDRADIO TD-H9**
-в **HID mode**(without switching the chip to UBOOT mode). The project consists of two parts:
-
-* **`h9_flash.py`**Console Flasher (CLI) in Python.
-* **`ui_app/app.py`**A window application (GUI) on PySide6 that repeats
-  The same logic and adds buttons, progress and journal.
-
-> **What the tool does.**Unpacking the package`.fw`(extracts)`flash.bin`)
-> compares the CRC sectors of the walkie-talkie to the target image and overwrites**only
-> differing**sectors, then checks the record by CRC. Boot area`0x0000..0x4FFF`settings`0xDA000..0x100000` **stay away**.
+#### Tidradio TD-H9 Customization: HID Unbricker + Custom Firmware + Apps + Games
 
 ---
 
-## 1. Why should I?
-
-Official firmware TD-H9 comes in file form`*.fw`(for example,`TD-H9-V1.0.38.fw`). It is now being used by a company program through**USB Update
-(UBOOT)**regime.
-
-However, the chip has**second** — **HID mode**(PTT+2 upon inclusion),
-When the radio is defined as a HID device`VID 0x4C4A, PID 0x4155`.
-Scripts work exactly on the HID channel.
-
----
-
-## 2. What do you need?
-
-| Component | Why? | Where to find it. |
-| --- | --- | --- |
-| **TIDRADIO TD-H9** | walkie-talkie | you |
-| **USB-C cable with data transfer** | Physical connection (not "charging"!) | you |
-| **Python 3. 11. +** | performance | python.org |
-| **Poetry** | Dependency management and environment n | python-poetry.org |
-| **Package`hid`**(pyhidapi) | access | `poetry add hid` |
-| **`hidapi.dll`(x64)** | native library`hid` | github.com/libusb/hidapi/releases |
-| **PySide6** | GUI only | `poetry add pyside6` |
-| **PyInstaller** | assemblage | `poetry add pyinstaller` |
-| **Firmware file`.fw`** | pour | firmware |
-
-> **Important`hidapi.dll`.**Package`pyhidapi`It's just a Python wrapper. She needs her.
-> native library**`hidapi.dll`**. Put her down.**near-script**
-> `h9_flash.py`(at the root of the project).
+**Quick links**:   
+- [RU](README.md) | [EN](README.en.md)   
+- [Open your hand.](UNBRICK.md) | [UNBRICK MANUAL](UNBRICK.en.md)   
+- [Hand-to-hand stitching](custom_firmware/README.md) | [Custom Fireware Manual](custom_firmware/README.en.md)   
+- [Hands-to-hands.](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md)   
+- [Hand-to-hand games](GAMES.md) | [GAMES MANUAL](GAMES.en.md)
+- [INSTRUCTION](https://github.com/dkxce/Tidradio-TD-H9/blob/main/TD-H9_manual.ru.md) | [MANUAL](https://github.com/dkxce/Tidradio-TD-H9/blob/main/TD-H9_manual.en.md)
+- [OTHER DOC-IA AND SOFT](https://github.com/dkxce/Tidradio-TD-H9/blob/main/README.md) | [OTHER DOCS & SOFT](https://github.com/dkxce/Tidradio-TD-H9/blob/main/README.md)   
+- [RELEASES](https://github.com/dkxce/tdh9apps/releases)
 
 ---
 
-## 3. Installation
-
-The project uses**Poetry**for addiction management. Dependencies.
-?`hid`, `pyside6`, `pyinstaller`...) declared in`pyproject.toml`.
-
-```
-# 1) Установить Poetry (один раз, если ещё нет)
-pip install poetry
-
-# 2) Перейти в папку проекта
-cd <path>
-
-# poetry env use "<path to python C:\...>"   # опционально
-
-# 3) Установить зависимости и создать виртуальное окружение
-poetry install
-
-# 4) Положить hidapi.dll (x64) в корень проекта:
-#    — скачать: https://github.com/libusb/hidapi/releases
-#    — взять архив hidapi-win.zip, распаковать x64\hidapi.dll
-#    — поместить рядом с h9_flash.py
-```
-
-All teams continue to run through`poetry run python ...`(or activate)
-Poetry's environment:`poetry shell`then just`python ...`).
+**Contents**:
+-[Description of the repository](#описание)   
+- [Documentation](#документация-md)   
+- [Screenshots](#скриншоты-экранов-виджетов-приложений)
 
 ---
 
-## 4. Radio preparation (entry into HID mode)
+## Description
 
-1. **Turn off the radio.**
-2. **Press the PTT and the button simultaneously`[2]`.**
-3. **Holding the buttons, turn on the radio**It will enter HID mode (updater).
-4. **Connect the USB-C cable**(requiredly with data) to the computer.
-5. In the system, the radio should be defined as a device**`Jieli Technology USB Composite Device`** с `VID 0x4C4A, PID 0x4155`.
+This repository is a set of tools and firmware for**radio station TIDRADIO
+TD-H9**. Here is everything that relates to working with the radio:
 
-You can check with the team:
+* **Unbrick**Decomposition of the main flash memory in**HID mode**(without switching the chip to UBOOT mode). Includes console flasher`h9_flash.py`window appendix`ui_app/app.py`(PySide6) that are unpacked
+  packet`.fw`Compare CRC sectors and rewrite only different ones.
+* **Custom firmware**Custom firmware with password support
+  ?`custom_firmware/`), as well as utilities for changing the boot logo, downloading
+  Images and app firmware.
+* **Apps**- applications / widgets for walkie-talkie (menu, tracker, waypoints,
+  Password and other modules.
+* **Games**Radio games (such as naval combat).
+* **Python scripts**A set of automation scripts:`h9_flash.py`,
+  `td9_aprs.py`(APRS/GNSS settings),`td9_apps.py`, `td9_logo.py`,
+  `td9_kpi.py`etc.
 
-```
-poetry run python h9_flash.py --list
-```
-
-Expected conclusion:
-
-```
-Scanning for JieLi HID devices (VID 0x4C4A):
-  VID:0x4C4A PID:0x4155  Jieli Technology USB Composite Device (TD-H9 HID flash mode)
-```
-
-Or use it.[USBTreeView](https://www.uwe-sieber.de/usbtreeview_e.html)
-
-> If there is no record, check the cable (you need data, not just charging).
-> button retention and order of inclusion.
+> **What an unbrick tool does.**Unpacking the bag`.fw`(extracts)`flash.bin`), compares the CRC sectors of the radio to the target image and overwrites**differing**sectors, then checks the record by CRC. Boot area`0x0000..0x4FFF`settings`0xDA000..0x100000` **hold off**.
 
 ---
 
-## 5. Console flasher`h9 flash.py`
-
-### 5.1. Reference
-
-```
-poetry run python h9_flash.py --help
-```
-
-| Flag. | Appointment |
-| --- | --- |
-| `--list` | Show the found JieLi HID devices |
-| `--fw <файл.fw>` | path to the firmware package (required for filling) |
-| `--backup <файл.bin>` | Save the current image in a file before recording |
-| `--verify` | Slow full check on shifted CRC before recording |
-| `--nocheck` | skip CRC reconciliation and force all sectors to be rewritten |
-| `--yes` | ask for confirmation |
-
-### 5.2. Basic launch
-
-```
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --backup before.bin
-```
-
-Script:
-1. unpack and show the SHA-256 packet and image;
-2. open the radio and check the geometry;
-3. make a CRC scan of sectors;
-4. will show a list of sectors for rewriting and ask for confirmation;
-5. write down sectors (from senior to junior) with verification of each;
-6. perform the final inspection of all sectors.
-
-After success, turn off the USB and restart the radio.
-
-### 5.3. Automatic start (without confirmation)
-
-```
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --backup before.bin --yes
-```
-
-### 5.4. Full (slow) inspection`-verify.`
-
-The script before recording additionally makes a check on**shifted**This proves that the real bytes in memory are the same.
-with an image, not just 16-bit CRC sectors (excludes collisions). This is a test.
-It is slow (thousands of HID requests), so it is turned off by default.
-
-```
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --verify --yes
-```
-
-In case of discrepancy, the recording will be prohibited.
-
-### 5.5. Forced rewriting`-Nocheck.`
-
-If you need to re-write**everything**Application sectors regardless of the current CRC
-(without stopping at coincidence) - use`--nocheck`:
-
-```
-poetry run python h9_flash.py --fw "TD-H9-V1.0.38.fw" --nocheck --yes
-```
-
-> `--nocheck`switch off`--verify`(if given together) Erasure/recording/checking
-> Each sector is still executed - only preliminary is missed.
-> reconciliation.
-
----
-
-## 6. Window appendix`ui app/app. py`
-
-GUI repeats console logic and adds convenience.
-
-### 6.1. Launch
-
-```
-poetry run python ui_app\app.py
-```
-
-### 6.2. What in the window?
-
-* **Instructions for entering HID mode**at the top of the window (summary from section 4).
-* **Firmware**- file selection`.fw`(Browse button)
-* **Options**Optional path to backup, checkboxes`--verify` и `--nocheck`.
-* **progress**- progress by sector.
-* **Magazine (log)**all messages; copyable log (selection + Ctrl+C), or
-  button**Copy log.**) and the button**Clear.**(clean)
-* **Detection device**Search and output of connected JieLi HID devices.
-* **Flash**Start firmware in the background stream (the window does not freeze).
-* **Stop.**- early stop.
-
-### 6.3. Working arrangements at GUI
-
-1. Connect the radio in HID mode (PTT+2 when turned on).
-2. Press.**Detection device**- Make sure it's visible.`4C4A:4155`.
-3. Select a file`.fw`.
-4. (Optional) indicate the path to the backup.
-5. (Optional) Turn on`--verify` / `--nocheck`.
-6. Press.**Flash**Keep an eye on progress and log.
-7. Upon completion, turn off the USB and restart the radio.
-
----
-
-## 7. Assembly of exe (PyInstaller)
-
-The assembly is done through PyInstaller (announced in poetry). way
-spec file (recommended - includes)`h9_flash.py` и `hidapi.dll`:
-
-```
-poetry run pyinstaller --noconfirm ui_app\flasher.spec
-```
-
-Result:`dist\TDH9Flasher.exe`a single-file GUI application in which
-packed`app.py`module`h9_flash` и `hidapi.dll`.
-
----
-
-## 8. File structure
-
-```
-Chat-20/
-├── h9_flash.py          # консольный флешер (CLI)
-├── hidapi.dll           # нативная библиотека (нужна для CLI и GUI)
-├── pyproject.toml       # зависимости Poetry
-├── ui_app/
-│   ├── app.py           # оконное приложение (GUI, PySide6)
-│   └── flasher.spec     # spec-файл PyInstaller для сборки exe
-└── README.md            # этот файл
-```
-
-### Documentation`. md`)
+## Documentation`. md`)
 
 | Document | RU | EN |
 | --- | --- | --- |
-| Root Readme | [Readme. md](README.md) | [Readme.en. md](README.en.md) |
-| Passing the radio | [lock-pass. md](lock-pass.md) | [lock-pass.en. md](lock-pass.en.md) |
-| Memory map | [ram. md](ram.md) | [ram.en. md](ram.en.md) |
+| Description of the repository (this file) | [Readme. md](README.md) | [Readme.en. md](README.en.md) |
+| **UNBRICK**: HID piping | [UNBRICK. md](UNBRICK.md) | [UNBRICK.EN. md](UNBRICK.en.md) |
+| Custom firmware | [custom firmware/README. md](custom_firmware/README.md) | [custom firmware/README.en. md](custom_firmware/README.en.md) |
+| Annexes/widgets | [Applications. md](APPLICATIONS.md) | [Applications.en. md](APPLICATIONS.en.md) |
 | Installation of applications | [td9 apps. md](td9_apps.md) | [td9 apps.en. md](td9_apps.en.md) |
+| Passing the radio | [lock-pass. md](lock-pass.md) | [lock-pass.en. md](lock-pass.en.md) |
+| Games | [GAMES. md](GAMES.md) | [GAMES.EN. md](GAMES.en.md) |
 | Boot logo | [td9 logo. md](td9_logo.md) | [td9 logo.en. md](td9_logo.en.md) |
 | Picture package | [td9 kpi. md](td9_kpi.md) | [td9 kpi.en. md](td9_kpi.en.md) |
 | APRS/GNSS settings | [td9 aprs. md](td9_aprs.md) | — |
-| Custom firmware | [custom firmware/README. md](custom_firmware/README.md) | [custom firmware/README.en. md](custom_firmware/README.en.md) |
 | tracker | [myapps/tracking/README. md](myapps/tracking/README.md) | [myapps/tracking/README.en. md](myapps/tracking/README.en.md) |
 | Travel points | [myapps/tracksvr/README. md](myapps/tracksvr/README.md) | [myapps/tracksvr/README.en. md](myapps/tracksvr/README.en.md) |
 | Tracker restrictions | [myapps/tracking/LIMITS. md](myapps/tracking/LIMITS.md) | [myapps/tracking/LIMITS.en. md](myapps/tracking/LIMITS.en.md) |
-| License. | [LICENSE. md](LICENSE.md) | — |
-| Third-party components | [THIRD PARTY NOTICES. md](THIRD_PARTY_NOTICES.md) | — |
-| Version. | [version. md](version.md) | — |
+| Memory map | [ram. md](ram.md) | [ram.en. md](ram.en.md) |
 
 ---
 
-## 9. Security and warnings
-
-* **Firmware is destructive.**Before the first launch, always make a backup if
-  There's an opportunity.
-* Tool.**doesn't**boot-field`0x0000..0x4FFF`and settings`0xDA000+`.
-* Use it.**only**checked package intended for**yours**Radios.
-  Incompatible firmware can disrupt the radio.
-* Do not turn off the walkie-talkie and USB while recording - you can get an interrupt
-  partially recorded state. The re-launch will recheck the sectors.
-* `--nocheck`More dangerous than the usual regime: forced re-recording without reconciliation.
-  Use it consciously.
-
----
-
-## 10. Frequent problems
-
-| Problem. | Decision |
-| --- | --- |
-| `ImportError: Unable to load ... hidapi.dll` | Put it down`hidapi.dll`(x64) at the root of the project |
-| The device`4C4A:4155`not visible`--list` | Check cable (with data), PTT+2 when turned on, work on behalf of admin if necessary |
-| `Package unpack error` | The selected file is not a valid TD-H9 package`.fw` |
-| `Radio already matches ... Nothing to write` | The radio already matches the image; use`--nocheck`If a forced re-recording is required |
-| GUI window does not open (PySide6) | `poetry run python -c "import PySide6"`If there is a mistake, check it out.`poetry install` |
-
----
-
-## 11. Other annexes
-
-* [Custom firmware](custom_firmware/README.md)password-enabled:[TD-H9-V1.0.38DKXCE.fw](custom_firmware/TD-H9-V1.0.38DKXCE.fw)
-* [Changing the boot image](td9_logo.md)
-* [Image uploading](td9_kpi.md)
-* [Downloading applications](td9_apps.md)
-* [Passing the radio](lock-pass.md)
-* [Configuration of APRS settings](td9_aprs.md)
-
----
-
-## 12. Screenshots of application widget screens
+## Screenshots of application widget screens
 
 ### Menu and Passwordsman
 
@@ -309,7 +84,7 @@ Chat-20/
 
 ---
 
-## 13. Credits & Acknowledgments
+## Credits & Acknowledgments
 
 Applications are based on tulbox and custom firmware[melidosian/h9toolbox](https://github.com/melidosian/h9toolbox).
 
