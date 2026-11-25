@@ -172,7 +172,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		};
 		if (*SKIP_CHECK == SKIP_KBLCKD) { /* Пограничный случай */
 			gfx_wait_release();
-			gfx_fill(0, 19, H9_WIDTH, 2, 0x8010);
+			gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED); /* 0x8010 */
 			return 0;
 		};
 	};
@@ -198,7 +198,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	
 	if (*SKIP_CHECK == SKIP_2BLCKD) {
 		 *SKIP_CHECK = SKIP_KBLCKD;
-		 // *KB_LOCKED = 1;
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
          STOCK_REDRAW();

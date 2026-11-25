@@ -342,7 +342,6 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		};
 		if ((*KB_LOCKED != 0) && (*KEY_HOLDED != 20)) { /* kb locked and no # holded */
 			*SKIP_CHECK = SKIP_2BLCKD;
-			// *KB_LOCKED = 1;
 			STOCK_REFRESH();
             STOCK_REDRAW();
 			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
@@ -353,7 +352,15 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         clear_all();
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
-        if (enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1) == 2) {
+		int res = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
+		if ((res == 1) && (*KB_LOCKED != 0)) {
+			*SKIP_CHECK = SKIP_2BLCKD;
+			STOCK_REFRESH();
+            STOCK_REDRAW();
+			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
+			return H9_RETURN_RADIO_LOCAL;
+		};
+        if (res == 2) {
 			show_logo(api);
 			gfx_wait_release();
 			for (;;) {
