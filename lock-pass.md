@@ -210,6 +210,9 @@ python td9_kpi.py passread                       # прочитать 8 байт
 ## Стек
 
 Для работы функции блокировки должны быть установлены следующие компоненты:
-- Прошивка [TD-H9-V1.0.38DKXCE.fw](custom_firmware/TD-H9-V1.0.38DKXCE.fw)
+- Прошивка одна из
+  a) [TD-H9-V1.0.38DKXCE.fw](custom_firmware/TD-H9-V1.0.38DKXCE.fw)
+  b) [TD-H9-V1.0.38DKXCE_APRS_mute.fw](custom_firmware/TD-H9-V1.0.38DKXCE_APRS_mute.fw)
+  c) [TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw](custom_firmware/TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw)
 - Меню [menu.h9mod](myapps/menu.h9mod)
 - Модуль приложения [passlock.h9mod](myapps/passlock.h9mod)
