@@ -147,22 +147,26 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по звездочке */	    
+	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED))     /* enter on-* */	    
 	{
-		if (*SKIP_CHECK == SKIP_KBLCKD) 
+		if ((*KB_LOCKED != 0) && (*SKIP_CHECK == SKIP_KBLCKD)) { /* try kbhardlock unlock */
+			int pc = find_passcode(api, count);
+			if (pc) return (unsigned)pc;
+		};
+		if (*SKIP_CHECK == SKIP_KBLCKD)                          // kbhardlocked
 			gfx_wait_release();
 		return 0;
 	};
 	
-	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по решетке */ 
+	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED))     /* enter on-# */ 
 	{		
-		if (*KB_LOCKED != 0) /* *KB_UNLOCKED == 0 <- Залочена*/
+		if (*KB_LOCKED != 0)                                     /* kb is locked */
 		{
 			if (*SKIP_CHECK == SKIP_UNLOCKED) {
 				unsigned char pass[PASS_LEN];
 				read_pass(api, pass);    
 				if (pass_locked(pass)) { 
-					*SKIP_CHECK = SKIP_KBLCKD;
+					*SKIP_CHECK = SKIP_KBLCKD;                   // set kbhardlock
 					gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
 				} else 
 					gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);
@@ -170,9 +174,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 			gfx_wait_release();
 			return 0;
 		};
-		if (*SKIP_CHECK == SKIP_KBLCKD) { /* Пограничный случай */
+		if (*SKIP_CHECK == SKIP_KBLCKD) {                        /* Пограничный случай */
 			gfx_wait_release();
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED); /* 0x8010 */
+			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
 			return 0;
 		};
 	};
@@ -187,7 +191,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         return (unsigned)pc;
 	}
 	
-	if (*SKIP_CHECK == SKIP_NORMAL) {
+	if (*SKIP_CHECK == SKIP_NORMAL) {                            // set normal through passlock fallback
 		*SKIP_CHECK = SKIP_UNLOCKED;
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
@@ -196,12 +200,12 @@ unsigned module_main(const struct h9_api *api, unsigned self)
          return 0;
     }
 	
-	if (*SKIP_CHECK == SKIP_2BLCKD) {
+	if (*SKIP_CHECK == SKIP_2BLCKD) {                            // set kbhardlock through passlock fallback
 		 *SKIP_CHECK = SKIP_KBLCKD;
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
          STOCK_REDRAW();
-		 gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
+		 gfx_fill(0, 19, H9_WIDTH, 2, 0x8010); // Violet
 		 h9_delay(120);
          return 0;
     }
