@@ -149,7 +149,11 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		
 	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по звездочке */	    
 	{
-		if (*SKIP_CHECK == SKIP_KBLCKD) 
+		if ((*KB_LOCKED != 0) && (*SKIP_CHECK == SKIP_KBLCKD)) { /* попытка разлочить */
+			int pc = find_passcode(api, count);
+			if (pc) return (unsigned)pc;
+		};
+		if (*SKIP_CHECK == SKIP_KBLCKD)
 			gfx_wait_release();
 		return 0;
 	};
@@ -172,7 +176,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		};
 		if (*SKIP_CHECK == SKIP_KBLCKD) { /* Пограничный случай */
 			gfx_wait_release();
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED); /* 0x8010 */
+			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
 			return 0;
 		};
 	};
@@ -201,7 +205,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
          STOCK_REDRAW();
-		 gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
+		 gfx_fill(0, 19, H9_WIDTH, 2, 0x8010);
 		 h9_delay(120);
          return 0;
     }
