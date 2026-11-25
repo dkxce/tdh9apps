@@ -46,7 +46,7 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define SKIP_KBLCKD   4u /* Блок клавы */
 #define SKIP_2BLCKD   5u /* Нужен блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
+#define KB_LOCKED     ((volatile unsigned char *)0x11AC2u) /* KEYLOCK FLAG REAL */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
 
 #define PASSCODE_NAME "PASSLOCK"
@@ -155,7 +155,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	};
 	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по SHARP */ 
 	{		
-		if (*KB_UNLOCKED == 0)
+		if (*KB_LOCKED != 0)
 		{
 			if (*SKIP_CHECK == SKIP_UNLOCKED) {
 				unsigned char pass[PASS_LEN];

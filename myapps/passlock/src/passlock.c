@@ -96,7 +96,7 @@
 #define SKIP_KBLCKD   4u /* Блок клавы */
 #define SKIP_2BLCKD   5u /* Нужен блок клавы */
 #define KEY_HOLDED    ((volatile unsigned char *)0x0C3AFu) /* KEY HOLDED ON OPEN */
-#define KB_UNLOCKED   ((volatile unsigned char *)0x0C3C8u) /* KEYLOCK FLAG */
+#define KB_LOCKED     ((volatile unsigned char *)0x11AC2u) /* KEYLOCK FLAG REAL */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
 
 #ifndef STOCK_REFRESH
@@ -229,7 +229,7 @@ static int enter_digits(char *buf, unsigned maxlen, const char *prompt, unsigned
     gfx_fill(0, y, H9_WIDTH, 16, GFX_BLACK);
 	/*
 	char b[3];
-	hex(b, *KB_UNLOCKED, 2);	
+	hex(b, *KB_LOCKED, 2);	
     gfx_text(50, y, b, 20, 1, GFX_YELLOW, GFX_BLACK);
 	*/
     gfx_text(50, y, prompt, 20, 1, GFX_YELLOW, GFX_BLACK);
