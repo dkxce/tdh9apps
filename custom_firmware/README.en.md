@@ -61,8 +61,8 @@ RX-сторона == B? ─────────(Нет)──► [Динам
 ### Build TD-H9-V1.0.38DKXCE APRS mute bb beacon.fw
 
 Includes assembly functionality TD-H9-V1.0.38DKXCE.fw and TD-H9-V1.0.38DKXCE APRS mute.fw as well as:
-Supports assigning a side button to send an APRS packet (beacon) instead of a stock Weather (Weather can open retention all the time) n`0`)
-Supports beep beep beep with APRS POPUP (if APRS has Resport Sats enabled)
+Supports assigning a side button to send an APRS packet (beacon) instead of a stock Weather (Weather can all open retention) n`0`)
+Supports beep-beep sound with APRS POPUP (if APRS has Resport Sats enabled) see the flow below
 
 ```
 Пришел APRS-пакет

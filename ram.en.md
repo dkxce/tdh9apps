@@ -62,13 +62,13 @@ flash 0xD8D2C (конец области приложения)
 | `0x12234` | NOR marker "ready" =`0x5AA5`[HW] |
 | `0x12550` / `0x12558` / `0x12560` | GPS fix: validity/latitude/longitude (signed micro-degrees) [HW, TRACKING] |
 | `0x13D10` | Last decoded AX.25 packet (324B) [STATIC] |
-| `0x16634` | APRS serial ring (2048 B; record indexes)`h[0x16634]`→`0x16E34`reading`0x16E36`) [HW] |
+| `0x16634` | APRS serial ring (2048 B; record indices)`h[0x16634]`→`0x16E34`reading`0x16E36`) [HW] |
 | `0x1D8B0` | 100-Hz tick counter`TICK`in all annexes) [HW] |
 | `0x1D7D0` | Heap free-bit map (128 B blocks) |
 | `0x1D8A8` / `0x1D8AA` | Heap: blocks occupied/all [HW] |
 | `0x1E4D8–0x2BEFF` | First Range of Stock Heap [STATIC] |
 | `0x29F00–0x2BEFF` | A piece of stock heap that the module-loader selects for itself when downloading, and the module code links there. |
-| `0x29F00–0x2BEFF` | **Module-loader**RAM-slot of modules (8 KB): a piece of stock heap, which the module-loader selects for itself, the module code links here (`LOAD=0x29F00`, `SLOT_END=0x2BF00`max. 0x2000) [HW] |
+| `0x29F00–0x2BEFF` | **Module-loader**RAM-slot of modules (8 KB): a piece of stock heap, which the module-loader selects for itself, the code of modules links here.`LOAD=0x29F00`, `SLOT_END=0x2BF00`max. 0x2000) [HW] |
 | `0x2BEE0–0x2BEFF` | "Run next" mailbox:`HRUN`, `name[16]`, `spare[3]`(see paragraph 1.3) [HW] |
 
 ### 1.1 RAM cache settings`0xC0F0`(copy of radio settings)
@@ -102,7 +102,7 @@ In the radio settings exist in two places:
 | --- | --- |
 | `+22` | Status bar byte: bit`0x20`= locking icon (sets)`0x01E895F0`) [DISASM] |
 | `+43`, `+46` | Mode flags (checked by key handler and action manager) [DISASM] |
-| `+78` | Byte "transmission is going" (timed-beacon path:`1`It doesn't call the end of the transmission. |
+| `+78` | Byte "transmission is going" (timed-beacon path:`1`It doesn't call end of transfer. |
 | `+79` | Byte that the runoff checks before the beep of the key; in practice always 0 [DISASM] |
 | `+87` | Tick counter (byte) [DISASM] |
 | `+504` | Byte Flag [DISASM] |
@@ -154,11 +154,11 @@ tab`GFCR`, lat/lon - tail`0x2BEE0–0x2BF00`[STATIC]
 
 ---
 
-## Resource chip (16 MiB SPI NOR, SPI2)
+## Resource chip (16 MB SPI NOR, SPI2)
 
 | Address | Appointment | Writes. |
 | --- | --- | --- |
-| `0x3A7000–0x3FFFFF` | The tail of the voice party: erased, runoff does not write [HW] | — |
+| `0x3A7000–0x3FFFFF` | Tail of the voice party: erased, runoff does not write [HW] | — |
 | `0x3FE000` | User VFO backup (log 16-B records) [STATIC] | — |
 | `0x3FF000` | **Last GPS fix.**log`GFX1`, 256×16 B) [HW] | loader stub |
 | `0x716000` | Radio Password Sector: 8B Lock Records`0x716FF8`, the rest erased (0xFF) [HW] | PASSLOCK |
@@ -219,7 +219,7 @@ handbook section 3 [STATIC]; field table from our tools.
 | CPU | Appointment |
 | --- | --- |
 | `0x01E525A0` | Key handler; binding table`0x1EAF150`(Step 24B: keycode, handler) |
-| `0x01E52BD0` | Keyboard beep wrapper`(tone, 20, 1)`; tone 42 =`tone/d_sound.*`[HW] |
+| `0x01E52BD0` | Keyboard beep wrapper`(tone, 20, 1)`tone 42 =`tone/d_sound.*`[HW] |
 | `0x01E50128` | Accessor settings; table descriptors`0x1EB6170`(step 20 B) |
 | `0x01E5C3D4` | APRS beacon sender (without argument) [HW] |
 | `0x01E5CDEC` | End of transmission (`r0=0`); without it, the PTT remains clamped [HW] |
