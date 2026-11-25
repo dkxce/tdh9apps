@@ -2,27 +2,15 @@
 
 [RU](README.md) | [EN](README.en.md)
 
-Custom firmware includes blocking the radio with a password:
+Custom firmware includes blocking the radio with a password.
 
-1. **`stub/`**- loader patch (`stub.s`) H9 Toolbox firmware.
-   At each turn on / restart checks the password in resource flash`0x716FF8`If the radio is locked and not yet unlocked in this session,
-   launcher`PASSLOCK`(input + rendering), does not draw the screen itself.
-   Session unlock flag - spare-byte`0x2B8DF`satshare
-   (Experiencing only soft-reset)`cpu_reset`; after a cold start,
-   i.e. turn off / turn on the power, the flag again requires entering the password.
-2. **`passlock/`**updating the module`PASSLOCK`: added**unlock-only**call-out`module_main(api, 0xFFFF)`Hard screen without exit
-   to the correct password (menu/personal reset is not available).
-
-## Files.
+## Source Files
 
 | File. | Appointment |
 | --- | --- |
-| `stub/stub.s` | the full source of the bootloader with lock-checking (for copying in`module-loader/src/stub.s`) |
-| `stub/stub.patch` | git-diff patch to current`stub.s`h9toolbox repository |
-| `menu/menu.c` | Menu with owner-lock boot path`skip_check == 2`launch`PASSCODE`or fail-open; to copy in`module-loader/modules/menu/menu.c`) |
-| <TD-H9-V1.0.38DKXCE.fw> | Firmware with stub (lock-check on inclusion) |
-
-folder`stub/`additionally`stub_base.s`(source loader) and`make_diff.py`(generation)`stub.patch`). The module itself`PASSLOCK`live`myapps/passlock/src/passlock.c`and collected separately (see below).
+| `stub/stub.s` | full source loader with lock check |
+| `menu/menu.c` | lock-boot |
+| `myapps/passlock/src/passlock.c` | password-input module |
 
 ## Finished assembly
 
@@ -73,8 +61,8 @@ RX-сторона == B? ─────────(Нет)──► [Динам
 ### Build TD-H9-V1.0.38DKXCE APRS mute bb beacon.fw
 
 Includes assembly functionality TD-H9-V1.0.38DKXCE.fw and TD-H9-V1.0.38DKXCE APRS mute.fw as well as:
-Supports assigning a side button to send an APRS packet (beacon) instead of a stock Weather (Weather can all open retention) n`0`)
-Supports beep-beep sound with APRS POPUP (if APRS has Resport Sats enabled) see the flow below
+Supports assigning a side button to send an APRS packet (beacon) instead of a stock Weather (Weather can open retention all the time) n`0`)
+Supports beep beep beep with APRS POPUP (if APRS has Resport Sats enabled)
 
 ```
 Пришел APRS-пакет

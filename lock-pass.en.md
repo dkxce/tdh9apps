@@ -1,6 +1,6 @@
 # TD-H9 RADIO LOCK / Password locking
 
-Owner's radio security function (for the owner, no bypassing protection).
+Owner's radio security function (for the owner, no circumvention of protection).
 
 ## Password storage
 
@@ -20,7 +20,7 @@ The condition "is parole":`pass_locked`= all bytes {`0-9`, `0x20`} **и**There's
 
 ## fly
 
-Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not set (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`- Locked: there is a password, you need to check.
+Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not set (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`There is a password, you need to check.
 
 ```
 <RADIO LOCK FLOW>
@@ -82,19 +82,12 @@ skip_check = 0 # включение питания (0x2B8DF)
 | Reading through`api->read` | `0x716FF8`8 bytes | confirmed |
 | Record password via S2 (erase+program, bypass font protection) | `td9_kpi.py pass / passclear / passread` | working |
 
-Implementation notes:
-- stub reads.`0x716FF8`through`ml_read`(stock)`0x01E4FF22`) only on the first passage; further`skip_check`Auto-entry to the menu (if 2) or regular hold-#`0x14`).
--`ml_main`in stub made return (keep frame) - menu and PASSCODE do not drop / do not reclaim the radio when leaving.
-- The menu.`skip_check==2`It does not draw a list, but immediately returns the index.`PASSLOCK`(or fail-open)`skip_check=1`in his absence).
--`PASSLOCK`upon`skip_check==2`Only displays the password entry screen, before matching (incorrect password → re-enter).
-Locked: Locked Menu (LOCK/UNLOCK/LOCK NOW) is available when you log in to PASSCODE from the module list.`skip_check != 2`).
-
 ## Tool (BLE)
 
 ```
 python td9_kpi.py pass       --password 123456   # установить пароль
-python td9_kpi.py passclear                       # сбросить (0xFF)
-python td9_kpi.py passread                        # прочитать 8 байт
+python td9_kpi.py passclear                      # сбросить (0xFF)
+python td9_kpi.py passread                       # прочитать 8 байт
 ```
 
 Writes in`0x716FF8`via S2: Programs a 32-byte block without touching the font sector (write only in erased ones).`0xFF`cells.
@@ -103,16 +96,116 @@ Writes in`0x716FF8`via S2: Programs a 32-byte block without touching the font se
 
 When you firmware the walkie-talkie module passcode and set the password, it is recommended to leave the walkie-talkie with bluetooth enabled. When you make sure everything is working properly, you can turn it off.
 
-If you try to enter the widget menu when the keyboard is blocked, the radio will be blocked before restarting. (We have to hold on)`#`when the keyboard is locked.
-So you can activate the full keyboard lock mode (without the possibility of its unlocking by standard rusting).`*`), the walkie-talkie will be running in effluent mode.
-When you activate the full keyboard lock mode at the top of the screen next to the signal scale, a red horizontal line will appear.
-To unlock the radio, turn it on and off, enter the password when you turn on (if it is set) and remove the keyboard lock with an asterisk.
+## Features of use
 
-If you need to leave the walkie-talkie working in the drain mode but at the same time disable the ability to unlock the keyboard you can
-Use a password starting from zero (0). In this case, when power is turned on, the radio will block button retention`*` и `#`.
-That is, if you have activated the keyboard lock, you will not be able to unlock the walkie-talkie (complete keyboard lock mode).
-When this mode is activated, a yellow horizontal line will appear at the top of the screen next to the signal scale.
-To turn off when you turn on the mode of full keyboard lock hold`#`- a password will be requested upon activation.
+Passwording of the radio takes place through the PASSLOCK module.
+
+At work:
+If the radio is passworded and the keyboard is blocked, then when rusting`#`radio activates the full keyboard lock mode**kbhardlock**.
+If the radio is passworded and is in full keyboard lock mode**kbhardlock**You can unblock it with standard rust.`*`and entering a password.
+
+When activated:
+If the radio is passworded and the keyboard is not blocked, the radio will ask for a password, the work of the stock firmware is blocked.
+If the radio is passworded and the keyboard is blocked, the radio activates the full keyboard lock mode.**kbhardlock**You can unblock it with standard rust.`*`and entering a password.
+If the radio is passworded and the keyboard is blocked, then when it is turned on with retention`#`The radio will ask for a password to exit the full keyboard lock mode**kbhardlock**.
+
+Status alarm:
+When activating the full keyboard lock mode**kbhardlock**retention`#`When the keyboard is locked at the top of the screen next to the signal scale, a red horizontal line will appear.
+When activating the full keyboard lock mode**kbhardlock**and refusal to enter the unlock password in the upper part of the screen next to the signal scale will appear purple horizontal line.
+When activating the full keyboard lock mode**kbhardlock**When the radio is turned on, a purple horizontal line will appear at the top of the screen next to the signal scale.
+- On hold.`#`If the keyboard is locked and the radio is not passworded, a blue horizontal line will appear at the top of the screen next to the signal scale.
+- On hold.`#`If the keyboard is not blocked, the application menu will be opened.
+
+You can use the full keyboard lock mode.**kbhardlock**if
+You need to leave the radio working in the drain mode, but at the same time turn off
+The ability to unlock the keyboard.
+
+Flow lock and unlock the radio.
+
+```
+                    ┌─────────────────────────────────────────────┐
+                    │         ВКЛЮЧЕНИЕ рации (power on)          │
+                    └─────────────────────────────────────────────┘
+                                           │
+                                           ▼
+                    ┌─────────────────────────────────────────────┐
+                    │            Рация запаролена?                │
+                    └─────────────────────────────────────────────┘
+                    Нет │                                      │ Да
+                        ▼                                      ▼
+      ┌──────────────────────────────┐   ┌─────────────────────────────────────────┐
+      │  РАБОТА (стоково, без пароля)│   │  Клавиатура заблокирована (KB_LOCKED)?  │
+      └──────────────────────────────┘   └─────────────────────────────────────────┘
+                        │               Нет │                          │ Да
+                        │                   ▼                          ▼
+                        │   ┌──────────────────────────────┐   ┌──────────────────────────────────────┐
+                        │   │  ВОПРОС ПАРОЛЯ (startup)     │   │  Активируется kbhardlock             │
+                        │   │  стоковая работа блокируется │   │  ─ фиолетовая линия у шкалы сигнала  │
+                        │   └──────────────────────────────┘   └──────────────────────────────────────┘
+                        │                   │                                                    │
+                        │                   ▼                                                    │
+                        │   ┌──────────────────────────────┐                                     │
+                        │   │  Корректный пароль?          │                                     │
+                        │   └──────────────────────────────┘                                     │
+                        │        Нет │                │ Да                                       │
+                        │            ▼                ▼                                          │
+                        │    повторить ввод       РАЗБЛОКИРОВАНО                                 │
+                        │  (рация не даёт идти)       ▼                                          │
+                        │                    ┌──────────────────────────┐                        │
+                        │                    │  РАБОТА (стоково)        │                        │
+                        │                    └──────────────────────────┘                        │
+                        │                              │                                         │
+                        │                 (в любой момент, при работе)                           │
+                        │                              ▼                                         │
+                        │                 ┌───────────────────┐                                  │
+                        │                 │  удержание `#`    │                                  │
+                        │                 └───────────────────┘                                  │
+                        │                           │                                            │ 
+                        │                           ▼                                            │
+                        │                      Запаролена?                                       │
+                        │                 Нет │           │ Да                                   │
+                        │                     ▼           ▼                                      │
+                        │                ┌───────────┐ ┌────────────────────────────────────┐    │
+                        │                │ ОТКРЫТО   │ │   Активируется kbhardlock          │    │
+                        │                │ меню      │ │  ─ красная линия у шкалы сигнала   │    │
+                        │                │ приложений│ └────────────────────────────────────┘    │
+                        │                └───────────┘                │                          │ 
+                        │                                             │      ┌───────────────────┘ 
+                        │                                             ▼      ▼
+                        │                        ┌───────────────────────────────┐
+                        │                        │ Удержание `*` + ввод пароля   │
+                        │                        │ (стандартная разблокировка)   │
+                        │                        └───────────────────────────────┘
+                        │                       Отмена   │              РАЗБЛОКИРОВАНО
+                        │                                ▼                   │
+                        │               ┌───────────────────────────┐        │
+                        │               │  Активируется kbhardlock  │        │
+                        │               └───────────────────────────┘        │
+                        │                                                    ▼
+                        ▼
+```
+
+Flow unlock the walkie-talkie when the keyboard is locked when turned on.
+
+```
+Питание + удержание `#` (рация уже запаролена + клавиатура заблокирована)
+        │
+        ▼
+┌────────────────────────────────────────────────┐
+│  ВОПРОС ПАРОЛЯ (запрос на выход из kbhardlock) │
+└────────────────────────────────────────────────┘
+        │
+        ▼
+┌────────────────────────────────────────────────┐
+│  Правильный пароль?                            │
+└────────────────────────────────────────────────┘
+   Нет │              │ Да                  │ Отмена
+       ▼              ▼                     ▼
+  повтор      ┌─────────────────────┐     ┌───────────────────────────┐
+              │  выход из kbhardlock│     │  Активируется kbhardlock  │
+              │  → обычная работа   │     └───────────────────────────┘
+              └─────────────────────┘
+```
 
 ## Stack.
 
