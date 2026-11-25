@@ -333,19 +333,18 @@ unsigned module_main(const struct h9_api *api, unsigned self)
 	unsigned char pass[PASS_LEN];
     read_pass(api, pass);    
 
-    if ((*SKIP_CHECK == SKIP_LOCKED) || (*SKIP_CHECK == SKIP_KBLCKD)) {                    /* on radio power-on flow on kbhardlock unlock */
-        if (!pass_locked(pass)) {                                                          /* no password */
-			if(*SKIP_CHECK == SKIP_KBLCKD) *KB_LOCKED = 0;                                 // on kbhardlock unlock
-			*SKIP_CHECK = SKIP_NORMAL;			
+    if (*SKIP_CHECK == SKIP_LOCKED) {
+        if (!pass_locked(pass)) {
+			*SKIP_CHECK = SKIP_NORMAL;
 			STOCK_REFRESH();
             STOCK_REDRAW();
 			return H9_RETURN_RADIO_LOCAL;
 		};
-		if ((*KB_LOCKED != 0) && (*SKIP_CHECK != SKIP_KBLCKD) && (*KEY_HOLDED != 20)) {    /* kb locked and no # holded */
+		if ((*KB_LOCKED != 0) && (*KEY_HOLDED != 20)) { /* kb locked and no # holded */
 			*SKIP_CHECK = SKIP_2BLCKD;
 			STOCK_REFRESH();
             STOCK_REDRAW();
-			gfx_fill(0, 19, H9_WIDTH, 2, 0x8010); // Violet
+			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
 			return H9_RETURN_RADIO_LOCAL;
 		};
         char buf[PASS_LEN + 1];
@@ -354,14 +353,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         gfx_text(4, 26, "RADIO IS LOCK", 14, 2, GFX_RED, GFX_BLACK);
         gfx_text(4, 118, "ENTER PASSWORD TO UNLOCK", 30, 1, GFX_GREY, GFX_BLACK);
 		int res = enter_digits(buf, PASS_LEN, "PASSWORD:", 56, 1);
-		if ((res == 1) && (*KB_LOCKED != 0)) {                                             /* kb locked and skip enter pass */
+		if ((res == 1) && (*KB_LOCKED != 0)) {
 			*SKIP_CHECK = SKIP_2BLCKD;
 			STOCK_REFRESH();
             STOCK_REDRAW();
-			gfx_fill(0, 19, H9_WIDTH, 2, 0x8010); // Violet
+			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
 			return H9_RETURN_RADIO_LOCAL;
 		};
-        if (res == 2) {                                                                    /* UP/DOWN pressed */
+        if (res == 2) {
 			show_logo(api);
 			gfx_wait_release();
 			for (;;) {
@@ -380,20 +379,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             gfx_text(30, 96, "WRONG PASSWORD", 16, 1, GFX_RED, GFX_BLACK);
             h9_delay(90);
             goto okb;
-        };
-		if(*SKIP_CHECK == SKIP_KBLCKD) {                                                   // on kbhardlock unlock
-			gfx_wait_release();
-			*KB_LOCKED = 0;			
-		};
+        }
         *SKIP_CHECK = SKIP_NORMAL;
         STOCK_REFRESH();
         STOCK_REDRAW();
         return H9_RETURN_RADIO_LOCAL;
     }
 
-    /* application manual select flow */
-	
-    if (pass_locked(pass)) { 
+    if (pass_locked(pass)) {
         char buf[PASS_LEN + 1];
         ok: ;
         clear_all();
