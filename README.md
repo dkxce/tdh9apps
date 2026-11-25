@@ -1,21 +1,24 @@
-﻿# Tidradio TD-H9 HID Unbricker + Custom Firmware + Apps + Games
-
-[RU](README.md) | [EN](README.en.md)      
-
----
-
-[РАЗКИРПИЧИТЬ РУК-ВО](UNBRICK.md) | [UNBRICK MANUAL](UNBRICK.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
-[КАСТОМНАЯ ПРОШИВКА РУК-ВО](custom_firmware/README.md) | [CUSTOM FIRMWARE MANUAL](custom_firmware/README.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)            
-[ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)             
-[ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md) | [RELEASES](https://github.com/dkxce/tdh9apps/releases)     
+﻿# Tidradio TD-H9 Customization
+#### Tidradio TD-H9 Customization: HID Unbricker + Custom Firmware + Apps + Games
 
 ---
 
-[ОПИСАНИЕ РЕПОЗИТОРИЯ](#описание)     
-[ДОКУМЕНТАЦИЯ](#документация-md)     
-[ПРОЧИЕ ПРИЛОЖЕНИЯ](#прочие-приложения)      
-[СКРИНШОТЫ](#скриншоты-экранов-виджетов-приложений)     
-[RELEASES](https://github.com/dkxce/tdh9apps/releases)     
+**Quick links**:     
+- [RU](README.md) | [EN](README.en.md)      
+- [РАЗКИРПИЧИТЬ РУК-ВО](UNBRICK.md) | [UNBRICK MANUAL](UNBRICK.en.md)      
+- [КАСТОМНАЯ ПРОШИВКА РУК-ВО](custom_firmware/README.md) | [CUSTOM FIRMWARE MANUAL](custom_firmware/README.en.md)releases)            
+- [ВИДЖЕТЫ РУК-ВО](APPLICATIONS.md) | [WIDGETS MANUAL](APPLICATIONS.en.md)              
+- [ИГРЫ РУК-ВО](GAMES.md) | [GAMES MANUAL](GAMES.en.md)      
+- [RELEASES](https://github.com/dkxce/tdh9apps/releases)      
+
+---
+
+**Содержание**:
+- [ОПИСАНИЕ РЕПОЗИТОРИЯ](#описание)     
+- [ДОКУМЕНТАЦИЯ](#документация-md)          
+- [СКРИНШОТЫ](#скриншоты-экранов-виджетов-приложений)
+
+---        
 
 ## Описание
 
