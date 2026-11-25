@@ -38,6 +38,11 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define STOCK_REDRAW()  ((void (*)(unsigned))0x01E53306)(0)    /* marks the three display rows for redraw */
 #endif
 
+/* Значок замка в цвете по месту, которое сток отвёл для текущего режима
+ * Display. Resolver 0x01E50BFA сам переводит проценты/абсолют в пиксели по
+ * активной таблице иконок [0x72400+432], поэтому координаты не хардкодим. */
+#define STOCK_ICON_RECT ((void (*)(uint16_t *, const char *))0x01E50BFA)
+
 /* Owner-lock flag, shared with the main-flash stub (stub.s mlk_check). */
 #define SKIP_CHECK ((volatile unsigned char *)0x2B8DFu)
 #define SKIP_UNLOCKED 1u /* Рация разлочена  */
@@ -49,7 +54,45 @@ enum { KEY_HASH = 0x14 };   /* the stub opens the menu on holding # */
 #define KB_LOCKED     ((volatile unsigned char *)0x11AC2u) /* KEYLOCK FLAG REAL */
 #define MDL_LOADED    ((volatile unsigned char *)0x2B8DEu) /* MODULE LOADED PTR */
 
+/* Состояние клавиш стока. 0xC3C7 — '*' (запись 16, app+0xAF1D0), 0xC3C8 — '#'
+ * (запись 17, app+0xAF1E8), 0xC3AF — код удержанной клавиши, h[0xC3B2] — тики
+ * удержания (порог 100). */
+#define KEY_STAR    ((volatile unsigned char  *)0x0C3C7u)
+#define KEY_SHARP   ((volatile unsigned char  *)0x0C3C8u)
+#define KEY_HOLDED2 ((volatile unsigned char  *)0x0C3AFu)
+#define KEY_HOLD_T  ((volatile unsigned short *)0x0C3B2u)
+
 #define PASSCODE_NAME "PASSLOCK"
+
+/* lock_icon: 10 x 12, бит 0 = левый столбец */
+static const uint16_t lock_rows[12] = {
+    0x0030, 0x0048, 0x0084, 0x0084, 0x01FE, 0x0201,
+    0x0201, 0x0231, 0x0231, 0x0201, 0x0201, 0x01FE,
+};
+
+static void lock_icon_draw(uint16_t color)
+{
+    uint16_t r[4];
+    STOCK_ICON_RECT(r, "lock_icon");
+    if (!r[2] || !r[3]) return;          /* в этом режиме значка нет */
+    for (unsigned row = 0; row < 12; row++) {
+        uint16_t bits = lock_rows[row];
+        for (unsigned col = 0; col < 10; ) {
+            if (!(bits & (1u << col))) { col++; continue; }
+            unsigned start = col;
+            while (col < 10 && (bits & (1u << col))) col++;
+            gfx_fill(r[0] + start, r[1] + row, col - start, 1, color);
+        }
+    }
+}
+
+static void stock_keys_idle(void)
+{
+    *KEY_HOLD_T = 0;   /* иначе счётчик удержания дойдёт до 100 на следующем тике */
+    *KEY_HOLDED2 = 0;
+    *KEY_STAR  = 0;
+    *KEY_SHARP = 0;
+}
 
 static int is_digit(unsigned char c) { return c >= '0' && c <= '9'; }
 static int is_space(unsigned char c) { return c == 0x20; }
@@ -147,32 +190,42 @@ unsigned module_main(const struct h9_api *api, unsigned self)
     unsigned count = header[10] | (unsigned)header[11] << 8;
     unsigned modules = count > 1 ? count - 1 : 0;	
 		
-	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по звездочке */	    
+	if ((*KEY_HOLDED == 19) && (*SKIP_CHECK != SKIP_LOCKED))     /* enter on-* */	    
 	{
-		if (*SKIP_CHECK == SKIP_KBLCKD) 
+		if ((*KB_LOCKED != 0) && (*SKIP_CHECK == SKIP_KBLCKD)) { /* try kbhardlock unlock */
+			int pc = find_passcode(api, count);
+			if (pc) return (unsigned)pc;
+		};
+		if (*SKIP_CHECK == SKIP_KBLCKD)                          // kbhardlocked
 			gfx_wait_release();
 		return 0;
 	};
 	
-	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED)) /* Вход по решетке */ 
+	if ((*KEY_HOLDED == 20) && (*SKIP_CHECK != SKIP_LOCKED))     /* enter on-# */ 
 	{		
-		if (*KB_LOCKED != 0) /* *KB_UNLOCKED == 0 <- Залочена*/
+		if (*KB_LOCKED != 0)                                     /* kb is locked */
 		{
 			if (*SKIP_CHECK == SKIP_UNLOCKED) {
 				unsigned char pass[PASS_LEN];
 				read_pass(api, pass);    
 				if (pass_locked(pass)) { 
-					*SKIP_CHECK = SKIP_KBLCKD;
+					*SKIP_CHECK = SKIP_KBLCKD;                   // set kbhardlock
 					gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED);
-				} else 
+					lock_icon_draw(GFX_RED);
+				} else {
 					gfx_fill(0, 19, H9_WIDTH, 2, GFX_BLUE);
+					lock_icon_draw(GFX_BLUE);
+				};
 			};
 			gfx_wait_release();
+			stock_keys_idle();
 			return 0;
 		};
-		if (*SKIP_CHECK == SKIP_KBLCKD) { /* Пограничный случай */
+		if (*SKIP_CHECK == SKIP_KBLCKD) {                        /* Пограничный случай */
 			gfx_wait_release();
-			gfx_fill(0, 19, H9_WIDTH, 2, GFX_RED); /* 0x8010 */
+			gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
+			lock_icon_draw(GFX_YELLOW);
+			stock_keys_idle();
 			return 0;
 		};
 	};
@@ -187,8 +240,9 @@ unsigned module_main(const struct h9_api *api, unsigned self)
         return (unsigned)pc;
 	}
 	
-	if (*SKIP_CHECK == SKIP_NORMAL) {
+	if (*SKIP_CHECK == SKIP_NORMAL) {                            // set normal through passlock fallback
 		*SKIP_CHECK = SKIP_UNLOCKED;
+		 stock_keys_idle();
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
          STOCK_REDRAW();
@@ -196,12 +250,14 @@ unsigned module_main(const struct h9_api *api, unsigned self)
          return 0;
     }
 	
-	if (*SKIP_CHECK == SKIP_2BLCKD) {
+	if (*SKIP_CHECK == SKIP_2BLCKD) {                            // set kbhardlock through passlock fallback
 		 *SKIP_CHECK = SKIP_KBLCKD;
+		 stock_keys_idle();
 		 gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
          STOCK_REFRESH();
          STOCK_REDRAW();
-		 gfx_fill(0, 19, H9_WIDTH, 2, GFX_YELLOW);
+		 gfx_fill(0, 19, H9_WIDTH, 2, 0x8010); // Violet
+		 lock_icon_draw(0x8010);
 		 h9_delay(120);
          return 0;
     }
@@ -259,6 +315,7 @@ unsigned module_main(const struct h9_api *api, unsigned self)
             selected = selected + 1 < items ? selected + 1 : 0;
         } else if (key == H9_KEY_BACK) {
             gfx_fill(0, 0, H9_WIDTH, H9_HEIGHT, GFX_BLACK);   /* stock redraws only what it thinks changed */
+			stock_keys_idle();
             STOCK_REFRESH();
             STOCK_REDRAW();
             return 0;
