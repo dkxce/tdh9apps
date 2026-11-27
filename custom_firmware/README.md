@@ -20,7 +20,9 @@
 | [TD-H9-V1.0.38DKXCE_APRS_mute.fw](TD-H9-V1.0.38DKXCE_APRS_mute.fw) | stub + passlock + aprs mute |
 | [TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw](TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw) | stub + passlock + aprs mute + beep-beep + send beacon |
 
-Менеджер приложений (виджетов) во всех сборках открывается удержанием `#`.    
+Менеджер приложений (виджетов) во всех сборках открывается удержанием `#`. 
+
+> `aprs mute` и `beep-beep` через bluetooth-гарнитуру не работают.
 
 ### Сборка TD-H9-V1.0.38DKXCE.fw
 
