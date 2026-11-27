@@ -18,7 +18,7 @@ Tidradio TD-H9 Customization
 
 **Contents**:
 -[Description of the repository](#описание)   
-- [Documentation](#документация-md)   
+- [DOCUMENTATION](#документация-md)   
 - [Screenshots](#скриншоты-экранов-виджетов-приложений)
 
 ---
@@ -28,19 +28,19 @@ Tidradio TD-H9 Customization
 This repository is a set of tools and firmware for**radio station TIDRADIO
 TD-H9**. Here is everything that relates to working with the radio:
 
-* **Unbrick**Decomposition of the main flash memory in**HID mode**(without switching the chip to UBOOT mode). Includes console flasher`h9_flash.py`window appendix`ui_app/app.py`(PySide6) that are unpacked
+* **Unbrick**Decomposition of the main flash memory in**HID mode**(without switching the chip to UBOOT mode). Includes console flasher`h9_flash.py`and window appendix`ui_app/app.py`(PySide6) that are unpacked
   packet`.fw`Compare CRC sectors and rewrite only different ones.
 * **Custom firmware**Custom firmware with password support
   ?`custom_firmware/`), as well as utilities for changing the boot logo, downloading
   Images and app firmware.
-* **Apps**- applications / widgets for walkie-talkie (menu, tracker, waypoints,
+* **Apps.**- applications / widgets for walkie-talkie (menu, tracker, waypoints,
   Password and other modules.
 * **Games**Radio games (such as naval combat).
 * **Python scripts**A set of automation scripts:`h9_flash.py`,
   `td9_aprs.py`(APRS/GNSS settings),`td9_apps.py`, `td9_logo.py`,
   `td9_kpi.py`etc.
 
-> **What an unbrick tool does.**Unpacking the bag`.fw`(extracts)`flash.bin`), compares the CRC sectors of the radio to the target image and overwrites**differing**sectors, then checks the record by CRC. Boot area`0x0000..0x4FFF`settings`0xDA000..0x100000` **hold off**.
+> **What an unbrick tool does.**Unpacking the package`.fw`(extracts)`flash.bin`), compares the CRC sectors of the radio to the target image and overwrites**differing**sectors, then checks the record by CRC. Boot area`0x0000..0x4FFF`settings`0xDA000..0x100000` **stay away**.
 
 ---
 

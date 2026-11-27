@@ -1,13 +1,13 @@
 # TD-H9 RADIO LOCK / Password locking
 
-Owner's radio safety feature (for the owner, no bypassing protection).
+Owner's radio security function (for the owner, no circumvention of protection).
 
 ## Password storage
 
 | Thing. | Meaning. |
 | --- | --- |
 | Address | flash**`0x716FF8`**8 bytes |
-| Where | region before pictures (`0x717000`); last sector font (`0x716000`) |
+| Where | area before pictures (`0x717000`); last sector font (`0x716000`) |
 | Parolene. | all 8 bytes = numbers`0-9`gap`0x20`(The gaps finish the tail, at least 1 digit) |
 | Not paroled. | At least one byte is not a number and not a space (mod writes).`0xFF`, erased cell ) |
 
@@ -20,7 +20,7 @@ The condition "is parole":`pass_locked`= all bytes {`0-9`, `0x20`} **и**There's
 
 ## fly
 
-Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not specified (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`There is a password, you need to check.
+Common flag`skip_check`lives in RAM`0x2B8DF`(free byte, end of satshare zone):`0`- fresh / not set (when power is turned on; on some firmware debris`0xFF`)`1`unlocked by this session (no password or password accepted),`2`There is a password, you need to check.
 
 ```
 <RADIO LOCK FLOW>
@@ -76,7 +76,7 @@ skip_check = 0 # включение питания (0x2B8DF)
 
 | Component | File. | Status |
 | --- | --- | --- |
-| Stub: Exposition`skip_check`along`0x716FF8`+ entrance to the menu by`#`or`skip_check>1` | patch`custom_firmware/stub/stub.s` | working |
+| Stubble: exhibit`skip_check`along`0x716FF8`+ entrance to the menu by`#`or`skip_check>1` | patch`custom_firmware/stub/stub.s` | working |
 | Menu:`skip_check==2`search and launch`PASSLOCK`If you fail-open; if you fail-open.`skip_check!=2`Regular list of modules | `custom_firmware/menu/menu.c`base`menu_base.c`) | working |
 | Module`PASSLOCK`: boot branch (`skip_check==2`Input + verification, the usual branch (`menu_loop`: Lock/UNLOCK/LOCK NOW | `myapps/passlock/src/passlock.c` | working |
 | Reading through`api->read` | `0x716FF8`8 bytes | confirmed |
@@ -90,7 +90,7 @@ python td9_kpi.py passclear                      # сбросить (0xFF)
 python td9_kpi.py passread                       # прочитать 8 байт
 ```
 
-Writes in`0x716FF8`via S2: Programs a 32-byte block without touching the font sector (write only in erased ones)`0xFF`cells.
+Writes in`0x716FF8`via S2: Programs a 32-byte block without touching the font sector (write only in erased ones).`0xFF`cells.
 
 ## It's important.
 
@@ -101,7 +101,7 @@ When you firmware the walkie-talkie module passcode and set the password, it is 
 Passwording of the radio takes place through the PASSLOCK module.
 
 At work:
-- If the radio is paroled and the keyboard is blocked, then when rusting,`#`radio activates the full keyboard lock mode**kbhardlock**.
+If the radio is passworded and the keyboard is blocked, then when rusting`#`radio activates the full keyboard lock mode**kbhardlock**.
 If the radio is passworded and is in full keyboard lock mode**kbhardlock**You can unblock it with standard rust.`*`and entering a password.
 
 When activated:
@@ -185,7 +185,7 @@ Flow lock and unlock the radio.
                         ▼
 ```
 
-Flow unlock the radio when the keyboard is locked when turned on.
+Flow unlock the walkie-talkie when the keyboard is locked when turned on.
 
 ```
 Питание + удержание `#` (рация уже запаролена + клавиатура заблокирована)
@@ -211,4 +211,4 @@ Flow unlock the radio when the keyboard is locked when turned on.
 
 The following components must be installed to operate the lock function:
 - The firmware is one of
-(a)[TD-H9-V1.0.38DKXCE.fw](custom_firmware/TD-H9-V1.0.38DKXCE.fw)(b)[TD-H9-V1.0.38DKXCE APRS mute.fw](custom_firmware/TD-H9-V1.0.38DKXCE_APRS_mute.fw)(c)[TD-H9-V1.0.38DKXCE APRS mute bb beacon.fw](custom_firmware/TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw)- Menu.[menu. h9mod](myapps/menu.h9mod)- Application module[passlock. h9mod](myapps/passlock.h9mod)
+(a)[TD-H9-V1.0.38DKXCE.fw](custom_firmware/TD-H9-V1.0.38DKXCE.fw)(b)[TD-H9-V1.0.38DKXCE APRS mute.fw](custom_firmware/TD-H9-V1.0.38DKXCE_APRS_mute.fw)(c)[TD-H9-V1.0.38DKXCE APRS mute bb beacon.fw.](custom_firmware/TD-H9-V1.0.38DKXCE_APRS_mute_bb_beacon.fw)- Menu.[menu. h9mod](myapps/menu.h9mod)- Application module[passlock. h9mod](myapps/passlock.h9mod)

@@ -1,7 +1,7 @@
 # TD-H9 applications: installation and disposal
 
 `td9_apps.py`Download and remove applications (H9 Toolbox modules) on the radio
-TD-H9 via Bluetooth**S2 write service**. The radio should be on the firmware.**H9 Toolbox Firmware**(It has written service v2).
+TD-H9 via Bluetooth**S2 write service**. The radio should be on firmware.**H9 Toolbox Firmware**(It has written service v2).
 
 ## Teams.
 
@@ -14,7 +14,7 @@ poetry run python td9_apps.py list
 ```
 
 It shows two sources:
--`apps_catalog/`- ready-made applications from the h9toolbox directory;
+-`apps_catalog/`- ready-made applications from the h9toolbox catalog;
 -`myapps/`- Collected extended applications.
 
 Item`menu`System (this is the menu list itself), not a visible application.
@@ -53,11 +53,11 @@ Erase the sectors listed in the directory and return them to 0xFF.
 
 ## How to Write Your Applications
 
-The source lies in`myapps/<имя>/src/*.c`, common layer and tulchain - in`myapps/shared/`. It is built through GitHub Actions.
+Sources lie in`myapps/<имя>/src/*.c`, common layer and tulchain - in`myapps/shared/`. It is built through GitHub Actions.
 ?`.github/workflows/build-module.yml`): downloads JieLi toolchain,
 trigger`myapps/build_all.py`artifact`myapps/*.h9mod`.
 
-A new application = create a new application`myapps/<имя>/src/<имя>.c`function`module_main`), start, run workflow.
+New Application = Create a New Application`myapps/<имя>/src/<имя>.c`function`module_main`), start, run workflow.
 
 For applications of several modules - add`myapps/<имя>/build.json`with a list of modules and their source.
 
